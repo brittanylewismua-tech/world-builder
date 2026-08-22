@@ -41,7 +41,7 @@ function HistoryBody({ world }: { world: World }) {
   if (!drops)
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Globe size={140} className="spin-slow text-pink" />
+        <Globe size={140} spin />
       </div>
     );
 

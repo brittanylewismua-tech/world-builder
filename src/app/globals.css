@@ -35,11 +35,6 @@ body {
   line-height: 0.86;
 }
 
-.script {
-  font-family: var(--font-script);
-  text-transform: none;
-}
-
 .eyebrow {
   font-family: var(--font-body);
   font-weight: 700;

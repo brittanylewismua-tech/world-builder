@@ -20,7 +20,7 @@ const NAV = [
 export function Loading() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-black">
-      <Globe size={150} className="spin-slow text-pink" />
+      <Globe size={150} spin />
     </main>
   );
 }

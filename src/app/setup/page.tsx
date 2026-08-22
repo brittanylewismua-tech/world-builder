@@ -139,7 +139,7 @@ function SetupBody({
   return (
     <main className="min-h-dvh gridfield relative overflow-hidden">
       <div className="pointer-events-none absolute -right-56 -top-40 text-pink opacity-60">
-        <Globe size={680} className="spin-slow" />
+        <Globe size={680} />
       </div>
 
       <div className="relative mx-auto max-w-3xl px-6 py-12 md:py-16">

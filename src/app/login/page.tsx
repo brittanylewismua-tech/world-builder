@@ -58,7 +58,7 @@ export default function Login() {
   return (
     <main className="min-h-dvh gridfield relative overflow-hidden">
       <div className="pointer-events-none absolute -right-52 -top-44 text-pink opacity-40">
-        <Globe size={640} className="spin-slow" />
+        <Globe size={640} />
       </div>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_12%,rgba(238,111,192,0.16),transparent_55%)]" />
 

@@ -1,49 +1,29 @@
+/* eslint-disable @next/next/no-img-element */
+
+/**
+ * The brand globe. This is Brittany's artwork (public/globe.png) — pink
+ * continents on a white sphere with a pink graticule — not a drawn
+ * approximation. Do not replace it with an SVG.
+ */
 export function Globe({
   size = 520,
   className = "",
+  spin = false,
 }: {
   size?: number;
   className?: string;
+  spin?: boolean;
 }) {
-  const meridians = [0.18, 0.42, 0.68, 0.92];
-  const parallels = [-0.72, -0.42, 0, 0.42, 0.72];
   return (
-    <svg
-      viewBox="0 0 200 200"
+    <img
+      src="/globe.png"
+      alt=""
       width={size}
       height={size}
-      className={className}
       aria-hidden
-    >
-      <defs>
-        <radialGradient id="gball" cx="34%" cy="28%" r="82%">
-          <stop offset="0%" stopColor="#ff9ad9" />
-          <stop offset="52%" stopColor="#ee6fc0" />
-          <stop offset="100%" stopColor="#5d1f47" />
-        </radialGradient>
-      </defs>
-      <circle cx="100" cy="100" r="82" fill="url(#gball)" opacity="0.16" />
-      <circle
-        cx="100"
-        cy="100"
-        r="82"
-        fill="none"
-        stroke="#ee6fc0"
-        strokeWidth="1.1"
-        opacity="0.85"
-      />
-      <g stroke="#ee6fc0" strokeWidth="0.7" fill="none" opacity="0.55">
-        {meridians.map((m, i) => (
-          <ellipse key={i} cx="100" cy="100" rx={82 * m} ry="82" />
-        ))}
-        {parallels.map((p, i) => {
-          const cy = 100 + p * 82;
-          const rx = 82 * Math.sqrt(Math.max(0, 1 - p * p));
-          return <ellipse key={i} cx="100" cy={cy} rx={rx} ry={rx * 0.16} />;
-        })}
-        <line x1="100" y1="18" x2="100" y2="182" />
-      </g>
-    </svg>
+      className={`${spin ? "spin-slow" : ""} ${className}`}
+      style={{ width: size, height: size, maxWidth: "none" }}
+    />
   );
 }
 

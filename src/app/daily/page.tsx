@@ -111,7 +111,7 @@ function DailyBody({ world }: { world: World }) {
       {/* researching */}
       {researching && (
         <div className="flex flex-col items-center py-20 text-center">
-          <Globe size={150} className="spin-slow text-pink" />
+          <Globe size={150} spin />
           <p className="display mt-7 text-xl text-paper">
             Reading your world…
           </p>

@@ -101,7 +101,7 @@ function StudioBody({ world }: { world: World }) {
   if (loading)
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Globe size={140} className="spin-slow text-pink" />
+        <Globe size={140} spin />
       </div>
     );
 
