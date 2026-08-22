@@ -185,7 +185,10 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
   let changed = false;
   // Newest first, so the open board is drops[0].
   const current = drops[0];
-  if (daysSince(current.publishDate) >= 0 && !current.frozenAt) {
+  // Freeze only once the publish day has fully passed. Using >= 0 here meant a
+  // seller who signed up on a Friday had Drop 01 frozen empty the moment they
+  // opened the studio.
+  if (daysSince(current.publishDate) > 0 && !current.frozenAt) {
     await supabase
       .from("wb_drops")
       .update({ frozen_at: new Date().toISOString(), status: "live" })

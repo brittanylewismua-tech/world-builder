@@ -76,8 +76,8 @@ function DailyBody({ world }: { world: World }) {
         <h1 className="display mt-4 text-[clamp(1.8rem,5vw,3rem)] text-paper">
           {greeting()}
         </h1>
-        <p className="script -mt-1 text-[clamp(1.3rem,3.6vw,2rem)] text-pink">
-          here&apos;s what&apos;s happening in your world
+        <p className="display mt-1 text-[clamp(1rem,2.6vw,1.4rem)] text-pink">
+          Here&apos;s what&apos;s happening in your world
         </p>
         <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs text-smoke">
           {world.areas.map((a) => (
