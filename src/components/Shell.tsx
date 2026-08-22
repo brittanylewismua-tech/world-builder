@@ -126,7 +126,11 @@ export default function Shell({
                         color:
                           rail === "accent" ? "#fff" : onAccent(theme.accent),
                       }
-                    : { color: railDark ? "rgba(255,255,255,0.5)" : "#5a5651" }
+                    : {
+                        color: railDark
+                          ? "rgba(255,255,255,0.55)"
+                          : "rgba(0,0,0,0.62)",
+                      }
                 }
               >
                 <span className="block text-[13.5px] font-bold">{n.label}</span>
