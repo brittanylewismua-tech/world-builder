@@ -2,6 +2,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { setWallpaper, saveWorld } from "@/lib/api";
 import {
   PRESETS,
@@ -41,6 +42,7 @@ export default function Customiser({
   const theme = world.theme;
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   async function apply(next: Partial<Theme>) {
     const merged = { ...theme, ...next };
@@ -66,6 +68,21 @@ export default function Customiser({
     } catch (e) {
       onError(e instanceof Error ? e.message : "Could not save that.");
     }
+  }
+
+  /**
+   * The door lives at the root of the app and only appears once a day, so
+   * after picking a new wallpaper colour there is otherwise no way to go and
+   * look at it. This forgets today's visit and walks you back out to it.
+   */
+  async function showDoorNow() {
+    patch({ doorSeenOn: null });
+    try {
+      await saveWorld(world.id, { doorSeenOn: null });
+    } catch {
+      /* worst case the door stays skipped for today */
+    }
+    router.push("/");
   }
 
   async function uploadWallpaper(files: FileList | null) {
@@ -457,9 +474,22 @@ export default function Customiser({
           </button>
         </div>
 
-        <p className="t-small mt-3 font-semibold">
-          {theme.door ? "On — you walk in once a day." : "Off — you land on home."}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <p className="t-small font-semibold">
+            {theme.door
+              ? "On — you walk in once a day."
+              : "Off — you land on home."}
+          </p>
+          {theme.door && (
+            <button
+              onClick={showDoorNow}
+              className="t-small underline underline-offset-4 transition hover:opacity-70"
+              style={{ color: "var(--accent)" }}
+            >
+              see it now →
+            </button>
+          )}
+        </div>
       </section>
 
       {/* ---------------------------------------------------- preview */}
