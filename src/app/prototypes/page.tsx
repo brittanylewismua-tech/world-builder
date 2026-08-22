@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import DirectionD from "@/components/proto-d";
+import DirectionE from "@/components/proto-e";
 
 /**
  * Visual directions, side by side.
@@ -338,6 +339,13 @@ function DirectionC() {
 export default function Prototypes() {
   const blocks = [
     {
+      key: "E",
+      name: "Hard contrast",
+      pitch:
+        "White, black, hot pink — no lavender, no wash. Pink lands as a punch instead of soaking the page. Keeps the playful vocabulary (window dots, stars, big numerals, bold lowercase, pink italic emphasis, cards that lift) on a graphic black-and-white chassis. Cards sit on a hard black offset that turns pink on hover.",
+      node: <DirectionE />,
+    },
+    {
       key: "D",
       name: "Disco",
       pitch:
@@ -374,12 +382,13 @@ export default function Prototypes() {
           Visual directions
         </span>
         <h1 className="mt-3 font-[Playfair_Display] text-[2.4rem] leading-tight">
-          Four ways World Builder could look
+          Five ways World Builder could look
         </h1>
         <p className="mt-3 max-w-2xl text-[17px] leading-relaxed text-black/60">
-          Same screen, same real content, four different treatments. D is new
-          — built from your actual marketing rather than my guesses. Tell me a
-          letter, or parts of two, and I will build the whole app in it.
+          Same screen, same real content. E is the newest — hard contrast
+          white, black and pink, with D&apos;s playful details but none of its
+          lavender. Tell me a letter, or parts of two, and I will build the
+          whole app in it.
         </p>
 
         <div className="mt-12 space-y-16">
