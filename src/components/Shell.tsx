@@ -82,7 +82,7 @@ export default function Shell({
             <Link
               key={n.href}
               href={n.href}
-              className={`block rounded-2xl px-3.5 py-2.5 transition ${
+              className={`block rounded-xl px-3.5 py-2.5 transition ${
                 active
                   ? "bg-white border border-line shadow-[0_1px_2px_rgba(13,12,12,0.05)]"
                   : "hover:bg-sunk"
@@ -100,7 +100,7 @@ export default function Shell({
       </nav>
 
       <div className="mt-auto pt-6">
-        <div className="rounded-2xl border border-line bg-white px-3.5 py-3">
+        <div className="rounded-xl border border-line bg-white px-3.5 py-3">
           <p className="eyebrow text-plum-3">Current world</p>
           <p className="display mt-1 truncate text-[1.05rem] text-plum">
             {world.name || "Untitled"}
@@ -144,7 +144,7 @@ export default function Shell({
         </div>
       )}
 
-      <aside className="sticky top-0 z-20 hidden h-dvh w-[264px] shrink-0 border-r border-line bg-white/72 backdrop-blur-xl lg:block">
+      <aside className="sticky top-0 z-20 hidden h-dvh w-[264px] shrink-0 border-r border-line bg-white/88 backdrop-blur-xl lg:block">
         {aside}
       </aside>
 

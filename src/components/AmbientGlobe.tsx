@@ -20,7 +20,7 @@ export default function AmbientGlobe() {
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     >
       {/* bloom so the globe sits in light rather than floating on nothing */}
-      <div className="absolute -right-[10vw] top-1/2 h-[120vh] w-[120vh] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(238,111,192,0.26),rgba(238,111,192,0.09)_46%,transparent_68%)] blur-3xl" />
+      <div className="absolute -right-[10vw] top-1/2 h-[120vh] w-[120vh] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(238,111,192,0.26),rgba(238,111,192,0.09)_50%,transparent_68%)] blur-3xl" />
 
       <div className="globe-drift absolute -right-[16vw] top-1/2 -translate-y-1/2">
         <img
@@ -35,7 +35,7 @@ export default function AmbientGlobe() {
         copy never sits on continents, then release quickly so the globe reads
         at full strength on the right.
       */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#fcfaf9_0%,#fcfaf9_46%,rgba(252,250,249,0.82)_58%,rgba(252,250,249,0.28)_72%,transparent_86%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_0%,#ffffff_50%,rgba(255,255,255,0.84)_58%,rgba(255,255,255,0.3)_72%,transparent_86%)]" />
     </div>
   );
 }
