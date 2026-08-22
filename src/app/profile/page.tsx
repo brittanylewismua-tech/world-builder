@@ -125,7 +125,7 @@ function ProfileBody({ world }: { world: World }) {
           onToggle={() => toggle("areas")}
           preview={
             world.areas.length > 0 && (
-              <div className="hidden flex-wrap justify-end gap-1 sm:flex">
+              <div className="hidden max-w-[46%] flex-wrap justify-end gap-1 lg:flex">
                 {world.areas.slice(0, 3).map((x) => (
                   <span key={x.id} className="chip text-[11px]">
                     {x.name}
@@ -178,8 +178,8 @@ function Module({
         >
           {letter}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="t-h3 block text-plum">{title}</span>
+        <span className="min-w-0 flex-1 pr-3">
+          <span className="t-h3 block whitespace-nowrap text-plum">{title}</span>
           <span className="t-small block text-plum-3">
             {summary}
             {warn && <span className="ml-2 text-pink-ink">· {warn}</span>}
