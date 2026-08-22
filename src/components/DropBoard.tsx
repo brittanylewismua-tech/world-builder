@@ -59,7 +59,7 @@ export function ShopBanner({
           className="flex h-24 w-full items-center justify-center sm:h-32"
           style={{ background: bannerColor(world.name || "world") }}
         >
-          <span className="display px-6 text-center text-[clamp(1.25rem,3vw,2rem)] text-white/95">
+          <span className="px-6 text-center text-[clamp(1.25rem,3vw,2rem)] font-extrabold tracking-tight text-white/95">
             {world.name || "Your Shop"}
           </span>
         </div>
@@ -70,7 +70,7 @@ export function ShopBanner({
           <button
             onClick={() => input.current?.click()}
             disabled={busy}
-            className="absolute bottom-2.5 right-2.5 rounded-xl bg-plum/75 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition hover:bg-plum group-hover:opacity-100"
+            className="absolute bottom-2.5 right-2.5 rounded-xl bg-black/75 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition hover:bg-black group-hover:opacity-100"
           >
             {busy
               ? "Uploading…"
@@ -130,7 +130,7 @@ function Tile({
           {!frozen && (
             <button
               onClick={() => onRemove(item)}
-              className="absolute inset-x-0 bottom-0 bg-plum/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
+              className="absolute inset-x-0 bottom-0 bg-black/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
             >
               Remove
             </button>
@@ -153,7 +153,7 @@ function Tile({
             : "border-black/18 text-black/25 hover:border-black/40 hover:bg-black/[0.03]"
         }`}
       >
-        <span className="display text-xl">
+        <span className="text-xl font-extrabold tracking-tight">
           {busy ? "…" : String(slot).padStart(2, "0")}
         </span>
       </button>
@@ -195,7 +195,7 @@ export default function DropBoard({
 
   return (
     <div>
-      <div className="card-flush overflow-hidden">
+      <div className="card overflow-hidden p-0">
         <ShopBanner
           world={world}
           onUpload={frozen ? undefined : onUploadBanner}
@@ -207,10 +207,10 @@ export default function DropBoard({
         >
           <div
             className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-5 pt-5 ${
-              dark ? "text-white" : "text-plum"
+              dark ? "text-white" : "text-ink"
             }`}
           >
-            <span className="display text-xl">
+            <span className="text-xl font-extrabold tracking-tight">
               Drop {String(drop.number).padStart(2, "0")}
             </span>
             <span
@@ -228,7 +228,8 @@ export default function DropBoard({
               className={`h-1 w-full overflow-hidden rounded-full ${dark ? "bg-white/12" : "bg-black/8"}`}
             >
               <div
-                className="h-full rounded-full bg-pink transition-all duration-300"
+                className="h-full rounded-full transition-all duration-300"
+                
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -252,7 +253,7 @@ export default function DropBoard({
 
       {onBackground && !frozen && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="t-small text-plum-3">Board</span>
+          <span className="t-small text-ink-3">Board</span>
           {BACKGROUNDS.map((b) => (
             <button
               key={b.hex}
@@ -260,8 +261,8 @@ export default function DropBoard({
               title={b.name}
               className={`h-6 w-6 rounded-full border transition ${
                 world.boardBackground === b.hex
-                  ? "border-plum ring-2 ring-pink ring-offset-1"
-                  : "border-line-strong hover:border-plum-3"
+                  ? "border-black ring-2 ring-accent ring-offset-1"
+                  : "border-black/25 hover:border-ink-3"
               }`}
               style={{ background: b.hex }}
             />

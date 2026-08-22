@@ -13,7 +13,6 @@ import {
   type Drop,
 } from "@/lib/drops";
 import type { World } from "@/lib/world";
-import { Globe } from "@/components/Globe";
 import { Page, PageHeader, Empty } from "@/components/ui";
 
 export default function History() {
@@ -43,7 +42,7 @@ function HistoryBody({ world }: { world: World }) {
   if (!drops)
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Globe size={64} spin className="opacity-70" />
+        <img src="/globe.png" alt="" className="globe-turn h-12 w-12 opacity-70" />
       </div>
     );
 
@@ -54,7 +53,7 @@ function HistoryBody({ world }: { world: World }) {
       <main className="mx-auto max-w-5xl px-5 py-8 md:px-8">
         <button
           onClick={() => setOpen(null)}
-          className="t-small mb-5 text-plum-3 transition hover:text-plum"
+          className="t-small mb-5 text-ink-3 transition hover:text-ink"
         >
           ← All drops
         </button>
@@ -65,7 +64,7 @@ function HistoryBody({ world }: { world: World }) {
           onUploadMockup={async () => {}}
           onRemoveMockup={async () => {}}
         />
-        <p className="t-small mt-3 text-plum-3">
+        <p className="t-small mt-3 text-ink-3">
           {STATUS_LABEL[open.status]} · {ageNote(open)}
         </p>
       </main>
@@ -91,13 +90,13 @@ function HistoryBody({ world }: { world: World }) {
             <button
               key={d.id}
               onClick={() => setOpen(d)}
-              className="card block w-full p-4 text-left transition hover:border-pink"
+              className="card card-hover block w-full p-4 text-left"
             >
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="display text-lg text-plum">
+                <span className="text-lg font-extrabold tracking-tight">
                   DROP {String(d.number).padStart(2, "0")}
                 </span>
-                <span className="t-small text-plum-3">
+                <span className="t-small text-ink-3">
                   {formatDropDate(d.publishDate)}
                 </span>
                 <span className="chip chip-accent ml-auto">
@@ -119,13 +118,13 @@ function HistoryBody({ world }: { world: World }) {
                   ) : (
                     <div
                       key={i}
-                      className="h-14 w-14 shrink-0 rounded-md border border-dashed border-line"
+                      className="h-14 w-14 shrink-0 rounded-md border border-dashed border-black/12"
                     />
                   );
                 })}
               </div>
 
-              <p className="t-small mt-3 text-plum-3">
+              <p className="t-small mt-3 text-ink-3">
                 {d.items.length} of {world.slotsPerDrop} · {ageNote(d)}
               </p>
             </button>

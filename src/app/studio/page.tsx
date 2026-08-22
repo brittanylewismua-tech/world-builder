@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -15,7 +16,6 @@ import {
   type DropItem,
 } from "@/lib/drops";
 import type { World } from "@/lib/world";
-import { Globe } from "@/components/Globe";
 import { ErrorNote } from "@/components/ui";
 
 export default function Studio() {
@@ -102,13 +102,13 @@ function StudioBody({ world }: { world: World }) {
   if (loading)
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Globe size={64} spin className="opacity-70" />
+        <img src="/globe.png" alt="" className="globe-turn h-12 w-12 opacity-70" />
       </div>
     );
 
   if (!drop)
     return (
-      <p className="t-body mx-auto max-w-xl px-6 py-20 text-plum-2">
+      <p className="t-body mx-auto max-w-xl px-6 py-20 text-ink-2">
         {err || "No drop board yet."}
       </p>
     );
@@ -120,7 +120,7 @@ function StudioBody({ world }: { world: World }) {
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="eyebrow text-pink-ink">Drop Studio</span>
+        <span className="eyebrow text-accent-ink">Drop Studio</span>
         {world.paused && (
           <span className="chip chip-accent">Schedule paused</span>
         )}

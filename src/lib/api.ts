@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase, ASSET_BUCKET } from "./supabase";
+import { DEFAULT_THEME, type RailStyle, type Theme, type WallpaperKind } from "./theme";
 import {
   EMPTY_AFFINITY,
   type Affinity,
@@ -42,11 +43,11 @@ export function downscale(file: File, max = 1200): Promise<Blob> {
   });
 }
 
-async function uploadAsset(file: File, folder: string): Promise<string> {
+export async function uploadAsset(file: File, folder: string): Promise<string> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error("Not signed in.");
-  const blob = await downscale(file);
+  const blob = await downscale(file, folder === "wallpaper" ? 2200 : 1200);
   // Storage policies key off the first path segment being the user id.
   const path = `${uid}/${folder}/${crypto.randomUUID()}.jpg`;
   const { error } = await supabase.storage
@@ -90,6 +91,12 @@ interface WorldRow {
   slots_per_drop: number;
   drop_weekday: number;
   paused: boolean;
+  theme_preset: string;
+  theme_accent: string;
+  theme_rail: RailStyle;
+  wallpaper_kind: WallpaperKind;
+  wallpaper_path: string | null;
+  wallpaper_opacity: number;
 }
 
 /** The seller's world, or null if they have not created one yet. */
@@ -97,7 +104,7 @@ export async function loadWorld(): Promise<World | null> {
   const { data: rows, error } = await supabase
     .from("wb_worlds")
     .select(
-      "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused",
+      "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused, theme_preset, theme_accent, theme_rail, wallpaper_kind, wallpaper_path, wallpaper_opacity",
     )
     .order("created_at", { ascending: true })
     .limit(1);
@@ -137,6 +144,15 @@ export async function loadWorld(): Promise<World | null> {
     slotsPerDrop: row.slots_per_drop,
     dropWeekday: row.drop_weekday,
     paused: row.paused,
+    theme: {
+      preset: row.theme_preset ?? DEFAULT_THEME.preset,
+      accent: row.theme_accent ?? DEFAULT_THEME.accent,
+      rail: row.theme_rail ?? DEFAULT_THEME.rail,
+      wallpaperKind: row.wallpaper_kind ?? DEFAULT_THEME.wallpaperKind,
+      wallpaperPath: row.wallpaper_path,
+      wallpaperSrc: await sign(row.wallpaper_path),
+      wallpaperOpacity: row.wallpaper_opacity ?? DEFAULT_THEME.wallpaperOpacity,
+    },
     subNiches: (niches ?? []) as World["subNiches"],
     areas: (areas ?? []) as World["areas"],
     visualReferences: refRows.map((r) => ({
@@ -159,6 +175,7 @@ export async function createWorld(): Promise<World> {
 }
 
 type WorldPatch = Partial<{
+  theme: Theme;
   name: string;
   established: boolean;
   affinity: Affinity;
@@ -178,6 +195,14 @@ export async function saveWorld(id: string, patch: WorldPatch) {
   if (patch.slotsPerDrop !== undefined) row.slots_per_drop = patch.slotsPerDrop;
   if (patch.dropWeekday !== undefined) row.drop_weekday = patch.dropWeekday;
   if (patch.paused !== undefined) row.paused = patch.paused;
+  if (patch.theme !== undefined) {
+    row.theme_preset = patch.theme.preset;
+    row.theme_accent = patch.theme.accent;
+    row.theme_rail = patch.theme.rail;
+    row.wallpaper_kind = patch.theme.wallpaperKind;
+    row.wallpaper_path = patch.theme.wallpaperPath;
+    row.wallpaper_opacity = patch.theme.wallpaperOpacity;
+  }
   const { error } = await supabase.from("wb_worlds").update(row).eq("id", id);
   if (error) throw new Error(error.message);
 }
@@ -254,5 +279,12 @@ export async function setShopBanner(worldId: string, file: File) {
     .update({ shop_banner: path })
     .eq("id", worldId);
   if (error) throw new Error(error.message);
+  return { path, src: (await sign(path)) ?? "" };
+}
+
+
+/** Upload a wallpaper. Wide and generous, but still downscaled and capped. */
+export async function setWallpaper(file: File) {
+  const path = await uploadAsset(file, "wallpaper");
   return { path, src: (await sign(path)) ?? "" };
 }

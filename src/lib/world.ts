@@ -1,3 +1,5 @@
+import type { Theme } from "./theme";
+
 // The World Profile — the foundational record established through WORLD.
 //
 // SPEC: "This is not a one-time onboarding wizard that disappears forever.
@@ -96,6 +98,8 @@ export interface World {
   subNiches: SubNiche[];
   areas: WorldArea[];
   visualReferences: VisualReference[];
+  /** How the seller has dressed their portal. */
+  theme: Theme;
 }
 
 /** SPEC: "Minimum viable world = at least 6 independently validated sub-niche keywords" */

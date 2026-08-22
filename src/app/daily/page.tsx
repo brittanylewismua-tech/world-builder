@@ -1,10 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
-import { Globe } from "@/components/Globe";
-import { Page, Card, Empty, ErrorNote } from "@/components/ui";
+import { Page, Card, Empty, ErrorNote, Dots } from "@/components/ui";
 import {
   formatIssueDate,
   generateIssue,
@@ -78,14 +78,19 @@ function DailyBody({ world }: { world: World }) {
   return (
     <Page width="reading">
       {/* masthead */}
-      <header className="mb-6 border-b border-line pb-5">
+      <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
-          <span className="eyebrow text-pink-ink">World Daily</span>
-          <span className="t-small text-plum-3">{formatIssueDate(date)}</span>
+          <span className="chip chip-solid">world daily</span>
+          <span className="t-small text-ink-3">{formatIssueDate(date)}</span>
         </div>
-        <h1 className="t-h1 mt-3 text-plum">
-          {greeting()}. Here&apos;s what&apos;s happening in your world.
+        <h1 className="t-h1 mt-3 text-ink">
+          {greeting().toLowerCase()} — here&apos;s what your customer is{" "}
+          <span className="italic" style={{ color: "var(--accent-ink)" }}>
+            obsessed with
+          </span>{" "}
+          today
         </h1>
+        <span className="rule-accent mt-4" />
         {!noAreas && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {world.areas.map((a) => (
@@ -113,9 +118,9 @@ function DailyBody({ world }: { world: World }) {
 
       {researching && (
         <Card className="flex flex-col items-center py-14 text-center">
-          <Globe size={64} spin />
-          <p className="t-h3 mt-5 text-plum">Reading your world…</p>
-          <p className="t-small mx-auto mt-1.5 max-w-sm text-plum-2">
+          <img src="/globe.png" alt="" className="globe-turn h-14 w-14 opacity-80" />
+          <p className="t-h3 mt-5 text-ink">Reading your world…</p>
+          <p className="t-small mx-auto mt-1.5 max-w-sm text-ink-2">
             Searching {world.areas.length} area
             {world.areas.length === 1 ? "" : "s"}, then throwing out everything
             that is not genuinely current. This takes a minute.
@@ -149,33 +154,38 @@ function DailyBody({ world }: { world: World }) {
         <>
           <div className="space-y-4">
             {items.map((it, i) => (
-              <Card key={it.id} className="rise">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="t-small font-semibold tabular-nums text-plum-3">
+              <Card key={it.id} className="rise" hover pad={false}>
+                <div className="flex items-center justify-between px-5 pt-4 md:px-6">
+                  <Dots />
+                  <span className="chip chip-solid">{it.area}</span>
+                </div>
+                <div className="flex gap-4 px-5 pb-5 pt-4 md:px-6">
+                  <span className="numeral shrink-0 text-[2.4rem]">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="eyebrow text-pink-ink">{it.area}</span>
-                </div>
-                <h2 className="t-h2 text-plum">{it.headline}</h2>
-                <p className="t-body mt-2 text-plum-2">{it.body}</p>
-                <div className="mt-4 flex flex-wrap gap-1.5 border-t border-line pt-3">
+                  <div className="min-w-0">
+                <h2 className="t-h2 text-ink">{it.headline}</h2>
+                <p className="t-body mt-2 text-ink-2">{it.body}</p>
+                <div className="mt-4 flex flex-wrap gap-1.5">
                   {it.sources.map((s, j) => (
                     <a
                       key={j}
                       href={s.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="chip transition hover:border-pink hover:text-pink-ink"
+                      className="chip chip-solid transition hover:opacity-80"
                     >
                       {hostOf(s.url)} ↗
                     </a>
                   ))}
                 </div>
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
 
-          <p className="t-small mt-5 text-plum-3">
+          <p className="t-small mt-5 text-ink-3">
             Signals only. Nothing here is a product instruction and none of it is
             sales data — what any of it means for your shop is your call. Every
             link came back from a real search; anything unverifiable was dropped.
@@ -184,7 +194,7 @@ function DailyBody({ world }: { world: World }) {
                 {" "}
                 <button
                   onClick={research}
-                  className="font-medium text-plum-2 underline underline-offset-2 transition hover:text-plum"
+                  className="font-medium text-ink-2 underline underline-offset-2 transition hover:text-ink"
                 >
                   Re-research today
                 </button>
@@ -195,8 +205,8 @@ function DailyBody({ world }: { world: World }) {
       )}
 
       {dates.length > 1 && (
-        <div className="mt-8 border-t border-line pt-5">
-          <p className="eyebrow mb-3 text-plum-3">Back issues</p>
+        <div className="mt-8 border-t border-black/12 pt-5">
+          <p className="eyebrow mb-3 text-ink-3">Back issues</p>
           <div className="flex flex-wrap gap-1.5">
             {dates.map((d) => (
               <button
@@ -204,8 +214,8 @@ function DailyBody({ world }: { world: World }) {
                 onClick={() => open(d)}
                 className={`chip transition ${
                   d === date
-                    ? "border-plum bg-plum text-white"
-                    : "hover:border-plum-3"
+                    ? "border-black bg-black text-white"
+                    : "hover:border-ink-3"
                 }`}
               >
                 {formatIssueDate(d)}

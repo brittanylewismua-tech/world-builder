@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Shell from "@/components/Shell";
-import { Sparkle } from "@/components/Globe";
+import { Star, Dots } from "@/components/ui";
 import { loadIssue, todayISO, type DailyItem } from "@/lib/daily";
 import type { World } from "@/lib/world";
 
@@ -89,13 +89,14 @@ function CustomerBody({ world }: { world: World }) {
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-8 md:px-8">
-      <div className="mb-6 border-b border-line pb-5">
-        <div className="flex items-center gap-1.5 text-pink-ink">
-          <Sparkle size={10} />
+      <div className="mb-6 border-b-2 border-black pb-5">
+        <div className="flex items-center gap-1.5 text-accent-ink">
+          <Star size={9} className="text-accent" />
           <span className="eyebrow">Talk to your customer</span>
         </div>
-        <h1 className="t-h1 mt-2 text-plum">World: {world.name}</h1>
-        <p className="t-small mt-2 text-plum-2">
+        <h1 className="t-h1 mt-2 text-ink">talking to <span className="italic" style={{ color: "var(--accent-ink)" }}>{world.name.toLowerCase()}</span></h1>
+        <span className="rule-accent mt-3" />
+        <p className="t-small mt-2 text-ink-2">
           A research-informed simulation of someone who lives in this world. She
           is one plausible person, not market truth — useful for thinking from
           inside her life, never as evidence.
@@ -111,7 +112,7 @@ function CustomerBody({ world }: { world: World }) {
               <button
                 key={p}
                 onClick={() => send(p)}
-                className="rounded-xl border border-line bg-white px-3.5 py-3 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
+                className="card card-hover px-3.5 py-3 text-left text-[13px] font-medium leading-snug"
               >
                 {p}
               </button>
@@ -123,21 +124,21 @@ function CustomerBody({ world }: { world: World }) {
           m.role === "user" ? (
             <p
               key={i}
-              className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-plum px-4 py-2.5 text-sm leading-relaxed text-white"
+              className="ml-auto max-w-[80%] rounded-xl border-2 border-black bg-black px-4 py-2.5 text-sm font-medium leading-relaxed text-white shadow-[3px_3px_0_var(--accent)]"
             >
               {m.content}
             </p>
           ) : (
             <p
               key={i}
-              className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-line bg-white px-4 py-3 text-[15px] leading-relaxed text-plum"
+              className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-black/12 bg-white px-4 py-3 text-[15px] leading-relaxed text-ink"
             >
               {m.content}
             </p>
           ),
         )}
 
-        {busy && <p className="pulse-soft t-small text-pink-ink">typing…</p>}
+        {busy && <p className="pulse-soft t-small text-accent-ink">typing…</p>}
         {err && (
           <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-4 py-3 text-sm text-[#8a2020]">
             {err}
@@ -147,13 +148,13 @@ function CustomerBody({ world }: { world: World }) {
       </div>
 
       <div className="sticky bottom-4">
-        <div className="card flex gap-2 p-2">
+        <div className="card flex gap-2 p-2 shadow-[4px_4px_0_var(--accent)]">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(draft)}
             placeholder="Ask her anything…"
-            className="w-full bg-transparent px-3 py-2 text-sm text-plum outline-none placeholder:text-plum-3"
+            className="w-full bg-transparent px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-3"
           />
           <button
             onClick={() => send(draft)}
@@ -166,7 +167,7 @@ function CustomerBody({ world }: { world: World }) {
         {msgs.length > 0 && (
           <button
             onClick={() => setMsgs([])}
-            className="t-small mt-3 text-plum-3 transition hover:text-plum"
+            className="t-small mt-3 text-ink-3 transition hover:text-ink"
           >
             Start over
           </button>

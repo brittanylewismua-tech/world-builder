@@ -14,7 +14,8 @@ import {
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
 import { Globe } from "@/components/Globe";
-import AmbientGlobe from "@/components/AmbientGlobe";
+import { ThemeStyle, Wallpaper } from "@/components/Wallpaper";
+import { DEFAULT_THEME } from "@/lib/theme";
 import { ErrorNote, Note } from "@/components/ui";
 
 const STEPS = [
@@ -142,13 +143,14 @@ function SetupBody({
 
   return (
     <main className="relative min-h-dvh">
-      <AmbientGlobe />
+      <ThemeStyle theme={world.theme ?? DEFAULT_THEME} />
+      <Wallpaper theme={world.theme ?? DEFAULT_THEME} />
       {/* slim brand bar so setup still feels like the product */}
-      <div className="relative z-10 border-b border-line bg-white/78 backdrop-blur">
+      <div className="relative z-10 border-b border-black/12 bg-white/78 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-5 md:px-8">
           <Globe size={22} />
-          <span className="display text-[1.05rem] text-plum">World Builder</span>
-          <span className="t-small ml-auto text-plum-3">
+          <span className="text-[1.05rem] font-extrabold tracking-tight">world builder</span>
+          <span className="t-small ml-auto text-ink-3">
             Step {step + 1} of {STEPS.length}
           </span>
         </div>
@@ -166,19 +168,19 @@ function SetupBody({
                   onClick={() => done && setStep(i)}
                   disabled={!done}
                   title={x.title}
-                  className={`display flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm transition ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-black text-sm font-extrabold transition ${
                     now
-                      ? "bg-plum text-white"
+                      ? "bg-black text-white"
                       : done
-                        ? "bg-pink text-plum hover:opacity-85"
-                        : "bg-white text-plum-3"
+                        ? "bg-accent text-ink hover:opacity-85"
+                        : "bg-white text-ink-3"
                   }`}
                 >
                   {x.letter}
                 </button>
                 {i < STEPS.length - 1 && (
                   <span
-                    className={`h-px flex-1 ${done ? "bg-pink" : "bg-line"}`}
+                    className={`h-px flex-1 ${done ? "bg-accent" : "bg-line"}`}
                   />
                 )}
               </li>
@@ -187,11 +189,11 @@ function SetupBody({
         </ol>
 
         <div className="mb-6">
-          <span className="eyebrow text-pink-ink">
+          <span className="eyebrow text-accent-ink">
             {s.letter} — {s.title}
           </span>
-          <h1 className="t-h1 mt-2 text-plum">{s.heading}</h1>
-          <p className="t-body mt-2 max-w-xl text-plum-2">{s.line}</p>
+          <h1 className="t-h1 mt-2 text-ink">{s.heading}</h1>
+          <p className="t-body mt-2 max-w-xl text-ink-2">{s.line}</p>
         </div>
 
         {err && <ErrorNote>{err}</ErrorNote>}
@@ -273,7 +275,7 @@ function SetupBody({
         {(step === 1 || step === 2) && (
           <button
             onClick={() => setStep(step + 1)}
-            className="t-small mt-3 text-plum-3 transition hover:text-plum"
+            className="t-small mt-3 text-ink-3 transition hover:text-ink"
           >
             Skip for now — you can fill this in later
           </button>

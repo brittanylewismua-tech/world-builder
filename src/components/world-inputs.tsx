@@ -66,38 +66,38 @@ export function SubNicheInput({
 
       {/* progress toward the floor, stated plainly */}
       <div className="mt-4 flex items-center gap-3">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-sunk">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#f4f2f1]">
           <div
-            className="h-full rounded-full bg-pink transition-all duration-300"
+            className="h-full rounded-full bg-accent transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="t-small whitespace-nowrap text-plum-2">
+        <span className="t-small whitespace-nowrap text-ink-2">
           {remaining > 0
             ? `${subNiches.length} of ${MIN_SUB_NICHES}`
             : `${subNiches.length} added`}
         </span>
       </div>
-      <p className="t-small mt-1.5 text-plum-3">
+      <p className="t-small mt-1.5 text-ink-3">
         {remaining > 0
           ? `${remaining} more to reach the minimum of ${MIN_SUB_NICHES}.`
           : "Minimum reached. There is no cap — keep adding as you validate."}
       </p>
 
       {subNiches.length > 0 && (
-        <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line">
+        <ul className="mt-5 divide-y divide-black/10 overflow-hidden rounded-2xl border border-black/12">
           {subNiches.map((s, i) => (
             <li
               key={s.id}
               className="group flex items-center gap-3 bg-white px-4 py-2.5"
             >
-              <span className="t-small w-5 shrink-0 tabular-nums text-plum-3">
+              <span className="t-small w-5 shrink-0 tabular-nums text-ink-3">
                 {i + 1}
               </span>
-              <span className="t-body flex-1 text-plum">{s.keyword}</span>
+              <span className="t-body flex-1 text-ink">{s.keyword}</span>
               <button
                 onClick={() => onRemove(s.id)}
-                className="t-small text-plum-3 opacity-0 transition hover:text-pink-ink group-hover:opacity-100"
+                className="t-small text-ink-3 opacity-0 transition hover:text-accent-ink group-hover:opacity-100"
               >
                 Remove
               </button>
@@ -132,8 +132,8 @@ export function AffinityInput({
         {AFFINITY_QUESTIONS.map((q) => {
           const value = affinity[q.key];
           return (
-            <div key={q.key} className="rounded-2xl border border-line bg-white p-4">
-              <p className="t-h3 text-plum">{q.question}</p>
+            <div key={q.key} className="rounded-2xl border border-black/12 bg-white p-4">
+              <p className="t-h3 text-ink">{q.question}</p>
               <div className="mt-3 flex gap-1">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                   <button
@@ -141,8 +141,8 @@ export function AffinityInput({
                     onClick={() => onChange({ ...affinity, [q.key]: n })}
                     className={`h-9 flex-1 rounded-lg text-sm font-semibold tabular-nums transition ${
                       value === n
-                        ? "bg-plum text-white"
-                        : "bg-white text-plum-2 hover:bg-pink-soft"
+                        ? "bg-black text-white"
+                        : "bg-white text-ink-2 hover:bg-accent-soft"
                     }`}
                   >
                     {n}
@@ -150,8 +150,8 @@ export function AffinityInput({
                 ))}
               </div>
               <div className="mt-2 flex justify-between">
-                <span className="t-small text-plum-3">{q.low}</span>
-                <span className="t-small text-plum-3">{q.high}</span>
+                <span className="t-small text-ink-3">{q.low}</span>
+                <span className="t-small text-ink-3">{q.high}</span>
               </div>
             </div>
           );
@@ -201,11 +201,11 @@ export function VisualCalibrationInput({
             <img
               src={r.src}
               alt=""
-              className="h-full w-full rounded-xl border border-line object-cover"
+              className="h-full w-full rounded-xl border border-black/12 object-cover"
             />
             <button
               onClick={() => onRemove(r)}
-              className="absolute inset-x-0 bottom-0 rounded-b-xl bg-plum/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
+              className="absolute inset-x-0 bottom-0 rounded-b-xl bg-black/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
             >
               Remove
             </button>
@@ -215,7 +215,7 @@ export function VisualCalibrationInput({
         <button
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-line-strong text-plum-3 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink disabled:opacity-40"
+          className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-black/25 text-ink-3 transition hover:border-accent hover:bg-accent-soft hover:text-accent-ink disabled:opacity-40"
         >
           <span className="text-xl leading-none">{busy ? "…" : "+"}</span>
           <span className="text-[11px] font-medium">
@@ -233,7 +233,7 @@ export function VisualCalibrationInput({
         className="hidden"
       />
 
-      <p className="t-small mt-3 text-plum-3">
+      <p className="t-small mt-3 text-ink-3">
         {refs.length} reference{refs.length === 1 ? "" : "s"}. Replace or add
         whenever your eye changes.
       </p>
@@ -303,7 +303,7 @@ export function AreasInput({
               {a.name}
               <button
                 onClick={() => onRemove(a.id)}
-                className="text-pink-ink/55 transition hover:text-pink-ink"
+                className="text-accent-ink/55 transition hover:text-accent-ink"
                 aria-label={`Remove ${a.name}`}
               >
                 ×

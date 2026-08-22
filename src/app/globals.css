@@ -1,161 +1,166 @@
 @import "tailwindcss";
 
 /*
-  DESIGN SYSTEM
-  -------------
-  Black, white, pink — the World Building brand, unchanged.
+  DESIGN SYSTEM — Direction E, themeable.
 
-  What ties it to Listing Factory is structure, not palette: the same serif
-  for headings, the same sidebar, the same rounded cards, pill buttons and
-  letterspaced small-caps labels. Listing Factory carries the gradient wash;
-  World Builder stays white, because this is where the seller reads long
-  research and stares at a design wall.
+  Hard contrast: white ground, true black structure, one accent that lands as
+  a punch rather than a wash. Cards sit on a solid black offset that shifts and
+  turns accent-coloured on hover — that single detail does most of the work
+  that keeps this feeling like a tool people want to be in rather than
+  enterprise software.
 
-  Hierarchy comes from spacing and weight. The serif is for headings only —
-  never UI labels, never anything long.
+  Every accent is a CSS variable set at runtime from the seller's theme, and
+  --accent-on is computed so text on the accent is always readable no matter
+  what colour they pick.
 */
 
 @theme {
-  /* Crisp white. The brand is high-contrast and graphic, not soft editorial
-     cream — so the ground is pure white and the ink is true black. */
   --color-canvas: #ffffff;
   --color-surface: #ffffff;
   --color-sunk: #f4f2f1;
 
-  /*
-    Black, white, pink. The original branding.
-    Token names stay `plum-*` only because every component already references
-    them — the values are the neutral ramp.
-  */
+  --color-ink: #000000;
+  --color-ink-2: #46433f;
+  --color-ink-3: #8a8580;
+
+  --color-line: #e4e1de;
+  --color-line-strong: #cfcac5;
+
+  /* Legacy aliases — older components still reference these names. */
   --color-plum: #000000;
   --color-plum-2: #46433f;
   --color-plum-3: #8a8580;
 
-  /* lines — crisp, not washed */
-  --color-line: #e4e1de;
-  --color-line-strong: #cfcac5;
-
-  /* accent */
-  --color-pink: #ee6fc0;
-  --color-pink-soft: #fdeef7;
-  --color-pink-ink: #b02371;
-
-  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   --font-condensed: "Anton", "Arial Narrow", Impact, sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
 }
 
+/* Theme defaults — ThemeProvider overwrites these on :root at runtime. */
 :root {
   color-scheme: light;
+  --accent: #ee6fc0;
+  --accent-on: #000000;
+  --accent-ink: #b02371;
+  --accent-soft: #fdeef7;
+  --accent-hover: #f582cb;
 }
 
 html,
 body {
   min-height: 100%;
-  color: var(--color-plum);
+  background: var(--color-canvas);
+  color: var(--color-ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
-body {
-  background:
-    linear-gradient(rgba(238, 111, 192, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(238, 111, 192, 0.055) 1px, transparent 1px),
-    var(--color-canvas);
-  background-size: 48px 48px;
-  background-attachment: fixed;
+/* Accent utilities, since Tailwind cannot see runtime variables. */
+.bg-accent {
+  background: var(--accent);
+  color: var(--accent-on);
+}
+.bg-accent-soft {
+  background: var(--accent-soft);
+}
+.text-accent {
+  color: var(--accent);
+}
+.text-accent-ink {
+  color: var(--accent-ink);
+}
+.border-accent {
+  border-color: var(--accent);
 }
 
 /* ---------------------------------------------------------------- type */
 
-.display {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.011em;
-  line-height: 1.12;
-}
-
 .eyebrow {
-  font-family: var(--font-condensed);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-size: 0.8125rem;
+  letter-spacing: 0.16em;
+  font-size: 0.6563rem;
   line-height: 1.2;
 }
 
-/* Big graphic numerals — the other place the condensed face earns its keep. */
-.numeral {
-  font-family: var(--font-condensed);
-  letter-spacing: 0.01em;
-  line-height: 0.86;
-  font-variant-numeric: tabular-nums;
-}
-
-/* One ramp. Serif for headings, Inter for everything a person operates. */
 .t-h1 {
-  font-family: var(--font-display);
-  font-size: clamp(1.85rem, 3vw, 2.55rem);
-  font-weight: 500;
-  line-height: 1.12;
-  letter-spacing: -0.021em;
+  font-size: clamp(1.75rem, 2.9vw, 2.3rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
 }
 .t-h2 {
-  font-family: var(--font-display);
-  font-size: 1.4375rem;
-  font-weight: 500;
-  line-height: 1.28;
-  letter-spacing: -0.013em;
+  font-size: 1.28rem;
+  font-weight: 800;
+  line-height: 1.32;
+  letter-spacing: -0.02em;
 }
 .t-h3 {
   font-size: 0.9688rem;
-  font-weight: 600;
-  line-height: 1.42;
-  letter-spacing: -0.004em;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.012em;
 }
 .t-body {
-  font-size: 1.0313rem;
-  line-height: 1.66;
+  font-size: 0.9688rem;
+  line-height: 1.62;
 }
 .t-small {
   font-size: 0.8438rem;
-  line-height: 1.6;
+  line-height: 1.55;
+}
+
+/* Big graphic numerals. */
+.numeral {
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.86;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+/* Legacy: a few places still ask for .display. */
+.display {
+  font-weight: 800;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
 }
 
 /* --------------------------------------------------------------- boxes */
 
+/* The signature: hard black offset that goes accent on hover. */
 .card {
   position: relative;
   background: #fff;
-  border: 1px solid var(--color-line);
+  border: 2px solid #000;
   border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.035);
+  box-shadow: 4px 4px 0 #000;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 160ms ease;
+}
+.card-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--accent);
 }
 
-.card-flush {
-  position: relative;
+/* Quiet box for things that should not shout — inputs, nested panels. */
+.card-quiet {
   background: #fff;
-  border: 1px solid var(--color-line);
-  border-radius: 14px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  border: 1.5px solid var(--color-line);
+  border-radius: 12px;
 }
 
 .note {
-  background: var(--color-pink-soft);
-  border: 1px solid #f7d3e9;
-  border-radius: 10px;
+  background: var(--accent-soft);
+  border: 1.5px solid #00000014;
+  border-radius: 12px;
 }
 
 .rule-accent {
   display: block;
   height: 3px;
-  width: 44px;
-  background: var(--color-pink);
-  border-radius: 2px;
-}
-
-.hairline {
-  border: 1px solid var(--color-line);
+  width: 56px;
+  background: var(--accent);
 }
 
 /* ------------------------------------------------------------- controls */
@@ -163,22 +168,21 @@ body {
 .field {
   width: 100%;
   background: #fff;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 8px;
+  border: 2px solid #000;
+  border-radius: 10px;
   padding: 0.6875rem 0.875rem;
   font-size: 0.9375rem;
-  color: var(--color-plum);
+  font-weight: 500;
+  color: #000;
   outline: none;
-  transition:
-    border-color 130ms ease,
-    box-shadow 130ms ease;
+  transition: box-shadow 120ms ease;
 }
 .field::placeholder {
-  color: var(--color-plum-3);
+  color: var(--color-ink-3);
+  font-weight: 400;
 }
 .field:focus {
-  border-color: var(--color-pink);
-  box-shadow: 0 0 0 3px rgba(238, 111, 192, 0.18);
+  box-shadow: 3px 3px 0 var(--accent);
 }
 
 .btn {
@@ -186,68 +190,79 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.875rem;
-  font-weight: 620;
-  padding: 0.625rem 1.0625rem;
+  font-weight: 700;
+  padding: 0.625rem 1.125rem;
+  border: 2px solid #000;
   transition:
-    background 130ms ease,
-    border-color 130ms ease,
-    color 130ms ease,
-    box-shadow 130ms ease;
+    transform 130ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 130ms ease,
+    background 130ms ease;
   white-space: nowrap;
 }
 .btn-primary {
-  background: var(--color-plum);
+  background: #000;
   color: #fff;
-  box-shadow: none;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #262322;
+  box-shadow: 3px 3px 0 var(--accent);
 }
 .btn-accent {
-  background: var(--color-pink);
-  color: #000;
-  box-shadow: none;
-}
-.btn-accent:hover:not(:disabled) {
-  background: #f582cb;
+  background: var(--accent);
+  color: var(--accent-on);
+  box-shadow: 3px 3px 0 #000;
 }
 .btn-ghost {
   background: #fff;
-  border: 1px solid var(--color-line-strong);
-  color: var(--color-plum);
+  color: #000;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.16);
+}
+.btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 5px 5px 0 var(--accent);
+}
+.btn-accent:hover:not(:disabled) {
+  box-shadow: 5px 5px 0 #000;
 }
 .btn-ghost:hover:not(:disabled) {
-  border-color: var(--color-plum-3);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.16);
 }
 .btn:disabled {
-  opacity: 0.42;
+  opacity: 0.38;
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  border-radius: 7px;
-  border: 1px solid var(--color-line-strong);
+  border-radius: 8px;
+  border: 1.5px solid #000;
   background: #fff;
-  padding: 0.25rem 0.6875rem;
+  padding: 0.1875rem 0.625rem;
   font-size: 0.8125rem;
-  color: var(--color-plum-2);
+  font-weight: 600;
+  color: #000;
 }
 .chip-accent {
-  border-color: #f2b9dc;
-  background: var(--color-pink-soft);
-  color: var(--color-pink-ink);
+  background: var(--accent-soft);
+  border-color: #00000018;
+  color: var(--accent-ink);
+}
+.chip-solid {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+  font-weight: 500;
 }
 
 /* --------------------------------------------------------------- motion */
 
 .rise {
-  animation: rise 280ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 @keyframes rise {
   from {
@@ -263,33 +278,9 @@ body {
 .spin-slow {
   animation: spin 90s linear infinite;
 }
-
-/* Ambient globe: one turn every three minutes, plus a slow breathing drift so
-   it never feels like a spinning disc. */
 .globe-turn {
   animation: spin 180s linear infinite;
   transform-origin: 50% 50%;
-}
-.globe-drift {
-  animation: drift 26s ease-in-out infinite;
-}
-@keyframes drift {
-  0%,
-  100% {
-    transform: translate(0, -50%) scale(1);
-  }
-  50% {
-    transform: translate(-0.8vw, calc(-50% - 1.1vh)) scale(1.015);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .globe-turn,
-  .globe-drift,
-  .spin-slow,
-  .pulse-soft {
-    animation: none !important;
-  }
 }
 @keyframes spin {
   to {
@@ -310,6 +301,17 @@ body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .globe-turn,
+  .spin-slow,
+  .pulse-soft,
+  .card-hover,
+  .btn {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -318,20 +320,21 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #ddd9d6;
+  background: #d8d4d1;
   border-radius: 99px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c4bfbb;
+  background: #b8b3af;
   background-clip: content-box;
 }
 
-
-/* ---- prototype D only: the real brand aesthetic --------------------- */
+/* ---- prototype-only styles (comparison page) ------------------------ */
 .proto-d,
-.proto-d * {
+.proto-d *,
+.proto-e,
+.proto-e * {
   font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 }
 .proto-d-card {
@@ -342,13 +345,6 @@ body {
 .proto-d-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 22px 50px -20px rgba(120, 60, 100, 0.55);
-}
-
-
-/* ---- prototype E only: hard-contrast white / black / pink ----------- */
-.proto-e,
-.proto-e * {
-  font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 }
 .proto-e-card {
   box-shadow: 4px 4px 0 #000;

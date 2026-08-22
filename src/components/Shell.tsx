@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Link from "next/link";
@@ -5,29 +6,39 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
-import { Globe } from "./Globe";
-import AmbientGlobe from "./AmbientGlobe";
+import { DEFAULT_THEME, onAccent } from "@/lib/theme";
+import { ThemeStyle, Wallpaper } from "./Wallpaper";
+import { Dots, Star } from "./ui";
 
 /**
- * Sidebar shell. Same navigation structure as Listing Factory so the two
- * products read as one suite, in World Builder's own black/white/pink.
+ * The room. Rail on the left in whichever style the seller chose, wallpaper
+ * behind everything, content floating on top.
+ *
  * SPEC: "Keep navigation minimal. Do not add more top-level areas."
  */
 const NAV = [
-  { href: "/daily", label: "World Daily", hint: "Stay immersed" },
-  { href: "/studio", label: "Drop Studio", hint: "Build the work" },
-  { href: "/customer", label: "Talk to the Customer", hint: "Think like her" },
-  { href: "/history", label: "Drop History", hint: "What you released" },
-  { href: "/profile", label: "World Profile", hint: "Your foundation" },
+  { href: "/daily", label: "world daily", hint: "stay immersed" },
+  { href: "/studio", label: "drop studio", hint: "build the work" },
+  { href: "/customer", label: "talk to the customer", hint: "think like her" },
+  { href: "/history", label: "drop history", hint: "what you released" },
+  { href: "/profile", label: "world profile", hint: "your foundation" },
 ];
 
 export function Loading() {
   return (
-    <main className="relative flex min-h-dvh items-center justify-center">
-      <AmbientGlobe />
-      <Globe size={56} spin className="relative z-10 opacity-70" />
+    <main className="flex min-h-dvh items-center justify-center bg-white">
+      <img src="/globe.png" alt="" className="globe-turn h-14 w-14 opacity-70" />
     </main>
   );
+}
+
+/** Days since the world was created — "somewhere you keep coming back to". */
+function dayCount(created?: string | null) {
+  if (!created) return null;
+  const d = Math.floor(
+    (Date.now() - new Date(created).getTime()) / 86_400_000,
+  );
+  return d >= 0 ? d + 1 : null;
 }
 
 export default function Shell({
@@ -50,9 +61,21 @@ export default function Shell({
 
   if (loading || !session || !world?.established) return <Loading />;
 
+  const theme = world.theme ?? DEFAULT_THEME;
+  const rail = theme.rail;
+  const railDark = rail === "black" || (rail === "accent" && onAccent(theme.accent) === "#FFFFFF");
+
+  const railStyle =
+    rail === "black"
+      ? { background: "#000" }
+      : rail === "accent"
+        ? { background: theme.accent }
+        : { background: "#fff" };
+
+  const railText = rail === "white" ? "#000" : railDark ? "#fff" : "#000";
+  const days = dayCount(session.user?.created_at);
+
   function handleSignOut() {
-    // An anonymous account lives only in this browser. Signing out of one is
-    // not "log back in later" — it is goodbye.
     if (
       session?.user?.is_anonymous &&
       !window.confirm(
@@ -64,56 +87,89 @@ export default function Shell({
   }
 
   const aside = (
-    <div className="flex h-full flex-col px-4 py-5">
-      <Link href="/daily" className="mb-7 block px-2">
-        <div className="flex items-center gap-2">
-          <Globe size={26} />
-          <span className="display text-[1.45rem] leading-none text-plum">
-            World
+    <div
+      className="relative flex h-full flex-col overflow-hidden p-4"
+      style={{ ...railStyle, color: railText }}
+    >
+      <img
+        src="/globe.png"
+        alt=""
+        className="pointer-events-none absolute -bottom-16 -left-16 h-[250px] w-[250px] max-w-none opacity-[0.16]"
+      />
+      <Star
+        size={10}
+        className="absolute right-6 top-28"
+        style={undefined}
+      />
+
+      <div className="relative">
+        <Dots onDark={railDark} />
+        <Link href="/daily" className="mt-4 flex items-center gap-2">
+          <img src="/globe.png" alt="" className="h-7 w-7" />
+          <span className="text-[17px] font-extrabold leading-none tracking-tight">
+            world builder
           </span>
-        </div>
-        <span className="eyebrow mt-1.5 block text-plum-3">Builder</span>
-      </Link>
+        </Link>
 
-      <nav className="space-y-1">
-        {NAV.map((n) => {
-          const active = pathname === n.href;
-          return (
-            <Link
-              key={n.href}
-              href={n.href}
-              className={`block rounded-xl px-3.5 py-2.5 transition ${
-                active
-                  ? "bg-white border border-line shadow-[0_1px_2px_rgba(13,12,12,0.05)]"
-                  : "hover:bg-sunk"
-              }`}
-            >
-              <span
-                className={`block text-sm font-semibold ${active ? "text-plum" : "text-plum-2"}`}
+        <nav className="mt-6 space-y-1">
+          {NAV.map((n) => {
+            const active = pathname === n.href;
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                className="block rounded-lg px-3.5 py-2 transition"
+                style={
+                  active
+                    ? {
+                        background: rail === "accent" ? "#000" : theme.accent,
+                        color:
+                          rail === "accent" ? "#fff" : onAccent(theme.accent),
+                      }
+                    : { color: railDark ? "rgba(255,255,255,0.5)" : "#5a5651" }
+                }
               >
-                {n.label}
-              </span>
-              <span className="block text-[11.5px] text-plum-3">{n.hint}</span>
-            </Link>
-          );
-        })}
-      </nav>
+                <span className="block text-[13.5px] font-bold">{n.label}</span>
+                <span className="block text-[11px] opacity-70">{n.hint}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
-      <div className="mt-auto pt-6">
-        <div className="rounded-xl border border-line bg-white px-3.5 py-3">
-          <p className="eyebrow text-plum-3">Current world</p>
-          <p className="display mt-1 truncate text-[1.05rem] text-plum">
-            {world.name || "Untitled"}
+      <div className="relative mt-auto pt-6">
+        <div
+          className="border-t pt-4"
+          style={{
+            borderColor: railDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.12)",
+          }}
+        >
+          <p className="eyebrow opacity-45">your world</p>
+          <p className="mt-1 truncate text-[18px] font-extrabold tracking-tight">
+            {world.name || "untitled"}
           </p>
-          <p className="t-small mt-0.5 text-plum-3">
-            {world.subNiches.length} sub-niches · {world.areas.length} areas
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {days && (
+              <span
+                className="rounded-md px-2 py-0.5 text-[11px] font-bold"
+                style={{
+                  background: rail === "accent" ? "#000" : theme.accent,
+                  color: rail === "accent" ? "#fff" : onAccent(theme.accent),
+                }}
+              >
+                day {days}
+              </span>
+            )}
+            <span className="text-[11.5px] opacity-55">
+              {world.subNiches.length} niches
+            </span>
+          </div>
         </div>
         <button
           onClick={handleSignOut}
-          className="mt-3 px-2 text-[12.5px] text-plum-3 transition hover:text-plum"
+          className="mt-3 text-[12px] opacity-50 transition hover:opacity-100"
         >
-          Sign out
+          sign out
         </button>
       </div>
     </div>
@@ -121,30 +177,34 @@ export default function Shell({
 
   return (
     <div className="relative min-h-dvh lg:flex">
-      <AmbientGlobe />
+      <ThemeStyle theme={theme} />
+      <Wallpaper theme={theme} />
 
-      {/* mobile bar */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-line bg-white/85 px-4 py-3 backdrop-blur lg:hidden">
+      <div
+        className="sticky top-0 z-40 flex items-center gap-3 border-b-2 border-black px-4 py-3 lg:hidden"
+        style={{ ...railStyle, color: railText }}
+      >
         <button
           onClick={() => setNavOpen((v) => !v)}
-          className="rounded-lg border border-line-strong bg-white px-2.5 py-1.5 text-sm"
+          className="rounded-lg border-2 px-2.5 py-1 text-sm font-bold"
+          style={{ borderColor: railText }}
           aria-label="Menu"
         >
           ☰
         </button>
-        <Globe size={20} />
-        <span className="display text-[1.1rem] text-plum">
-          {world.name || "World Builder"}
+        <img src="/globe.png" alt="" className="h-5 w-5" />
+        <span className="text-[15px] font-extrabold tracking-tight">
+          {world.name || "world builder"}
         </span>
       </div>
 
       {navOpen && (
-        <div className="relative z-30 border-b border-line bg-white/92 backdrop-blur lg:hidden">
+        <div className="relative z-30 border-b-2 border-black lg:hidden">
           {aside}
         </div>
       )}
 
-      <aside className="sticky top-0 z-20 hidden h-dvh w-[264px] shrink-0 border-r border-line bg-white/88 backdrop-blur-xl lg:block">
+      <aside className="sticky top-0 z-20 hidden h-dvh w-[248px] shrink-0 border-r-2 border-black lg:block">
         {aside}
       </aside>
 
@@ -164,17 +224,20 @@ export function NotBuiltYet({
   what: string[];
 }) {
   return (
-    <div className="mx-auto max-w-2xl px-6 py-16">
-      <span className="eyebrow text-pink-ink">{phase}</span>
-      <h1 className="t-h1 mt-2 text-plum">{title}</h1>
-      <p className="t-body mt-3 text-plum-2">
+    <div className="relative z-10 mx-auto max-w-2xl px-6 py-14">
+      <span className="chip chip-solid">{phase}</span>
+      <h1 className="t-h1 mt-3">{title}</h1>
+      <span className="rule-accent mt-3" />
+      <p className="t-body mt-4 text-ink-2">
         Not built yet. Specced, prioritised, and next in line. When it lands it
         will do exactly this:
       </p>
       <ul className="mt-5 space-y-2.5">
         {what.map((w, i) => (
-          <li key={i} className="t-body flex gap-3 text-plum-2">
-            <span className="text-pink-ink">—</span>
+          <li key={i} className="t-body flex gap-3 text-ink-2">
+            <span className="numeral text-[1.1rem]">
+              {String(i + 1).padStart(2, "0")}
+            </span>
             {w}
           </li>
         ))}

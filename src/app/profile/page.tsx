@@ -12,8 +12,10 @@ import {
 } from "@/components/world-inputs";
 import { worldActions } from "@/lib/worldActions";
 import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
+import Customiser from "@/components/Customiser";
+import { PRESETS } from "@/lib/theme";
 
-type ModuleKey = "demand" | "connection" | "visual" | "areas";
+type ModuleKey = "demand" | "connection" | "visual" | "areas" | "look";
 
 /**
  * SPEC: "Each module can be revisited independently. Do not force the seller to
@@ -45,7 +47,7 @@ function ProfileBody({ world }: { world: World }) {
       {err && <ErrorNote>{err}</ErrorNote>}
 
       <div className="mb-6">
-        <label className="eyebrow mb-1.5 block text-plum-3">World name</label>
+        <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
         <input
           value={world.name}
           onChange={(e) => patch({ name: e.target.value })}
@@ -114,6 +116,25 @@ function ProfileBody({ world }: { world: World }) {
         </Module>
 
         <Module
+          letter="★"
+          title="Make It Yours"
+          summary={
+            PRESETS.find((p) => p.id === world.theme.preset)?.name ??
+            "Custom look"
+          }
+          open={open === "look"}
+          onToggle={() => toggle("look")}
+          preview={
+            <span
+              className="h-6 w-6 rounded-md border-2 border-black"
+              style={{ background: world.theme.accent }}
+            />
+          }
+        >
+          <Customiser world={world} patch={patch} onError={setErr} />
+        </Module>
+
+        <Module
           letter="L"
           title="Active World Areas"
           summary={
@@ -166,32 +187,32 @@ function Module({
   preview?: React.ReactNode;
 }) {
   return (
-    <section className={`card overflow-hidden ${open ? "ring-1 ring-pink" : ""}`}>
+    <section className={`card overflow-hidden ${open ? "ring-1 ring-accent" : ""}`}>
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-sunk"
+        className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-[#f4f2f1]"
       >
         <span
           className={`display flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm ${
-            open ? "bg-plum text-white" : "bg-pink-soft text-pink-ink"
+            open ? "bg-black text-white" : "bg-accent-soft text-accent-ink"
           }`}
         >
           {letter}
         </span>
         <span className="min-w-0 flex-1 pr-3">
-          <span className="t-h3 block whitespace-nowrap text-plum">{title}</span>
-          <span className="t-small block text-plum-3">
+          <span className="t-h3 block whitespace-nowrap text-ink">{title}</span>
+          <span className="t-small block text-ink-3">
             {summary}
-            {warn && <span className="ml-2 text-pink-ink">· {warn}</span>}
+            {warn && <span className="ml-2 text-accent-ink">· {warn}</span>}
           </span>
         </span>
         {!open && preview}
-        <span className="shrink-0 text-lg leading-none text-plum-3">
+        <span className="shrink-0 text-lg leading-none text-ink-3">
           {open ? "−" : "+"}
         </span>
       </button>
       {open && (
-        <div className="rise border-t border-line p-5 md:p-6">{children}</div>
+        <div className="rise border-t border-black/12 p-5 md:p-6">{children}</div>
       )}
     </section>
   );

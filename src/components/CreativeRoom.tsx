@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
 import { formatDropDate } from "@/lib/drops";
-import { Sparkle } from "./Globe";
+import { Star, Dots } from "./ui";
 
 interface Msg {
   role: "user" | "assistant";
@@ -112,10 +112,10 @@ export default function CreativeRoom({
 
   return (
     <div className="card flex h-full flex-col overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <Sparkle size={10} className="text-pink-ink" />
-        <span className="eyebrow text-pink-ink">Creative Room</span>
-        <span className="ml-auto text-[11px] text-plum-3">
+      <div className="flex items-center gap-2 border-b-2 border-black px-4 py-3">
+        <Star size={9} className="text-accent" />
+        <span className="eyebrow">creative room</span>
+        <span className="ml-auto text-[11px] text-ink-3">
           Drop {String(drop.number).padStart(2, "0")} · {drop.items.length}/
           {world.slotsPerDrop}
         </span>
@@ -124,7 +124,7 @@ export default function CreativeRoom({
       <div className="min-h-[300px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {msgs.length === 0 && (
           <div>
-            <p className="t-small text-plum-2">
+            <p className="t-small text-ink-2">
               I can see the board and everything in your World Profile. Talk to
               me while you look at it.
             </p>
@@ -133,7 +133,7 @@ export default function CreativeRoom({
                 <button
                   key={o}
                   onClick={() => send(o)}
-                  className="block w-full rounded-xl border border-line bg-white px-3 py-2 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
+                  className="block w-full rounded-lg border-2 border-black bg-white px-3 py-2 text-left text-[13px] font-medium leading-snug shadow-[2px_2px_0_rgba(0,0,0,0.15)] transition hover:shadow-[3px_3px_0_var(--accent)]"
                 >
                   {o}
                 </button>
@@ -146,14 +146,14 @@ export default function CreativeRoom({
           m.role === "user" ? (
             <p
               key={i}
-              className="ml-6 rounded-xl bg-white px-3 py-2 text-sm leading-relaxed text-plum"
+              className="ml-6 rounded-lg border-2 border-black bg-black px-3 py-2 text-sm font-medium leading-relaxed text-white"
             >
               {m.content}
             </p>
           ) : (
             <div
               key={i}
-              className="whitespace-pre-wrap text-sm leading-relaxed text-plum-2"
+              className="whitespace-pre-wrap text-sm leading-relaxed text-ink-2"
             >
               {m.content}
             </div>
@@ -161,7 +161,7 @@ export default function CreativeRoom({
         )}
 
         {busy && (
-          <p className="pulse-soft t-small text-pink-ink">Looking at the board…</p>
+          <p className="pulse-soft t-small text-accent-ink">Looking at the board…</p>
         )}
         {err && (
           <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-3 py-2 text-sm text-[#8a2020]">
@@ -171,7 +171,7 @@ export default function CreativeRoom({
         <div ref={endRef} />
       </div>
 
-      <div className="border-t border-line p-3">
+      <div className="border-t-2 border-black p-3">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

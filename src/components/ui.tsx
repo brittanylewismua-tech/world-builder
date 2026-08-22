@@ -1,13 +1,57 @@
-import { Sparkle } from "./Globe";
+/* eslint-disable @next/next/no-img-element */
 
 /**
- * Layout primitives. Every surface uses these so padding, gutters and type
- * ramp stay identical across the app — the research point that a single
- * spacing scale and one type ramp is what makes pages feel native to
- * each other.
+ * Layout kit for Direction E. One card style, one spacing scale, one type
+ * ramp — every accent comes from the theme variables so the seller's colour
+ * flows through without any component knowing about it.
  */
 
-/** Standard page frame. `width` controls the reading measure. */
+/** The window-dot motif from the brand, recoloured onto the palette. */
+export function Dots({ onDark = false }: { onDark?: boolean }) {
+  return (
+    <div className="flex shrink-0 gap-1.5">
+      <span
+        className="h-2.5 w-2.5 rounded-full"
+        style={{ background: "var(--accent)" }}
+      />
+      <span
+        className={`h-2.5 w-2.5 rounded-full ${onDark ? "bg-white/85" : "bg-black"}`}
+      />
+      <span
+        className={`h-2.5 w-2.5 rounded-full border ${
+          onDark ? "border-white/45" : "border-black/30"
+        }`}
+      />
+    </div>
+  );
+}
+
+export function Star({
+  size = 14,
+  className = "",
+  style,
+}: {
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      style={style}
+      aria-hidden
+    >
+      <path
+        d="M12 0l2.9 8.6L24 9.2l-7.2 5.3 2.6 8.9L12 18.2 4.6 23.4l2.6-8.9L0 9.2l9.1-.6z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export function Page({
   children,
   width = "wide",
@@ -24,7 +68,7 @@ export function Page({
           ? "max-w-5xl"
           : "max-w-[1600px]";
   return (
-    <main className={`mx-auto ${max} px-5 py-10 md:px-10 md:py-14`}>
+    <main className={`relative z-10 mx-auto ${max} px-5 py-8 md:px-8 md:py-10`}>
       {children}
     </main>
   );
@@ -37,21 +81,19 @@ export function PageHeader({
   actions,
 }: {
   eyebrow?: string;
-  title: string;
+  title: React.ReactNode;
   lede?: string;
   actions?: React.ReactNode;
 }) {
   return (
-    <header className="mb-9 flex flex-wrap items-end justify-between gap-4">
+    <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && (
-          <div className="mb-2 flex items-center gap-1.5 text-pink-ink">
-            <Sparkle size={10} />
-            <span className="eyebrow">{eyebrow}</span>
-          </div>
+          <span className="chip-solid chip mb-3">{eyebrow}</span>
         )}
-        <h1 className="t-h1 text-plum">{title}</h1>
-        {lede && <p className="t-body mt-2 max-w-xl text-plum-2">{lede}</p>}
+        <h1 className="t-h1">{title}</h1>
+        <span className="rule-accent mt-3" />
+        {lede && <p className="t-body mt-3 max-w-xl text-ink-2">{lede}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </header>
@@ -62,19 +104,30 @@ export function Card({
   children,
   className = "",
   pad = true,
+  hover = false,
+  dots = false,
+  right,
 }: {
   children: React.ReactNode;
   className?: string;
   pad?: boolean;
+  hover?: boolean;
+  dots?: boolean;
+  right?: React.ReactNode;
 }) {
   return (
-    <section className={`card ${pad ? "p-6 md:p-7" : ""} ${className}`}>
-      {children}
+    <section className={`card ${hover ? "card-hover" : ""} ${className}`}>
+      {(dots || right) && (
+        <div className="flex items-center justify-between gap-3 px-5 pt-4 md:px-6">
+          {dots ? <Dots /> : <span />}
+          {right}
+        </div>
+      )}
+      <div className={pad ? "p-5 md:p-6" : ""}>{children}</div>
     </section>
   );
 }
 
-/** Card with a titled head — the standard content box. */
 export function Panel({
   title,
   meta,
@@ -90,28 +143,25 @@ export function Panel({
 }) {
   return (
     <section className={`card ${className}`}>
-      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5 md:px-6">
+      <div className="flex items-center justify-between gap-3 border-b-2 border-black px-5 py-3.5 md:px-6">
         <div className="min-w-0">
-          <h2 className="t-h3 text-plum">{title}</h2>
-          {meta && <p className="t-small mt-0.5 text-plum-3">{meta}</p>}
+          <h2 className="t-h3">{title}</h2>
+          {meta && <p className="t-small mt-0.5 text-ink-3">{meta}</p>}
         </div>
         {aside}
       </div>
-      <div className="p-6 md:p-7">{children}</div>
+      <div className="p-5 md:p-6">{children}</div>
     </section>
   );
 }
 
-/** The quiet "how this works" explainer. Never shouty. */
 export function Note({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="note t-small mb-5 px-4 py-3 text-plum-2">{children}</div>
-  );
+  return <div className="note t-small mb-5 px-4 py-3 text-ink-2">{children}</div>;
 }
 
 export function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="t-small mb-5 rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-4 py-3 text-[#8a2020]">
+    <div className="t-small mb-5 rounded-xl border-2 border-black bg-[#ffe9e9] px-4 py-3 font-medium text-[#8a1a1a] shadow-[3px_3px_0_#000]">
       {children}
     </div>
   );
@@ -127,14 +177,14 @@ export function Empty({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-line-strong px-6 py-12 text-center">
-      <p className="t-h3 text-plum">{title}</p>
-      <p className="t-small mx-auto mt-1.5 max-w-sm text-plum-2">{body}</p>
+    <div className="rounded-xl border-2 border-dashed border-black/25 px-6 py-12 text-center">
+      <p className="t-h3">{title}</p>
+      <p className="t-small mx-auto mt-1.5 max-w-sm text-ink-2">{body}</p>
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>
   );
 }
 
 export function Divider() {
-  return <hr className="my-6 border-0 border-t border-line" />;
+  return <hr className="my-6 border-0 border-t-2 border-black/10" />;
 }

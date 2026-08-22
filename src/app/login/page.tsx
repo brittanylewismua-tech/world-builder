@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useWorld } from "@/lib/useWorld";
-import { Globe, Sparkle } from "@/components/Globe";
+import { Star } from "@/components/ui";
 
 /**
  * The sign-in door stays dark with the globe — this is the brand moment, and
@@ -55,34 +55,36 @@ export default function Login() {
   return (
     <main className="gridfield relative min-h-dvh overflow-hidden bg-[#0d0c0c]">
       <div className="pointer-events-none absolute -right-48 top-1/2 hidden -translate-y-1/2 lg:block">
-        <Globe size={620} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/globe.png" alt="" className="globe-turn h-[620px] w-[620px] max-w-none" />
       </div>
+      <Star size={16} className="pointer-events-none absolute left-[38%] top-[14%] text-white/70" />
+      <Star size={10} className="pointer-events-none absolute left-[30%] top-[26%] text-[#ee6fc0]" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0d0c0c] via-[#0d0c0c] to-transparent" />
 
       <div className="relative mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-6 py-16">
-        <div className="flex items-center gap-2 text-pink">
-          <Sparkle size={11} />
-          <span className="eyebrow">For print on demand sellers</span>
+        <div className="flex items-center gap-2 text-accent">
+          <Star size={10} />
+          <span className="eyebrow">for print on demand sellers</span>
         </div>
 
-        <h1 className="display mt-5 text-[clamp(2.5rem,9vw,4rem)] text-white">
-          World
+        <h1 className="mt-5 text-[clamp(2.6rem,9vw,4.2rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-white">
+          world
           <br />
-          Builder
+          builder
         </h1>
         <p className="mt-4 text-[15px] font-medium leading-relaxed text-white/70">
-          Build one customer world deeply — instead of jumping between
-          unrelated niches.
+          build one customer world deeply — instead of jumping between unrelated niches.
         </p>
-        <span className="mt-5 block h-0.5 w-16 bg-pink" />
+        <span className="mt-5 block h-0.5 w-16 bg-accent" />
 
         <div className="mt-9">
           <button
             onClick={enterAnonymously}
             disabled={busy}
-            className="w-full rounded-lg bg-pink py-3.5 text-base font-semibold text-[#0d0c0c] transition hover:bg-[#f582cb] disabled:opacity-50"
+            className="w-full rounded-xl border-2 border-white bg-[#ee6fc0] py-3.5 text-base font-extrabold text-black shadow-[4px_4px_0_#fff] transition hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_#fff] disabled:opacity-50"
           >
-            {busy ? "Opening…" : "Enter"}
+            {busy ? "opening…" : "enter"}
           </button>
           <p className="mt-3 text-[13px] leading-relaxed text-white/50">
             No email, no password. Your world saves to this browser&apos;s
@@ -91,18 +93,18 @@ export default function Login() {
         </div>
 
         {err && (
-          <p className="mt-5 rounded-lg border border-pink/40 bg-pink/10 px-4 py-3 text-[13px] leading-relaxed text-white">
+          <p className="mt-5 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-[13px] leading-relaxed text-white">
             {err}
           </p>
         )}
 
         <details className="mt-10 border-t border-white/12 pt-5">
-          <summary className="eyebrow cursor-pointer text-white/45 transition hover:text-pink">
+          <summary className="eyebrow cursor-pointer text-white/45 transition hover:text-accent">
             Or sign in with email
           </summary>
           {sent ? (
             <div className="mt-4 rounded-lg border border-white/12 bg-white/[0.05] px-4 py-4">
-              <p className="text-sm font-semibold text-pink">Check your email</p>
+              <p className="text-sm font-semibold text-accent">Check your email</p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-white/65">
                 A link is on its way to {email.trim()}. Supabase&apos;s built-in
                 mailer is rate limited, so if nothing arrives in a couple of
@@ -110,7 +112,7 @@ export default function Login() {
               </p>
               <button
                 onClick={() => setSent(false)}
-                className="mt-3 text-[12px] text-white/45 transition hover:text-pink"
+                className="mt-3 text-[12px] text-white/45 transition hover:text-accent"
               >
                 Different email
               </button>
@@ -124,12 +126,12 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 placeholder="you@yourshop.com"
-                className="w-full rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-pink"
+                className="w-full rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-accent"
               />
               <button
                 onClick={sendLink}
                 disabled={busy || !email.trim()}
-                className="shrink-0 rounded-lg border border-white/20 px-4 py-2.5 text-sm font-medium text-white transition hover:border-pink hover:text-pink disabled:opacity-40"
+                className="shrink-0 rounded-lg border border-white/20 px-4 py-2.5 text-sm font-medium text-white transition hover:border-accent hover:text-accent disabled:opacity-40"
               >
                 Send link
               </button>
