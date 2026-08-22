@@ -23,10 +23,11 @@ export default function History() {
 function ageNote(d: Drop) {
   const age = daysSince(d.publishDate);
   if (age < 0) return "Not published yet";
+  if (age === 0) return "Published today — far too young to read";
   if (age < GATHERING_DAYS)
     return `${age} day${age === 1 ? "" : "s"} old — too young to read`;
   if (age < REVIEW_DAYS)
-    return `${age} days old — ${REVIEW_DAYS - age} until it is worth reviewing`;
+    return `${age} days old — ${REVIEW_DAYS - age} more until it is worth reviewing`;
   return `${age} days old — enough history to look at`;
 }
 

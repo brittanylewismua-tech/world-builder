@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import { Globe, Sparkle } from "@/components/Globe";
@@ -27,6 +27,9 @@ function DailyBody({ world }: { world: World }) {
   const [dates, setDates] = useState<string[]>([]);
   const [researching, setResearching] = useState(false);
   const [err, setErr] = useState("");
+  // SPEC: "every day the software researches those territories and publishes".
+  // The seller should not have to ask for the paper — it should be waiting.
+  const autoRan = useRef(false);
 
   const open = useCallback(
     async (d: string) => {
@@ -47,7 +50,7 @@ function DailyBody({ world }: { world: World }) {
     open(today);
   }, [world.id, today, open]);
 
-  async function research() {
+  const research = useCallback(async () => {
     setResearching(true);
     setErr("");
     try {
@@ -58,9 +61,19 @@ function DailyBody({ world }: { world: World }) {
     } finally {
       setResearching(false);
     }
-  }
+  }, [world, date]);
 
   const noAreas = world.areas.length === 0;
+
+  // First visit of the day with nothing published yet: go and get it.
+  useEffect(() => {
+    if (autoRan.current) return;
+    if (noAreas || researching) return;
+    if (date !== today) return;
+    if (items === null || items.length > 0) return;
+    autoRan.current = true;
+    research();
+  }, [items, noAreas, researching, date, today, research]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">

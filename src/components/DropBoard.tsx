@@ -100,12 +100,15 @@ function Tile({
   slot,
   item,
   frozen,
+  dark,
   onUpload,
   onRemove,
 }: {
   slot: number;
   item?: DropItem;
   frozen: boolean;
+  /** Board background is dark, so the empty-slot furniture has to invert. */
+  dark: boolean;
   onUpload: (slot: number, file: File) => Promise<void>;
   onRemove: (item: DropItem) => Promise<void>;
 }) {
@@ -136,8 +139,12 @@ function Tile({
             remove
           </button>
         )}
-        <div className="mt-1.5 h-3 w-4/5 bg-black/10" />
-        <div className="mt-1 h-3 w-1/3 bg-black/10" />
+        <div
+          className={`mt-1.5 h-3 w-4/5 ${dark ? "bg-white/15" : "bg-black/10"}`}
+        />
+        <div
+          className={`mt-1 h-3 w-1/3 ${dark ? "bg-white/15" : "bg-black/10"}`}
+        />
       </div>
     );
   }
@@ -147,14 +154,24 @@ function Tile({
       <button
         onClick={() => !frozen && input.current?.click()}
         disabled={frozen || busy}
-        className="flex aspect-square w-full items-center justify-center border border-dashed border-black/20 transition hover:border-black/45 hover:bg-black/[0.03] disabled:cursor-default disabled:opacity-40"
+        className={`flex aspect-square w-full items-center justify-center border border-dashed transition disabled:cursor-default disabled:opacity-40 ${
+          dark
+            ? "border-white/25 hover:border-white/50 hover:bg-white/[0.05]"
+            : "border-black/20 hover:border-black/45 hover:bg-black/[0.03]"
+        }`}
       >
-        <span className="display text-3xl text-black/25">
+        <span
+          className={`display text-3xl ${dark ? "text-white/35" : "text-black/25"}`}
+        >
           {busy ? "…" : String(slot).padStart(2, "0")}
         </span>
       </button>
-      <div className="mt-1.5 h-3 w-4/5 bg-black/[0.06]" />
-      <div className="mt-1 h-3 w-1/3 bg-black/[0.06]" />
+      <div
+        className={`mt-1.5 h-3 w-4/5 ${dark ? "bg-white/8" : "bg-black/[0.06]"}`}
+      />
+      <div
+        className={`mt-1 h-3 w-1/3 ${dark ? "bg-white/8" : "bg-black/[0.06]"}`}
+      />
       <input
         ref={input}
         type="file"
@@ -220,6 +237,7 @@ export default function DropBoard({
               slot={s}
               item={bySlot.get(s)}
               frozen={frozen}
+              dark={dark}
               onUpload={onUploadMockup}
               onRemove={onRemoveMockup}
             />

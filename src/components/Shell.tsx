@@ -67,7 +67,19 @@ export default function Shell({
             })}
           </nav>
           <button
-            onClick={signOut}
+            onClick={() => {
+              // An anonymous account lives only in this browser's session.
+              // Signing out of one is not "log back in later" — it is goodbye.
+              const anon = session?.user?.is_anonymous;
+              if (
+                anon &&
+                !window.confirm(
+                  "You signed in without an email, so this world is tied to this browser. Signing out will lose access to it permanently. Sign out anyway?",
+                )
+              )
+                return;
+              signOut();
+            }}
             className="eyebrow shrink-0 text-smoke/60 transition hover:text-pink"
           >
             Sign out
