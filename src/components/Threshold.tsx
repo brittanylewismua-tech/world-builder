@@ -183,11 +183,14 @@ export default function Threshold({
           <div className="door-frame relative h-[340px] w-[214px] overflow-hidden border-[5px] border-black bg-black sm:h-[400px] sm:w-[252px]">
             <Galaxy wall={wall} />
 
-            {/* the door itself, closed over the galaxy */}
+            {/* The door itself, closed over the galaxy — but inset, so a rim
+                of what is behind it glows around the edge and you can tell
+                there is somewhere to go. */}
             <div
-              className={`door-panel absolute inset-0 bg-black ${
+              className={`door-panel absolute inset-[7px] bg-black ${
                 state === "shut" ? "" : "is-open"
               }`}
+              style={{ boxShadow: `0 0 18px ${wall}77` }}
             >
               {/* panelling */}
               <span className="absolute inset-x-5 top-6 bottom-[46%] rounded-[76px_76px_6px_6px] border-2 border-white/25" />
