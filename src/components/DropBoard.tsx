@@ -23,7 +23,7 @@ const BACKGROUNDS = [
 function bannerColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
-  return `hsl(${h} 38% 24%)`;
+  return `hsl(${h} 32% 16%)`;
 }
 
 export function ShopBanner({
@@ -70,7 +70,7 @@ export function ShopBanner({
           <button
             onClick={() => input.current?.click()}
             disabled={busy}
-            className="absolute bottom-2.5 right-2.5 rounded-xl bg-plum/72 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition hover:bg-plum group-hover:opacity-100"
+            className="absolute bottom-2.5 right-2.5 rounded-xl bg-plum/75 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition hover:bg-plum group-hover:opacity-100"
           >
             {busy
               ? "Uploading…"

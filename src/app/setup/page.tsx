@@ -142,7 +142,7 @@ function SetupBody({
   return (
     <main className="min-h-dvh bg-transparent">
       {/* slim brand bar so setup still feels like the product */}
-      <div className="border-b border-line bg-white/70 backdrop-blur">
+      <div className="border-b border-line bg-white backdrop-blur">
         <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-5 md:px-8">
           <Globe size={22} />
           <span className="display text-[1.05rem] text-plum">World Builder</span>
@@ -169,7 +169,7 @@ function SetupBody({
                       ? "bg-plum text-white"
                       : done
                         ? "bg-pink text-plum hover:opacity-85"
-                        : "bg-white/60 text-plum-3"
+                        : "bg-white text-plum-3"
                   }`}
                 >
                   {x.letter}

@@ -111,7 +111,7 @@ function CustomerBody({ world }: { world: World }) {
               <button
                 key={p}
                 onClick={() => send(p)}
-                className="rounded-xl border border-line bg-white/70 px-3.5 py-3 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
+                className="rounded-xl border border-line bg-white px-3.5 py-3 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
               >
                 {p}
               </button>
@@ -130,7 +130,7 @@ function CustomerBody({ world }: { world: World }) {
           ) : (
             <p
               key={i}
-              className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-line bg-white/80 px-4 py-3 text-[15px] leading-relaxed text-plum"
+              className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-line bg-white px-4 py-3 text-[15px] leading-relaxed text-plum"
             >
               {m.content}
             </p>

@@ -101,7 +101,7 @@ export default function Login() {
             Or sign in with email
           </summary>
           {sent ? (
-            <div className="mt-4 rounded-lg border border-white/12 bg-white/[0.04] px-4 py-4">
+            <div className="mt-4 rounded-lg border border-white/12 bg-white/[0.05] px-4 py-4">
               <p className="text-sm font-semibold text-pink">Check your email</p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-white/65">
                 A link is on its way to {email.trim()}. Supabase&apos;s built-in
@@ -124,7 +124,7 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 placeholder="you@yourshop.com"
-                className="w-full rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-pink"
+                className="w-full rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-pink"
               />
               <button
                 onClick={sendLink}

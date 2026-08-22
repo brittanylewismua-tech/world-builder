@@ -66,7 +66,7 @@ export function SubNicheInput({
 
       {/* progress toward the floor, stated plainly */}
       <div className="mt-4 flex items-center gap-3">
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/60">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-sunk">
           <div
             className="h-full rounded-full bg-pink transition-all duration-300"
             style={{ width: `${pct}%` }}
@@ -89,7 +89,7 @@ export function SubNicheInput({
           {subNiches.map((s, i) => (
             <li
               key={s.id}
-              className="group flex items-center gap-3 bg-white/70 px-4 py-2.5"
+              className="group flex items-center gap-3 bg-white px-4 py-2.5"
             >
               <span className="t-small w-5 shrink-0 tabular-nums text-plum-3">
                 {i + 1}
@@ -132,7 +132,7 @@ export function AffinityInput({
         {AFFINITY_QUESTIONS.map((q) => {
           const value = affinity[q.key];
           return (
-            <div key={q.key} className="rounded-2xl border border-line bg-white/55 p-4">
+            <div key={q.key} className="rounded-2xl border border-line bg-white p-4">
               <p className="t-h3 text-plum">{q.question}</p>
               <div className="mt-3 flex gap-1">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -142,7 +142,7 @@ export function AffinityInput({
                     className={`h-9 flex-1 rounded-lg text-sm font-semibold tabular-nums transition ${
                       value === n
                         ? "bg-plum text-white"
-                        : "bg-white/70 text-plum-2 hover:bg-pink-soft"
+                        : "bg-white text-plum-2 hover:bg-pink-soft"
                     }`}
                   >
                     {n}

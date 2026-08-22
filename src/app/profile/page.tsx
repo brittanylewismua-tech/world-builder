@@ -169,7 +169,7 @@ function Module({
     <section className={`card overflow-hidden ${open ? "ring-1 ring-pink" : ""}`}>
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-white/45"
+        className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-sunk"
       >
         <span
           className={`display flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm ${

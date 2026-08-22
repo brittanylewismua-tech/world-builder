@@ -133,7 +133,7 @@ export default function CreativeRoom({
                 <button
                   key={o}
                   onClick={() => send(o)}
-                  className="block w-full rounded-xl border border-line bg-white/70 px-3 py-2 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
+                  className="block w-full rounded-xl border border-line bg-white px-3 py-2 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
                 >
                   {o}
                 </button>
@@ -146,7 +146,7 @@ export default function CreativeRoom({
           m.role === "user" ? (
             <p
               key={i}
-              className="ml-6 rounded-xl bg-white/70 px-3 py-2 text-sm leading-relaxed text-plum"
+              className="ml-6 rounded-xl bg-white px-3 py-2 text-sm leading-relaxed text-plum"
             >
               {m.content}
             </p>

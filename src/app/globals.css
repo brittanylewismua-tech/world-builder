@@ -1,42 +1,43 @@
 @import "tailwindcss";
 
 /*
-  DESIGN SYSTEM — the Goldie suite
-  --------------------------------
-  World Builder ships alongside Listing Factory, so it has to read as the same
-  company: warm serif display, plum as the dark, soft tinted ground, frosted
-  white cards with generous rounding, pill buttons, letterspaced small-caps
-  labels.
+  DESIGN SYSTEM
+  -------------
+  Black, white, pink — the World Building brand, unchanged.
 
-  Where it differs on purpose: Listing Factory is a production line and leans
-  fully into the gradient. World Builder is the thinking tool, so the ground is
-  calmer and the content sits in clearly separated boxes — the seller is
-  reading and deciding here, not pushing batches through.
+  What ties it to Listing Factory is structure, not palette: the same serif
+  for headings, the same sidebar, the same rounded cards, pill buttons and
+  letterspaced small-caps labels. Listing Factory carries the gradient wash;
+  World Builder stays white, because this is where the seller reads long
+  research and stares at a design wall.
 
-  Hierarchy comes from spacing and weight. Display type is for headings only,
-  never for UI labels or anything long.
+  Hierarchy comes from spacing and weight. The serif is for headings only —
+  never UI labels, never anything long.
 */
 
 @theme {
-  /* ground */
-  --color-canvas: #fbf4f7;
+  /* ground — clean white, no wash */
+  --color-canvas: #ffffff;
   --color-surface: #ffffff;
-  --color-sunk: #f6eef3;
+  --color-sunk: #f7f3f5;
 
-  /* plum — the suite's dark. Never pure black. */
-  --color-plum: #4a1d33;
-  --color-plum-2: #6b3a52;
-  --color-plum-3: #9b7d8c;
+  /*
+    Black, white, pink. The original branding.
+    Token names stay `plum-*` only because every component already references
+    them — the values are the neutral ramp.
+  */
+  --color-plum: #0d0c0c;
+  --color-plum-2: #4d4a48;
+  --color-plum-3: #8b8683;
 
   /* lines */
-  --color-line: #ecdfe6;
-  --color-line-strong: #ddc9d4;
+  --color-line: #e8e5e3;
+  --color-line-strong: #d6d2cf;
 
   /* accent */
   --color-pink: #ee6fc0;
-  --color-pink-soft: #fceaf4;
-  --color-pink-ink: #a81b63;
-  --color-lav: #cbb8e8;
+  --color-pink-soft: #fdeef7;
+  --color-pink-ink: #b02371;
 
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Inter", system-ui, -apple-system, sans-serif;
@@ -55,26 +56,8 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* The soft suite wash, kept gentle so long reading is comfortable. */
 body {
-  background:
-    radial-gradient(
-      1100px 620px at 12% -8%,
-      rgba(233, 214, 246, 0.5),
-      transparent 62%
-    ),
-    radial-gradient(
-      900px 540px at 96% 4%,
-      rgba(253, 221, 205, 0.46),
-      transparent 60%
-    ),
-    radial-gradient(
-      1000px 700px at 60% 108%,
-      rgba(250, 208, 231, 0.42),
-      transparent 62%
-    ),
-    var(--color-canvas);
-  background-attachment: fixed;
+  background: var(--color-canvas);
 }
 
 /* ---------------------------------------------------------------- type */
@@ -127,28 +110,23 @@ body {
 /* --------------------------------------------------------------- boxes */
 
 .card {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 18px;
-  box-shadow:
-    0 1px 2px rgba(74, 29, 51, 0.04),
-    0 8px 24px -12px rgba(74, 29, 51, 0.14);
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(13, 12, 12, 0.04);
 }
 
 .card-flush {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 18px;
-  box-shadow:
-    0 1px 2px rgba(74, 29, 51, 0.04),
-    0 8px 24px -12px rgba(74, 29, 51, 0.14);
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(13, 12, 12, 0.04);
 }
 
 .note {
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid var(--color-line);
-  border-radius: 14px;
+  background: var(--color-pink-soft);
+  border: 1px solid #f6d9ea;
+  border-radius: 12px;
 }
 
 .hairline {
@@ -159,9 +137,9 @@ body {
 
 .field {
   width: 100%;
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
   border: 1px solid var(--color-line-strong);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 0.6875rem 0.875rem;
   font-size: 0.9375rem;
   color: var(--color-plum);
@@ -197,21 +175,21 @@ body {
 .btn-primary {
   background: var(--color-plum);
   color: #fff;
-  box-shadow: 0 2px 10px -4px rgba(74, 29, 51, 0.5);
+  box-shadow: none;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #5d2742;
+  background: #2b2827;
 }
 .btn-accent {
   background: var(--color-pink);
-  color: #40122c;
-  box-shadow: 0 2px 12px -4px rgba(238, 111, 192, 0.6);
+  color: #0d0c0c;
+  box-shadow: none;
 }
 .btn-accent:hover:not(:disabled) {
   background: #f582cb;
 }
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.7);
+  background: #fff;
   border: 1px solid var(--color-line-strong);
   color: var(--color-plum);
 }
@@ -230,7 +208,7 @@ body {
   gap: 0.375rem;
   border-radius: 999px;
   border: 1px solid var(--color-line-strong);
-  background: rgba(255, 255, 255, 0.75);
+  background: #fff;
   padding: 0.25rem 0.6875rem;
   font-size: 0.8125rem;
   color: var(--color-plum-2);
@@ -287,12 +265,12 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #e3cfda;
+  background: #ddd9d6;
   border-radius: 99px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #d0b3c2;
+  background: #c4bfbb;
   background-clip: content-box;
 }

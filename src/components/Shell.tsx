@@ -8,8 +8,9 @@ import type { World } from "@/lib/world";
 import { Globe } from "./Globe";
 
 /**
- * Sidebar shell, matching Listing Factory so the two products read as one
- * suite. SPEC: "Keep navigation minimal. Do not add more top-level areas."
+ * Sidebar shell. Same navigation structure as Listing Factory so the two
+ * products read as one suite, in World Builder's own black/white/pink.
+ * SPEC: "Keep navigation minimal. Do not add more top-level areas."
  */
 const NAV = [
   { href: "/daily", label: "World Daily", hint: "Stay immersed" },
@@ -81,8 +82,8 @@ export default function Shell({
               href={n.href}
               className={`block rounded-2xl px-3.5 py-2.5 transition ${
                 active
-                  ? "bg-white/85 shadow-[0_2px_10px_-6px_rgba(74,29,51,0.35)]"
-                  : "hover:bg-white/45"
+                  ? "bg-white border border-line shadow-[0_1px_2px_rgba(13,12,12,0.05)]"
+                  : "hover:bg-sunk"
               }`}
             >
               <span
@@ -97,7 +98,7 @@ export default function Shell({
       </nav>
 
       <div className="mt-auto pt-6">
-        <div className="rounded-2xl border border-line bg-white/55 px-3.5 py-3">
+        <div className="rounded-2xl border border-line bg-white px-3.5 py-3">
           <p className="eyebrow text-plum-3">Current world</p>
           <p className="display mt-1 truncate text-[1.05rem] text-plum">
             {world.name || "Untitled"}
@@ -119,10 +120,10 @@ export default function Shell({
   return (
     <div className="min-h-dvh lg:flex">
       {/* mobile bar */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-line bg-white/80 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-line bg-white px-4 py-3 backdrop-blur lg:hidden">
         <button
           onClick={() => setNavOpen((v) => !v)}
-          className="rounded-lg border border-line-strong bg-white/70 px-2.5 py-1.5 text-sm"
+          className="rounded-lg border border-line-strong bg-white px-2.5 py-1.5 text-sm"
           aria-label="Menu"
         >
           ☰
@@ -134,7 +135,7 @@ export default function Shell({
       </div>
 
       {navOpen && (
-        <div className="border-b border-line bg-white/85 backdrop-blur lg:hidden">
+        <div className="border-b border-line bg-white backdrop-blur lg:hidden">
           {aside}
         </div>
       )}
