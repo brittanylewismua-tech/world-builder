@@ -57,10 +57,12 @@ export default function Login() {
 
   return (
     <main className="min-h-dvh gridfield relative overflow-hidden">
-      <div className="pointer-events-none absolute -right-52 -top-44 text-pink opacity-40">
-        <Globe size={640} />
+      {/* Banner treatment: full-strength globe bleeding off the right edge,
+          with a scrim so the copy column stays readable over it. */}
+      <div className="pointer-events-none absolute -right-64 top-1/2 hidden -translate-y-1/2 md:block">
+        <Globe size={820} />
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_12%,rgba(238,111,192,0.16),transparent_55%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/90 to-transparent" />
 
       <div className="relative mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-6 py-16">
         <div className="flex items-center gap-3 text-pink">

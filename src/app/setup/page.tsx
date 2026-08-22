@@ -138,9 +138,12 @@ function SetupBody({
 
   return (
     <main className="min-h-dvh gridfield relative overflow-hidden">
-      <div className="pointer-events-none absolute -right-56 -top-40 text-pink opacity-60">
-        <Globe size={680} />
+      {/* Banner treatment: full-strength globe bleeding off the right edge,
+          with a scrim so the copy column stays readable over it. */}
+      <div className="pointer-events-none absolute -right-72 -top-32 hidden md:block">
+        <Globe size={760} />
       </div>
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/92 to-transparent" />
 
       <div className="relative mx-auto max-w-3xl px-6 py-12 md:py-16">
         <div className="flex items-center gap-2">
