@@ -21,8 +21,6 @@ export interface Theme {
   wallpaperOpacity: number;
   /** Wallpaper colour. null means "follow my accent". */
   wallpaperAccent: string | null;
-  /** Show the door on the way in. Off means go straight to Home. */
-  door: boolean;
 }
 
 export const DEFAULT_THEME: Theme = {
@@ -34,7 +32,6 @@ export const DEFAULT_THEME: Theme = {
   wallpaperSrc: null,
   wallpaperOpacity: 22,
   wallpaperAccent: null,
-  door: true,
 };
 
 /* ------------------------------------------------------------------ */

@@ -98,8 +98,6 @@ interface WorldRow {
   wallpaper_path: string | null;
   wallpaper_opacity: number;
   wallpaper_accent: string | null;
-  door_enabled: boolean;
-  door_seen_on: string | null;
 }
 
 /** The seller's world, or null if they have not created one yet. */
@@ -107,7 +105,7 @@ export async function loadWorld(): Promise<World | null> {
   const { data: rows, error } = await supabase
     .from("wb_worlds")
     .select(
-      "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused, theme_preset, theme_accent, theme_rail, wallpaper_kind, wallpaper_path, wallpaper_opacity, wallpaper_accent, door_enabled, door_seen_on",
+      "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused, theme_preset, theme_accent, theme_rail, wallpaper_kind, wallpaper_path, wallpaper_opacity, wallpaper_accent",
     )
     .order("created_at", { ascending: true })
     .limit(1);
@@ -156,9 +154,7 @@ export async function loadWorld(): Promise<World | null> {
       wallpaperSrc: await sign(row.wallpaper_path),
       wallpaperOpacity: row.wallpaper_opacity ?? DEFAULT_THEME.wallpaperOpacity,
       wallpaperAccent: row.wallpaper_accent,
-      door: row.door_enabled ?? true,
     },
-    doorSeenOn: row.door_seen_on,
     subNiches: (niches ?? []) as World["subNiches"],
     areas: (areas ?? []) as World["areas"],
     visualReferences: refRows.map((r) => ({
@@ -182,7 +178,6 @@ export async function createWorld(): Promise<World> {
 
 type WorldPatch = Partial<{
   theme: Theme;
-  doorSeenOn: string | null;
   name: string;
   established: boolean;
   affinity: Affinity;
@@ -202,7 +197,6 @@ export async function saveWorld(id: string, patch: WorldPatch) {
   if (patch.slotsPerDrop !== undefined) row.slots_per_drop = patch.slotsPerDrop;
   if (patch.dropWeekday !== undefined) row.drop_weekday = patch.dropWeekday;
   if (patch.paused !== undefined) row.paused = patch.paused;
-  if (patch.doorSeenOn !== undefined) row.door_seen_on = patch.doorSeenOn;
   if (patch.theme !== undefined) {
     row.theme_preset = patch.theme.preset;
     row.theme_accent = patch.theme.accent;
@@ -211,7 +205,6 @@ export async function saveWorld(id: string, patch: WorldPatch) {
     row.wallpaper_path = patch.theme.wallpaperPath;
     row.wallpaper_opacity = patch.theme.wallpaperOpacity;
     row.wallpaper_accent = patch.theme.wallpaperAccent;
-    row.door_enabled = patch.theme.door;
   }
   const { error } = await supabase.from("wb_worlds").update(row).eq("id", id);
   if (error) throw new Error(error.message);

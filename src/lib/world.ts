@@ -100,8 +100,6 @@ export interface World {
   visualReferences: VisualReference[];
   /** How the seller has dressed their portal. */
   theme: Theme;
-  /** The last local date the door was shown. Keeps it to once a day. */
-  doorSeenOn: string | null;
 }
 
 /** SPEC: "Minimum viable world = at least 6 independently validated sub-niche keywords" */

@@ -2,7 +2,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { setWallpaper, saveWorld } from "@/lib/api";
 import {
   PRESETS,
@@ -42,7 +41,6 @@ export default function Customiser({
   const theme = world.theme;
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const router = useRouter();
 
   async function apply(next: Partial<Theme>) {
     const merged = { ...theme, ...next };
@@ -52,37 +50,6 @@ export default function Customiser({
     } catch (e) {
       onError(e instanceof Error ? e.message : "Could not save your theme.");
     }
-  }
-
-  /**
-   * Switching the door back on clears today's "already walked through", so it
-   * appears next time rather than tomorrow. Turning it on and seeing nothing
-   * happen would read as broken.
-   */
-  async function toggleDoor() {
-    const theme = { ...world.theme, door: !world.theme.door };
-    const doorSeenOn = theme.door ? null : world.doorSeenOn;
-    patch({ theme, doorSeenOn });
-    try {
-      await saveWorld(world.id, { theme, doorSeenOn });
-    } catch (e) {
-      onError(e instanceof Error ? e.message : "Could not save that.");
-    }
-  }
-
-  /**
-   * The door lives at the root of the app and only appears once a day, so
-   * after picking a new wallpaper colour there is otherwise no way to go and
-   * look at it. This forgets today's visit and walks you back out to it.
-   */
-  async function showDoorNow() {
-    patch({ doorSeenOn: null });
-    try {
-      await saveWorld(world.id, { doorSeenOn: null });
-    } catch {
-      /* worst case the door stays skipped for today */
-    }
-    router.push("/");
   }
 
   async function uploadWallpaper(files: FileList | null) {
@@ -443,53 +410,6 @@ export default function Customiser({
             </p>
           </div>
         )}
-      </section>
-
-      {/* ---------------------------------------------------- the door */}
-      <section className="card p-5 md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h3 className="t-h3">The door</h3>
-            <p className="t-small mt-1 max-w-md text-ink-2">
-              The first time you open World Builder each day you arrive at a
-              door with your world behind it, and click through into your home
-              page. After that it opens straight on home. Turn this off and it
-              always does.
-            </p>
-          </div>
-
-          <button
-            role="switch"
-            aria-checked={theme.door}
-            aria-label="Show the door"
-            onClick={toggleDoor}
-            className="relative h-9 w-16 shrink-0 rounded-full border-2 border-black transition"
-            style={{ background: theme.door ? theme.accent : "#fff" }}
-          >
-            <span
-              className={`absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-2 border-black bg-white transition-all ${
-                theme.door ? "left-[calc(100%-1.75rem)]" : "left-1"
-              }`}
-            />
-          </button>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <p className="t-small font-semibold">
-            {theme.door
-              ? "On — you walk in once a day."
-              : "Off — you land on home."}
-          </p>
-          {theme.door && (
-            <button
-              onClick={showDoorNow}
-              className="t-small underline underline-offset-4 transition hover:opacity-70"
-              style={{ color: "var(--accent)" }}
-            >
-              see it now →
-            </button>
-          )}
-        </div>
       </section>
 
       {/* ---------------------------------------------------- preview */}
