@@ -18,15 +18,16 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const sha = process.env.VERCEL_GIT_COMMIT_SHA ?? null;
 
+  // Next inlines missing NEXT_PUBLIC_* vars as empty strings rather than
+  // undefined, so ?? never fires here. Use || and report the fallback honestly.
   const env = {
     anthropicKey: Boolean(process.env.ANTHROPIC_API_KEY),
-    supabaseUrl: Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "built-in default",
-    ),
-    supabaseKey: Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_KEY ?? "built-in default",
-    ),
-    model: process.env.WB_MODEL ?? "claude-sonnet-5 (default)",
+    supabaseUrl:
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "built-in default (in source)",
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_KEY
+      ? "set via env"
+      : "built-in default (in source)",
+    model: process.env.WB_MODEL || "claude-sonnet-5 (default)",
   };
 
   const surfaces = {
