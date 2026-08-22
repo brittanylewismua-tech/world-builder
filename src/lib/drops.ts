@@ -81,8 +81,7 @@ export function formatDropDate(iso: string) {
       weekday: "long",
       month: "long",
       day: "numeric",
-    })
-    .toUpperCase();
+    });
 }
 
 /* ------------------------------------------------------------------ */

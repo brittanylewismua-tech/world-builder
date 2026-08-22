@@ -96,15 +96,14 @@ export function formatIssueDate(iso: string) {
       weekday: "long",
       month: "long",
       day: "numeric",
-    })
-    .toUpperCase();
+    });
 }
 
 export function greeting() {
   const h = new Date().getHours();
-  if (h < 12) return "GOOD MORNING";
-  if (h < 18) return "GOOD AFTERNOON";
-  return "GOOD EVENING";
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export function hostOf(url: string) {
