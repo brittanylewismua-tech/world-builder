@@ -412,6 +412,39 @@ export default function Customiser({
         )}
       </section>
 
+      {/* ---------------------------------------------------- the door */}
+      <section className="card p-5 md:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h3 className="t-h3">The door</h3>
+            <p className="t-small mt-1 max-w-md text-ink-2">
+              When you open World Builder you arrive at a door with your world
+              behind it, and click through into your home page. Turn it off and
+              you land straight on home instead.
+            </p>
+          </div>
+
+          <button
+            role="switch"
+            aria-checked={theme.door}
+            aria-label="Show the door"
+            onClick={() => apply({ door: !theme.door })}
+            className="relative h-9 w-16 shrink-0 rounded-full border-2 border-black transition"
+            style={{ background: theme.door ? theme.accent : "#fff" }}
+          >
+            <span
+              className={`absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-2 border-black bg-white transition-all ${
+                theme.door ? "left-[calc(100%-1.75rem)]" : "left-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        <p className="t-small mt-3 font-semibold">
+          {theme.door ? "On — you walk in." : "Off — you land on home."}
+        </p>
+      </section>
+
       {/* ---------------------------------------------------- preview */}
       <section>
         <h3 className="t-h3 mb-3">How it looks</h3>
