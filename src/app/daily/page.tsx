@@ -17,6 +17,21 @@ import {
 } from "@/lib/daily";
 import type { World } from "@/lib/world";
 
+/**
+ * What sort of signal each item is. This is the one label on the card — the
+ * seller's own keywords are deliberately not repeated back at them.
+ */
+const KIND_LABEL: Record<string, string> = {
+  phrase: "a phrase",
+  visual: "a look",
+  object: "an object",
+  event: "coming up",
+  humour: "a joke",
+  humor: "a joke",
+  aesthetic: "an aesthetic",
+  moment: "a moment",
+};
+
 export default function Daily() {
   return <Shell>{(world) => <DailyBody world={world} />}</Shell>;
 }
@@ -85,21 +100,12 @@ function DailyBody({ world }: { world: World }) {
         </div>
         <h1 className="t-h1 mt-3 text-ink">
           {greeting().toLowerCase()} — here&apos;s what your customer is{" "}
-          <span className="italic" style={{ color: "var(--accent-ink)" }}>
+          <span className="italic" style={{ color: "var(--accent)" }}>
             obsessed with
           </span>{" "}
           today
         </h1>
         <span className="rule-accent mt-4" />
-        {!noAreas && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {world.areas.map((a) => (
-              <span key={a.id} className="chip">
-                {a.name}
-              </span>
-            ))}
-          </div>
-        )}
       </header>
 
       {err && <ErrorNote>{err}</ErrorNote>}
@@ -157,7 +163,9 @@ function DailyBody({ world }: { world: World }) {
               <Card key={it.id} className="rise" hover pad={false}>
                 <div className="flex items-center justify-between px-5 pt-4 md:px-6">
                   <Dots />
-                  <span className="chip chip-solid">{it.area}</span>
+                  {it.kind && (
+                    <span className="chip chip-solid">{KIND_LABEL[it.kind] ?? it.kind}</span>
+                  )}
                 </div>
                 <div className="flex gap-4 px-5 pb-5 pt-4 md:px-6">
                   <span className="numeral shrink-0 text-[2.4rem]">

@@ -21,14 +21,24 @@ const TARGET_ITEMS = 5;
  */
 const SYSTEM = `You research a print-on-demand seller's customer world and write them a very short daily newspaper.
 
-WHAT YOU ARE LOOKING FOR
-Signals inside the areas the seller asked you to watch. Any of these count:
-a phrase appearing repeatedly · a meme gaining traction · a visual styling pattern · an event approaching · a cultural conversation · an object or motif showing up everywhere · a micro-aesthetic gaining visibility · a recurring joke · a lifestyle behaviour · a creator or celebrity moment · a seasonal ritual starting · an adjacent interest becoming visible.
+WHO YOU ARE WRITING FOR
+Someone who puts artwork and words onto shirts, sweatshirts, hats, mugs, totes and prints. That is the filter for what counts as worth reporting. They are not a journalist and not a marketer. Their raw material is language, imagery and the things this customer identifies with — so report the signals that live in that raw material.
+
+WHAT COUNTS AS A SIGNAL — pick the kind that fits and label it
+- phrase — an exact wording people are repeating: a caption, a saying, a lyric fragment, an in-joke, a self-description. Quote the actual words.
+- visual — a styling pattern you can see: a typeface treatment, a layout, a motif, a colour palette, a graphic convention that keeps appearing.
+- object — a specific thing showing up over and over in this world: an item, a garment, a prop, a product category.
+- event — something dated and coming up that this customer prepares for, travels to, dresses for, or gifts around.
+- humour — a joke format or running bit inside the culture.
+- aesthetic — a named or nameable micro-aesthetic gaining visibility.
+- moment — a creator, release, or cultural conversation the customer is actually reacting to.
+
+Favour phrase, visual and object items. Those are the ones a seller can genuinely do something with. An item that is only news — a tour date with nothing around it, a business headline, a chart position — is close to useless here. If you report an event, report what people around it are wearing, saying, or buying, not the ticket link.
 
 HOW TO WRITE IT
-- One item per area at most. Around ${TARGET_ITEMS} items total.
+- Around ${TARGET_ITEMS} items. Spread them across the areas; never two items about the same thing.
 - Headline: short, concrete, specific. Name the actual thing. "Cowboy hats with veils at every rodeo wedding" not "Western bridal trends rising".
-- Body: two or three sentences. What the signal is, where you saw it, and enough context that the seller understands why it is interesting to their customer.
+- Body: two or three sentences. What the signal is, where you saw it, and enough context that the seller understands why their customer cares. Where there are words, quote them exactly — the wording is the useful part.
 - Write like a well-edited culture newsletter, not a market report. No bullet lists inside the body.
 
 HARD RULES
@@ -40,7 +50,7 @@ HARD RULES
 
 OUTPUT
 After searching, return ONLY raw JSON. No markdown fence, no preamble:
-{"items":[{"area":"the area this belongs to","headline":"...","body":"...","sources":[{"title":"page title","url":"https://..."}]}]}`;
+{"items":[{"area":"the area this belongs to","kind":"phrase|visual|object|event|humour|aesthetic|moment","headline":"...","body":"...","sources":[{"title":"page title","url":"https://..."}]}]}`;
 
 interface Body {
   worldName?: string;
@@ -88,7 +98,7 @@ ${body.subNiches?.length ? `Sub-niches the seller sells into: ${body.subNiches.j
 AREAS TO WATCH:
 ${areas.map((a) => `- ${a}`).join("\n")}
 
-Search the web for what is actually happening in these areas right now. Prioritise the last two weeks. Search each area separately, and search the way someone inside that culture would talk about it, not the way a marketer would.
+Search the web for what is actually happening in these areas right now. Prioritise the last two weeks. Search each area separately, and search the way someone inside that culture would talk about it, not the way a marketer would — the captions they write, the phrases they repeat, the way they describe their own style.
 
 Then write the ${TARGET_ITEMS}-item newspaper.`;
 
@@ -139,6 +149,7 @@ Then write the ${TARGET_ITEMS}-item newspaper.`;
     const parsed = JSON.parse(cleaned.slice(start, end + 1)) as {
       items?: {
         area?: string;
+        kind?: string;
         headline?: string;
         body?: string;
         sources?: { title?: string; url?: string }[];
@@ -149,6 +160,7 @@ Then write the ${TARGET_ITEMS}-item newspaper.`;
     const items = (parsed.items ?? [])
       .map((it) => ({
         area: (it.area || "").trim(),
+        kind: (it.kind || "").trim().toLowerCase(),
         headline: (it.headline || "").trim(),
         body: (it.body || "").trim(),
         sources: (it.sources ?? [])

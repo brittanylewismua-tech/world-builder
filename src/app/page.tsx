@@ -12,7 +12,7 @@ export default function Home() {
   useEffect(() => {
     if (loading) return;
     if (!session) router.replace("/login");
-    else router.replace(world?.established ? "/daily" : "/setup");
+    else router.replace(world?.established ? "/home" : "/setup");
   }, [loading, session, world, router]);
 
   return <Loading />;

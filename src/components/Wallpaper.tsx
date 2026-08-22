@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { themeVars, type Theme } from "@/lib/theme";
+import { globeFilter, themeVars, wallColor, type Theme } from "@/lib/theme";
 
 /**
  * Applies the world's theme to the document. One place sets every accent
@@ -40,7 +40,7 @@ export function Wallpaper({ theme }: { theme: Theme }) {
           <div
             className="absolute -right-[10vw] top-1/2 h-[120vh] w-[120vh] -translate-y-1/2 rounded-full blur-3xl"
             style={{
-              background: `radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 68%)`,
+              background: `radial-gradient(circle, color-mix(in srgb, var(--wall) 30%, transparent), transparent 68%)`,
               opacity: o,
             }}
           />
@@ -48,7 +48,10 @@ export function Wallpaper({ theme }: { theme: Theme }) {
             src="/globe.png"
             alt=""
             className="globe-turn absolute -right-[16vw] top-1/2 h-[112vh] w-[112vh] max-w-none -translate-y-1/2"
-            style={{ opacity: Math.min(0.55, o * 1.9) }}
+            style={{
+              opacity: Math.min(0.55, o * 1.9),
+              filter: globeFilter(wallColor(theme)),
+            }}
           />
         </>
       )}
@@ -59,7 +62,7 @@ export function Wallpaper({ theme }: { theme: Theme }) {
           style={{
             opacity: o,
             backgroundImage:
-              "linear-gradient(var(--accent) 1px, transparent 1px), linear-gradient(90deg, var(--accent) 1px, transparent 1px)",
+              "linear-gradient(var(--wall) 1px, transparent 1px), linear-gradient(90deg, var(--wall) 1px, transparent 1px)",
             backgroundSize: "44px 44px",
           }}
         />
@@ -71,7 +74,7 @@ export function Wallpaper({ theme }: { theme: Theme }) {
           style={{
             opacity: o,
             background:
-              "radial-gradient(760px 560px at 6% -8%, color-mix(in srgb, var(--accent) 70%, white), transparent 60%), radial-gradient(820px 620px at 98% 6%, color-mix(in srgb, var(--accent) 45%, white), transparent 58%), radial-gradient(900px 700px at 52% 112%, color-mix(in srgb, var(--accent) 55%, white), transparent 60%)",
+              "radial-gradient(760px 560px at 6% -8%, color-mix(in srgb, var(--wall) 70%, white), transparent 60%), radial-gradient(820px 620px at 98% 6%, color-mix(in srgb, var(--wall) 45%, white), transparent 58%), radial-gradient(900px 700px at 52% 112%, color-mix(in srgb, var(--wall) 55%, white), transparent 60%)",
           }}
         />
       )}

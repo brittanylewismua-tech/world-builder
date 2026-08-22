@@ -97,6 +97,7 @@ interface WorldRow {
   wallpaper_kind: WallpaperKind;
   wallpaper_path: string | null;
   wallpaper_opacity: number;
+  wallpaper_accent: string | null;
 }
 
 /** The seller's world, or null if they have not created one yet. */
@@ -104,7 +105,7 @@ export async function loadWorld(): Promise<World | null> {
   const { data: rows, error } = await supabase
     .from("wb_worlds")
     .select(
-      "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused, theme_preset, theme_accent, theme_rail, wallpaper_kind, wallpaper_path, wallpaper_opacity",
+      "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused, theme_preset, theme_accent, theme_rail, wallpaper_kind, wallpaper_path, wallpaper_opacity, wallpaper_accent",
     )
     .order("created_at", { ascending: true })
     .limit(1);
@@ -152,6 +153,7 @@ export async function loadWorld(): Promise<World | null> {
       wallpaperPath: row.wallpaper_path,
       wallpaperSrc: await sign(row.wallpaper_path),
       wallpaperOpacity: row.wallpaper_opacity ?? DEFAULT_THEME.wallpaperOpacity,
+      wallpaperAccent: row.wallpaper_accent,
     },
     subNiches: (niches ?? []) as World["subNiches"],
     areas: (areas ?? []) as World["areas"],
@@ -202,6 +204,7 @@ export async function saveWorld(id: string, patch: WorldPatch) {
     row.wallpaper_kind = patch.theme.wallpaperKind;
     row.wallpaper_path = patch.theme.wallpaperPath;
     row.wallpaper_opacity = patch.theme.wallpaperOpacity;
+    row.wallpaper_accent = patch.theme.wallpaperAccent;
   }
   const { error } = await supabase.from("wb_worlds").update(row).eq("id", id);
   if (error) throw new Error(error.message);

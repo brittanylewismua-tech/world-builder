@@ -194,7 +194,7 @@ function Module({
       >
         <span
           className={`display flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm ${
-            open ? "bg-black text-white" : "bg-accent-soft text-accent-ink"
+            open ? "bg-black text-white" : "bg-accent"
           }`}
         >
           {letter}
@@ -203,7 +203,7 @@ function Module({
           <span className="t-h3 block whitespace-nowrap text-ink">{title}</span>
           <span className="t-small block text-ink-3">
             {summary}
-            {warn && <span className="ml-2 text-accent-ink">· {warn}</span>}
+            {warn && <span className="ml-2 text-ink-2">· {warn}</span>}
           </span>
         </span>
         {!open && preview}

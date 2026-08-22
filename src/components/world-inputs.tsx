@@ -97,7 +97,7 @@ export function SubNicheInput({
               <span className="t-body flex-1 text-ink">{s.keyword}</span>
               <button
                 onClick={() => onRemove(s.id)}
-                className="t-small text-ink-3 opacity-0 transition hover:text-accent-ink group-hover:opacity-100"
+                className="t-small text-ink-3 opacity-0 transition hover:text-ink group-hover:opacity-100"
               >
                 Remove
               </button>
@@ -112,6 +112,52 @@ export function SubNicheInput({
 /* ------------------------------------------------------------------ */
 /* O — OWN THE WORLD                                                   */
 /* ------------------------------------------------------------------ */
+
+/**
+ * One affinity question on its own. Onboarding shows these one card at a
+ * time; World Profile stacks all four.
+ */
+export function AffinityScale({
+  question,
+  low,
+  high,
+  value,
+  onChange,
+  bare = false,
+}: {
+  question: string;
+  low: string;
+  high: string;
+  value: number | null;
+  onChange: (n: number) => void;
+  /** Drop the surrounding box when the card already provides one. */
+  bare?: boolean;
+}) {
+  return (
+    <div className={bare ? "" : "rounded-2xl border border-black/12 bg-white p-4"}>
+      {!bare && <p className="t-h3 text-ink">{question}</p>}
+      <div className={`flex gap-1 ${bare ? "" : "mt-3"}`}>
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            onClick={() => onChange(n)}
+            className={`h-11 flex-1 rounded-lg border-2 text-sm font-bold tabular-nums transition ${
+              value === n
+                ? "border-black bg-black text-white"
+                : "border-black/12 bg-white text-ink-2 hover:border-black"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between">
+        <span className="t-small text-ink-3">{low}</span>
+        <span className="t-small text-ink-3">{high}</span>
+      </div>
+    </div>
+  );
+}
 
 export function AffinityInput({
   affinity,
@@ -129,33 +175,16 @@ export function AffinityInput({
       </Note>
 
       <div className="space-y-6">
-        {AFFINITY_QUESTIONS.map((q) => {
-          const value = affinity[q.key];
-          return (
-            <div key={q.key} className="rounded-2xl border border-black/12 bg-white p-4">
-              <p className="t-h3 text-ink">{q.question}</p>
-              <div className="mt-3 flex gap-1">
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => onChange({ ...affinity, [q.key]: n })}
-                    className={`h-9 flex-1 rounded-lg text-sm font-semibold tabular-nums transition ${
-                      value === n
-                        ? "bg-black text-white"
-                        : "bg-white text-ink-2 hover:bg-accent-soft"
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-2 flex justify-between">
-                <span className="t-small text-ink-3">{q.low}</span>
-                <span className="t-small text-ink-3">{q.high}</span>
-              </div>
-            </div>
-          );
-        })}
+        {AFFINITY_QUESTIONS.map((q) => (
+          <AffinityScale
+            key={q.key}
+            question={q.question}
+            low={q.low}
+            high={q.high}
+            value={affinity[q.key]}
+            onChange={(n) => onChange({ ...affinity, [q.key]: n })}
+          />
+        ))}
       </div>
     </div>
   );
@@ -215,7 +244,7 @@ export function VisualCalibrationInput({
         <button
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-black/25 text-ink-3 transition hover:border-accent hover:bg-accent-soft hover:text-accent-ink disabled:opacity-40"
+          className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-black/25 text-ink-3 transition hover:border-accent hover:bg-accent-soft hover:text-ink disabled:opacity-40"
         >
           <span className="text-xl leading-none">{busy ? "…" : "+"}</span>
           <span className="text-[11px] font-medium">
@@ -303,7 +332,7 @@ export function AreasInput({
               {a.name}
               <button
                 onClick={() => onRemove(a.id)}
-                className="text-accent-ink/55 transition hover:text-accent-ink"
+                className="text-black/45 transition hover:text-black"
                 aria-label={`Remove ${a.name}`}
               >
                 ×

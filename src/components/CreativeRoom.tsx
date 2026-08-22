@@ -161,7 +161,7 @@ export default function CreativeRoom({
         )}
 
         {busy && (
-          <p className="pulse-soft t-small text-accent-ink">Looking at the board…</p>
+          <p className="pulse-soft t-small text-ink-3">Looking at the board…</p>
         )}
         {err && (
           <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-3 py-2 text-sm text-[#8a2020]">

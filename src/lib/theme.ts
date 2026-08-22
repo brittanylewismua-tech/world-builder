@@ -19,6 +19,8 @@ export interface Theme {
   wallpaperPath: string | null;
   wallpaperSrc: string | null;
   wallpaperOpacity: number;
+  /** Wallpaper colour. null means "follow my accent". */
+  wallpaperAccent: string | null;
 }
 
 export const DEFAULT_THEME: Theme = {
@@ -29,6 +31,7 @@ export const DEFAULT_THEME: Theme = {
   wallpaperPath: null,
   wallpaperSrc: null,
   wallpaperOpacity: 22,
+  wallpaperAccent: null,
 };
 
 /* ------------------------------------------------------------------ */
@@ -189,8 +192,58 @@ export function themeVars(theme: Theme): Record<string, string> {
     "--accent-ink": accentInk(accent),
     "--accent-soft": accentSoft(accent),
     "--accent-hover": accentHover(accent),
+    "--wall": theme.wallpaperAccent || accent,
   };
 }
+
+/** What the wallpaper is actually painted in right now. */
+export const wallColor = (t: Theme) => t.wallpaperAccent || t.accent;
+
+/* The globe artwork is a flat pink-and-white illustration, so it cannot be
+   masked into another colour without losing its detail. Rotating its hue
+   instead keeps every shape and just moves the pink to wherever the seller
+   pointed. */
+const GLOBE_HUE = 322;
+const GLOBE_SAT = 0.62;
+
+function hsl(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const [R, G, B] = [r / 255, g / 255, b / 255];
+  const max = Math.max(R, G, B);
+  const min = Math.min(R, G, B);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return { h: 0, s: 0, l };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h: number;
+  if (max === R) h = ((G - B) / d) % 6;
+  else if (max === G) h = (B - R) / d + 2;
+  else h = (R - G) / d + 4;
+  return { h: (h * 60 + 360) % 360, s, l };
+}
+
+/** CSS filter that repaints the globe in the seller's wallpaper colour. */
+export function globeFilter(hex: string) {
+  const { h, s, l } = hsl(hex);
+  if (s < 0.06) return `grayscale(1) brightness(${(0.35 + l).toFixed(2)})`;
+  const rotate = Math.round(h - GLOBE_HUE);
+  const sat = Math.max(0.25, Math.min(2.2, s / GLOBE_SAT));
+  const bright = Math.max(0.6, Math.min(1.35, 0.72 + l * 0.62));
+  return `hue-rotate(${rotate}deg) saturate(${sat.toFixed(2)}) brightness(${bright.toFixed(2)})`;
+}
+
+/** Ready-made wallpaper colours, so nobody has to open a colour wheel. */
+export const WALLPAPER_SWATCHES = [
+  "#EE6FC0",
+  "#FF4FA3",
+  "#8B5CF6",
+  "#3B82F6",
+  "#0E9F8E",
+  "#FF7A2F",
+  "#F2C14E",
+  "#111111",
+  "#9A938C",
+];
 
 export const RAIL_LABEL: Record<RailStyle, string> = {
   black: "Black",

@@ -90,11 +90,11 @@ function CustomerBody({ world }: { world: World }) {
   return (
     <main className="mx-auto max-w-2xl px-5 py-8 md:px-8">
       <div className="mb-6 border-b-2 border-black pb-5">
-        <div className="flex items-center gap-1.5 text-accent-ink">
+        <div className="flex items-center gap-1.5 text-ink-3">
           <Star size={9} className="text-accent" />
           <span className="eyebrow">Talk to your customer</span>
         </div>
-        <h1 className="t-h1 mt-2 text-ink">talking to <span className="italic" style={{ color: "var(--accent-ink)" }}>{world.name.toLowerCase()}</span></h1>
+        <h1 className="t-h1 mt-2 text-ink">talking to <span className="italic" style={{ color: "var(--accent)" }}>{world.name.toLowerCase()}</span></h1>
         <span className="rule-accent mt-3" />
         <p className="t-small mt-2 text-ink-2">
           A research-informed simulation of someone who lives in this world. She
@@ -138,7 +138,7 @@ function CustomerBody({ world }: { world: World }) {
           ),
         )}
 
-        {busy && <p className="pulse-soft t-small text-accent-ink">typing…</p>}
+        {busy && <p className="pulse-soft t-small text-ink-3">typing…</p>}
         {err && (
           <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-4 py-3 text-sm text-[#8a2020]">
             {err}

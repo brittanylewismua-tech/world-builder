@@ -35,7 +35,12 @@
   --font-condensed: "Anton", "Arial Narrow", Impact, sans-serif;
 }
 
-/* Theme defaults — ThemeProvider overwrites these on :root at runtime. */
+/* Theme defaults — ThemeProvider overwrites these on :root at runtime.
+
+   --accent is the real brand pink and it is what every highlight, numeral and
+   fill uses. --accent-ink is the darkened version, kept only for the rare
+   place small text has to sit on white; it is deliberately almost unused,
+   because a darkened pink stops reading as the brand pink. */
 :root {
   color-scheme: light;
   --accent: #ee6fc0;
@@ -43,6 +48,7 @@
   --accent-ink: #b02371;
   --accent-soft: #fdeef7;
   --accent-hover: #f582cb;
+  --wall: #ee6fc0;
 }
 
 html,
@@ -250,7 +256,7 @@ body {
 .chip-accent {
   background: var(--accent-soft);
   border-color: #00000018;
-  color: var(--accent-ink);
+  color: #000;
 }
 .chip-solid {
   background: #000;

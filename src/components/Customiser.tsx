@@ -7,8 +7,11 @@ import {
   PRESETS,
   RAIL_LABEL,
   WALLPAPER_LABEL,
+  WALLPAPER_SWATCHES,
   contrastRatio,
+  globeFilter,
   onAccent,
+  wallColor,
   type RailStyle,
   type Theme,
   type WallpaperKind,
@@ -96,6 +99,7 @@ export default function Customiser({
                     rail: p.rail,
                     wallpaperKind: p.wallpaperKind,
                     wallpaperOpacity: p.wallpaperOpacity,
+                    wallpaperAccent: null,
                   })
                 }
                 className={`card card-hover overflow-hidden p-0 text-left ${
@@ -284,6 +288,79 @@ export default function Customiser({
           />
         </div>
 
+        {/* Wallpaper colour — only meaningful for the drawn wallpapers. An
+            uploaded image is already whatever colour it is. */}
+        {theme.wallpaperKind !== "none" && theme.wallpaperKind !== "custom" && (
+          <div className="mt-5 border-t border-black/10 pt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <label className="t-small font-semibold">Wallpaper colour</label>
+                <p className="t-small text-ink-3">
+                  {theme.wallpaperAccent
+                    ? "Set on its own, separate from your accent."
+                    : "Following your accent."}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={wallColor(theme)}
+                  onChange={(e) =>
+                    apply({
+                      wallpaperAccent: e.target.value.toUpperCase(),
+                      preset: "custom",
+                    })
+                  }
+                  className="h-10 w-14 cursor-pointer rounded-lg border-2 border-black bg-white p-1"
+                  aria-label="Wallpaper colour"
+                />
+                {theme.wallpaperAccent && (
+                  <button
+                    onClick={() => apply({ wallpaperAccent: null })}
+                    className="t-small text-ink-3 underline underline-offset-2 hover:text-ink"
+                  >
+                    Match my accent
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {WALLPAPER_SWATCHES.map((hex) => (
+                <button
+                  key={hex}
+                  onClick={() =>
+                    apply({ wallpaperAccent: hex, preset: "custom" })
+                  }
+                  title={hex}
+                  aria-label={`Wallpaper ${hex}`}
+                  className={`h-7 w-7 rounded-full border-2 transition ${
+                    wallColor(theme).toUpperCase() === hex
+                      ? "border-black ring-2 ring-black ring-offset-2"
+                      : "border-black/25 hover:border-black"
+                  }`}
+                  style={{ background: hex }}
+                />
+              ))}
+            </div>
+
+            {theme.wallpaperKind === "globe" && (
+              <div className="mt-4 flex items-center gap-3">
+                <img
+                  src="/globe.png"
+                  alt=""
+                  className="h-12 w-12"
+                  style={{ filter: globeFilter(wallColor(theme)) }}
+                />
+                <p className="t-small text-ink-3">
+                  The globe keeps all its artwork — its colour is shifted rather
+                  than flattened, so it never turns into a silhouette.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {theme.wallpaperSrc && (
           <div className="mt-4 flex items-center gap-3">
             <img
@@ -348,7 +425,7 @@ export default function Customiser({
             <div>
               <h4 className="t-h2">
                 a headline in your world, with{" "}
-                <span className="italic" style={{ color: "var(--accent-ink)" }}>
+                <span className="italic" style={{ color: "var(--accent)" }}>
                   your accent
                 </span>{" "}
                 inside it

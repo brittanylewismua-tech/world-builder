@@ -11,6 +11,8 @@ export interface DailySource {
 export interface DailyItem {
   id: string;
   area: string;
+  /** What sort of signal this is — phrase, visual, object, event, humour… */
+  kind: string;
   headline: string;
   body: string;
   sources: DailySource[];
@@ -28,7 +30,7 @@ export async function loadIssue(
 ): Promise<DailyItem[]> {
   const { data, error } = await supabase
     .from("wb_daily_items")
-    .select("id, area, headline, body, sources")
+    .select("id, area, kind, headline, body, sources")
     .eq("world_id", worldId)
     .eq("issue_date", date)
     .order("position");
@@ -71,6 +73,7 @@ export async function generateIssue(
     world_id: world.id,
     issue_date: date,
     area: it.area,
+    kind: it.kind,
     headline: it.headline,
     body: it.body,
     sources: it.sources,

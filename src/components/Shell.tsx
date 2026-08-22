@@ -8,7 +8,7 @@ import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 import { DEFAULT_THEME, onAccent } from "@/lib/theme";
 import { ThemeStyle, Wallpaper } from "./Wallpaper";
-import { Dots, Star } from "./ui";
+import { Star } from "./ui";
 
 /**
  * The room. Rail on the left in whichever style the seller chose, wallpaper
@@ -17,6 +17,7 @@ import { Dots, Star } from "./ui";
  * SPEC: "Keep navigation minimal. Do not add more top-level areas."
  */
 const NAV = [
+  { href: "/home", label: "home", hint: "where you are today" },
   { href: "/daily", label: "world daily", hint: "stay immersed" },
   { href: "/studio", label: "drop studio", hint: "build the work" },
   { href: "/customer", label: "talk to the customer", hint: "think like her" },
@@ -30,15 +31,6 @@ export function Loading() {
       <img src="/globe.png" alt="" className="globe-turn h-14 w-14 opacity-70" />
     </main>
   );
-}
-
-/** Days since the world was created — "somewhere you keep coming back to". */
-function dayCount(created?: string | null) {
-  if (!created) return null;
-  const d = Math.floor(
-    (Date.now() - new Date(created).getTime()) / 86_400_000,
-  );
-  return d >= 0 ? d + 1 : null;
 }
 
 export default function Shell({
@@ -73,7 +65,6 @@ export default function Shell({
         : { background: "#fff" };
 
   const railText = rail === "white" ? "#000" : railDark ? "#fff" : "#000";
-  const days = dayCount(session.user?.created_at);
 
   function handleSignOut() {
     if (
@@ -103,8 +94,7 @@ export default function Shell({
       />
 
       <div className="relative">
-        <Dots onDark={railDark} />
-        <Link href="/daily" className="mt-4 flex items-center gap-2">
+        <Link href="/home" className="flex items-center gap-2">
           <img src="/globe.png" alt="" className="h-7 w-7" />
           <span className="text-[17px] font-extrabold leading-none tracking-tight">
             world builder
@@ -152,22 +142,6 @@ export default function Shell({
           <p className="mt-1 truncate text-[18px] font-extrabold tracking-tight">
             {world.name || "untitled"}
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {days && (
-              <span
-                className="rounded-md px-2 py-0.5 text-[11px] font-bold"
-                style={{
-                  background: rail === "accent" ? "#000" : theme.accent,
-                  color: rail === "accent" ? "#fff" : onAccent(theme.accent),
-                }}
-              >
-                day {days}
-              </span>
-            )}
-            <span className="text-[11.5px] opacity-55">
-              {world.subNiches.length} niches
-            </span>
-          </div>
         </div>
         <button
           onClick={handleSignOut}

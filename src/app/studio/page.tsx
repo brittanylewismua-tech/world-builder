@@ -120,7 +120,7 @@ function StudioBody({ world }: { world: World }) {
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="eyebrow text-accent-ink">Drop Studio</span>
+        <span className="eyebrow text-ink-3">Drop Studio</span>
         {world.paused && (
           <span className="chip chip-accent">Schedule paused</span>
         )}
