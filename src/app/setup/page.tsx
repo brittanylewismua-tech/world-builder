@@ -14,6 +14,7 @@ import {
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
 import { Globe } from "@/components/Globe";
+import AmbientGlobe from "@/components/AmbientGlobe";
 import { ErrorNote, Note } from "@/components/ui";
 
 const STEPS = [
@@ -140,9 +141,10 @@ function SetupBody({
   }
 
   return (
-    <main className="min-h-dvh bg-transparent">
+    <main className="relative min-h-dvh">
+      <AmbientGlobe />
       {/* slim brand bar so setup still feels like the product */}
-      <div className="border-b border-line bg-white backdrop-blur">
+      <div className="relative z-10 border-b border-line bg-white/78 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-5 md:px-8">
           <Globe size={22} />
           <span className="display text-[1.05rem] text-plum">World Builder</span>
@@ -152,7 +154,7 @@ function SetupBody({
         </div>
       </div>
 
-      <div ref={topRef} className="mx-auto max-w-3xl px-5 py-8 md:px-8">
+      <div ref={topRef} className="relative z-10 mx-auto max-w-3xl px-5 py-10 md:px-8">
         {/* WORLD rail */}
         <ol className="mb-8 flex items-center gap-2">
           {STEPS.map((x, i) => {

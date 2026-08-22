@@ -23,7 +23,11 @@ export function Page({
         : width === "wide"
           ? "max-w-5xl"
           : "max-w-[1600px]";
-  return <main className={`mx-auto ${max} px-5 py-8 md:px-8`}>{children}</main>;
+  return (
+    <main className={`mx-auto ${max} px-5 py-10 md:px-10 md:py-14`}>
+      {children}
+    </main>
+  );
 }
 
 export function PageHeader({
@@ -38,7 +42,7 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <header className="mb-9 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && (
           <div className="mb-2 flex items-center gap-1.5 text-pink-ink">
@@ -64,7 +68,7 @@ export function Card({
   pad?: boolean;
 }) {
   return (
-    <section className={`card ${pad ? "p-5 md:p-6" : ""} ${className}`}>
+    <section className={`card ${pad ? "p-6 md:p-7" : ""} ${className}`}>
       {children}
     </section>
   );
@@ -93,7 +97,7 @@ export function Panel({
         </div>
         {aside}
       </div>
-      <div className="p-5 md:p-6">{children}</div>
+      <div className="p-6 md:p-7">{children}</div>
     </section>
   );
 }

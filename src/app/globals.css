@@ -16,10 +16,11 @@
 */
 
 @theme {
-  /* ground — clean white, no wash */
-  --color-canvas: #ffffff;
+  /* A specific warm off-white, not pure white — cards are true white, so
+     they lift off it. Restraint plus specificity is what reads as expensive. */
+  --color-canvas: #fcfaf9;
   --color-surface: #ffffff;
-  --color-sunk: #f7f3f5;
+  --color-sunk: #f6f2f0;
 
   /*
     Black, white, pink. The original branding.
@@ -72,7 +73,7 @@ body {
 .eyebrow {
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   font-size: 0.6875rem;
   line-height: 1.2;
 }
@@ -80,47 +81,55 @@ body {
 /* One ramp. Serif for headings, Inter for everything a person operates. */
 .t-h1 {
   font-family: var(--font-display);
-  font-size: clamp(1.65rem, 2.6vw, 2.15rem);
-  font-weight: 600;
-  line-height: 1.14;
-  letter-spacing: -0.014em;
+  font-size: clamp(1.85rem, 3vw, 2.55rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.016em;
 }
 .t-h2 {
   font-family: var(--font-display);
-  font-size: 1.3125rem;
-  font-weight: 600;
-  line-height: 1.26;
-  letter-spacing: -0.008em;
+  font-size: 1.4375rem;
+  font-weight: 500;
+  line-height: 1.28;
+  letter-spacing: -0.009em;
 }
 .t-h3 {
-  font-size: 0.9375rem;
-  font-weight: 620;
-  line-height: 1.4;
+  font-size: 0.9688rem;
+  font-weight: 600;
+  line-height: 1.42;
   letter-spacing: -0.004em;
 }
 .t-body {
-  font-size: 0.9375rem;
-  line-height: 1.64;
+  font-size: 1.0313rem;
+  line-height: 1.66;
 }
 .t-small {
-  font-size: 0.8125rem;
-  line-height: 1.55;
+  font-size: 0.8438rem;
+  line-height: 1.6;
 }
 
 /* --------------------------------------------------------------- boxes */
 
 .card {
-  background: #fff;
+  position: relative;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--color-line);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(13, 12, 12, 0.04);
+  border-radius: 18px;
+  box-shadow:
+    0 1px 2px rgba(13, 12, 12, 0.03),
+    0 14px 34px -22px rgba(13, 12, 12, 0.22);
 }
 
 .card-flush {
-  background: #fff;
+  position: relative;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--color-line);
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(13, 12, 12, 0.04);
+  border-radius: 18px;
+  box-shadow:
+    0 1px 2px rgba(13, 12, 12, 0.03),
+    0 14px 34px -22px rgba(13, 12, 12, 0.22);
 }
 
 .note {
@@ -237,6 +246,34 @@ body {
 
 .spin-slow {
   animation: spin 90s linear infinite;
+}
+
+/* Ambient globe: one turn every three minutes, plus a slow breathing drift so
+   it never feels like a spinning disc. */
+.globe-turn {
+  animation: spin 180s linear infinite;
+  transform-origin: 50% 50%;
+}
+.globe-drift {
+  animation: drift 26s ease-in-out infinite;
+}
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-0.8vw, calc(-50% - 1.1vh)) scale(1.015);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .globe-turn,
+  .globe-drift,
+  .spin-slow,
+  .pulse-soft {
+    animation: none !important;
+  }
 }
 @keyframes spin {
   to {

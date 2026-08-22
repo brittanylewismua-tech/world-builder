@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 import { Globe } from "./Globe";
+import AmbientGlobe from "./AmbientGlobe";
 
 /**
  * Sidebar shell. Same navigation structure as Listing Factory so the two
@@ -22,8 +23,9 @@ const NAV = [
 
 export function Loading() {
   return (
-    <main className="flex min-h-dvh items-center justify-center">
-      <Globe size={64} spin className="opacity-60" />
+    <main className="relative flex min-h-dvh items-center justify-center">
+      <AmbientGlobe />
+      <Globe size={56} spin className="relative z-10 opacity-70" />
     </main>
   );
 }
@@ -118,9 +120,11 @@ export default function Shell({
   );
 
   return (
-    <div className="min-h-dvh lg:flex">
+    <div className="relative min-h-dvh lg:flex">
+      <AmbientGlobe />
+
       {/* mobile bar */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-line bg-white px-4 py-3 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-line bg-white/85 px-4 py-3 backdrop-blur lg:hidden">
         <button
           onClick={() => setNavOpen((v) => !v)}
           className="rounded-lg border border-line-strong bg-white px-2.5 py-1.5 text-sm"
@@ -135,16 +139,16 @@ export default function Shell({
       </div>
 
       {navOpen && (
-        <div className="border-b border-line bg-white backdrop-blur lg:hidden">
+        <div className="relative z-30 border-b border-line bg-white/92 backdrop-blur lg:hidden">
           {aside}
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-dvh w-[264px] shrink-0 border-r border-line lg:block">
+      <aside className="sticky top-0 z-20 hidden h-dvh w-[264px] shrink-0 border-r border-line bg-white/72 backdrop-blur-xl lg:block">
         {aside}
       </aside>
 
-      <div className="min-w-0 flex-1">{children(world)}</div>
+      <div className="relative z-10 min-w-0 flex-1">{children(world)}</div>
     </div>
   );
 }
