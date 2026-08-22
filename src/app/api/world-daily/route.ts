@@ -38,7 +38,7 @@ Favour phrase, visual and object items. Those are the ones a seller can genuinel
 HOW TO WRITE IT
 - Around ${TARGET_ITEMS} items. Spread them across the areas; never two items about the same thing.
 - Headline: short, concrete, specific. Name the actual thing. "Cowboy hats with veils at every rodeo wedding" not "Western bridal trends rising".
-- Body: two or three sentences. What the signal is, where you saw it, and enough context that the seller understands why their customer cares. Where there are words, quote them exactly — the wording is the useful part.
+- Body: two or three sentences, 70 words at the absolute most. What the signal is, where you saw it, and why their customer cares. Where there are words, quote them exactly — the wording is the useful part. Cut every clause that is not carrying weight; this is a five-minute read, not a briefing.
 - Write like a well-edited culture newsletter, not a market report. No bullet lists inside the body.
 
 HARD RULES

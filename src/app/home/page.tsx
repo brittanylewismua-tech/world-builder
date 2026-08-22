@@ -13,7 +13,7 @@ import {
 } from "@/lib/daily";
 import {
   formatDropDate,
-  loadDrops,
+  syncSchedule,
   STATUS_LABEL,
   type Drop,
 } from "@/lib/drops";
@@ -44,10 +44,12 @@ function HomeBody({ world }: { world: World }) {
     loadIssue(world.id, today)
       .then(setItems)
       .catch(() => setItems([]));
-    loadDrops(world.id)
+    // Same call Drop Studio makes, so the board exists the moment the world
+    // does and Home is never the only screen that thinks there is no drop.
+    syncSchedule(world)
       .then((d) => setDrop(d.find((x) => !x.frozenAt) ?? d[0] ?? null))
       .catch(() => setDrop(null));
-  }, [world.id, today]);
+  }, [world, today]);
 
   const filled = drop?.items.length ?? 0;
   const slots = world.slotsPerDrop;

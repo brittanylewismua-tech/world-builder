@@ -8,7 +8,6 @@ import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 import { DEFAULT_THEME, onAccent } from "@/lib/theme";
 import { ThemeStyle, Wallpaper } from "./Wallpaper";
-import { Star } from "./ui";
 
 /**
  * The room. Rail on the left in whichever style the seller chose, wallpaper
@@ -87,12 +86,6 @@ export default function Shell({
         alt=""
         className="pointer-events-none absolute -bottom-16 -left-16 h-[250px] w-[250px] max-w-none opacity-[0.16]"
       />
-      <Star
-        size={10}
-        className="absolute right-6 top-28"
-        style={undefined}
-      />
-
       <div className="relative">
         <Link href="/home" className="flex items-center gap-2">
           <img src="/globe.png" alt="" className="h-7 w-7" />
