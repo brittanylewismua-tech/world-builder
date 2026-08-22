@@ -16,6 +16,7 @@ import {
 } from "@/lib/drops";
 import type { World } from "@/lib/world";
 import { Globe } from "@/components/Globe";
+import { ErrorNote } from "@/components/ui";
 
 export default function Studio() {
   return <Shell>{(world) => <StudioBody world={world} />}</Shell>;
@@ -101,42 +102,38 @@ function StudioBody({ world }: { world: World }) {
   if (loading)
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Globe size={140} spin />
+        <Globe size={64} spin className="opacity-70" />
       </div>
     );
 
   if (!drop)
     return (
-      <p className="mx-auto max-w-xl px-6 py-20 text-paper">
+      <p className="t-body mx-auto max-w-xl px-6 py-20 text-plum-2">
         {err || "No drop board yet."}
       </p>
     );
 
   return (
-    <main className="mx-auto max-w-[1600px] px-5 py-6">
+    <main className="mx-auto max-w-[1600px] px-5 py-6 md:px-8">
       {err && (
-        <p className="mb-4 border-l-2 border-pink bg-pink/10 px-4 py-3 text-sm text-paper">
-          {err}
-        </p>
+        <ErrorNote>{err}</ErrorNote>
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="eyebrow text-pink">Drop Studio</span>
+        <span className="eyebrow text-pink-ink">Drop Studio</span>
         {world.paused && (
-          <span className="border border-pink/50 px-2 py-1 text-[10px] uppercase tracking-widest text-pink">
-            Schedule paused
-          </span>
+          <span className="chip chip-accent">Schedule paused</span>
         )}
         <div className="ml-auto flex gap-2">
           <button
             onClick={togglePause}
-            className="border border-paper/20 px-4 py-2 text-xs text-paper/80 transition hover:border-pink hover:text-pink"
+            className="btn btn-ghost"
           >
             {world.paused ? "Resume schedule" : "Pause schedule"}
           </button>
           <button
             onClick={publishNow}
-            className="display bg-paper px-5 py-2 text-base text-black transition hover:bg-pink"
+            className="btn btn-primary"
           >
             Publish &amp; freeze
           </button>
@@ -153,7 +150,7 @@ function StudioBody({ world }: { world: World }) {
           onUploadBanner={onUploadBanner}
           onBackground={onBackground}
         />
-        <div className="lg:sticky lg:top-[76px] lg:h-[calc(100dvh-100px)]">
+        <div className="lg:sticky lg:top-[72px] lg:h-[calc(100dvh-96px)]">
           <CreativeRoom world={world} drop={drop} />
         </div>
       </div>

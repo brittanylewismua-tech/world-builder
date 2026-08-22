@@ -13,7 +13,8 @@ import {
   AreasInput,
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
-import { Globe, Sparkle } from "@/components/Globe";
+import { Globe } from "@/components/Globe";
+import { ErrorNote, Note } from "@/components/ui";
 
 const STEPS = [
   {
@@ -43,7 +44,7 @@ const STEPS = [
   {
     letter: "D",
     title: "Drop. Data. Deepen.",
-    heading: "Name the world.",
+    heading: "Name the world",
     line: "Then your first drop board gets built.",
   },
 ];
@@ -56,14 +57,12 @@ export default function Setup() {
   const [saving, setSaving] = useState(false);
   const creating = useRef(false);
 
-  // Not signed in -> login. Signed in with a finished world -> straight in.
   useEffect(() => {
     if (loading) return;
     if (!session) router.replace("/login");
     else if (world?.established) router.replace("/daily");
   }, [loading, session, world, router]);
 
-  // Signed in but no world row yet: make one.
   useEffect(() => {
     if (loading || !session || world || creating.current) return;
     creating.current = true;
@@ -115,6 +114,7 @@ function SetupBody({
   const a = worldActions(world, patch, setErr);
   const s = STEPS[step];
   const last = step === STEPS.length - 1;
+  const topRef = useRef<HTMLDivElement>(null);
 
   const canAdvance = (() => {
     if (step === 0) return hasDemandFloor(world);
@@ -133,64 +133,68 @@ function SetupBody({
       return;
     }
     setStep(step + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Scroll after the new step paints, not before.
+    requestAnimationFrame(() =>
+      topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
   }
 
   return (
-    <main className="min-h-dvh gridfield relative overflow-hidden">
-      {/* Banner treatment: the globe bleeds off the right edge and only appears
-          once the viewport is wide enough that it will not sit under the copy. */}
-      <div className="pointer-events-none absolute -right-40 top-16 hidden xl:block">
-        <Globe size={560} />
-      </div>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black to-transparent" />
-
-      <div className="relative mx-auto max-w-3xl px-6 py-12 md:py-16">
-        <div className="flex items-center gap-2">
-          {STEPS.map((x, i) => (
-            <button
-              key={x.letter}
-              onClick={() => i < step && setStep(i)}
-              disabled={i > step}
-              className={`display flex h-11 w-11 items-center justify-center text-2xl transition ${
-                i === step
-                  ? "bg-pink text-black"
-                  : i < step
-                    ? "border border-pink/50 text-pink hover:bg-pink/10"
-                    : "border border-paper/12 text-paper/25"
-              }`}
-            >
-              {x.letter}
-            </button>
-          ))}
-          <span className="ml-2 h-px flex-1 bg-pink/20" />
-          <span className="eyebrow text-smoke">
-            {step + 1} / {STEPS.length}
+    <main className="min-h-dvh bg-transparent">
+      {/* slim brand bar so setup still feels like the product */}
+      <div className="border-b border-line bg-white/70 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-5 md:px-8">
+          <Globe size={22} />
+          <span className="display text-[1.05rem] text-plum">World Builder</span>
+          <span className="t-small ml-auto text-plum-3">
+            Step {step + 1} of {STEPS.length}
           </span>
         </div>
+      </div>
 
-        <div className="mt-10">
-          <div className="flex items-center gap-2 text-pink">
-            <Sparkle size={12} />
-            <span className="eyebrow">
-              {s.letter} — {s.title}
-            </span>
-          </div>
-          <h1 className="display mt-4 text-[clamp(2rem,5vw,3.4rem)] text-paper">
-            {s.heading}
-          </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-smoke">
-            {s.line}
-          </p>
+      <div ref={topRef} className="mx-auto max-w-3xl px-5 py-8 md:px-8">
+        {/* WORLD rail */}
+        <ol className="mb-8 flex items-center gap-2">
+          {STEPS.map((x, i) => {
+            const done = i < step;
+            const now = i === step;
+            return (
+              <li key={x.letter} className="flex flex-1 items-center gap-2">
+                <button
+                  onClick={() => done && setStep(i)}
+                  disabled={!done}
+                  title={x.title}
+                  className={`display flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm transition ${
+                    now
+                      ? "bg-plum text-white"
+                      : done
+                        ? "bg-pink text-plum hover:opacity-85"
+                        : "bg-white/60 text-plum-3"
+                  }`}
+                >
+                  {x.letter}
+                </button>
+                {i < STEPS.length - 1 && (
+                  <span
+                    className={`h-px flex-1 ${done ? "bg-pink" : "bg-line"}`}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="mb-6">
+          <span className="eyebrow text-pink-ink">
+            {s.letter} — {s.title}
+          </span>
+          <h1 className="t-h1 mt-2 text-plum">{s.heading}</h1>
+          <p className="t-body mt-2 max-w-xl text-plum-2">{s.line}</p>
         </div>
 
-        {err && (
-          <p className="mt-6 border-l-2 border-pink bg-pink/10 px-4 py-3 text-sm text-paper">
-            {err}
-          </p>
-        )}
+        {err && <ErrorNote>{err}</ErrorNote>}
 
-        <div className="mt-10">
+        <div className="card p-5 md:p-6">
           {step === 0 && (
             <SubNicheInput
               subNiches={world.subNiches}
@@ -217,25 +221,22 @@ function SetupBody({
           )}
           {step === 4 && (
             <div>
-              <div className="hairline mb-5 bg-pink/5 px-4 py-3 text-sm leading-relaxed text-paper/85">
+              <Note>
                 Look at your {world.subNiches.length} sub-niches together. What
                 is the broader customer universe underneath them? That is the
                 world, and you name it — not the AI.
-              </div>
+              </Note>
               <input
                 value={world.name}
                 onChange={(e) => patch({ name: e.target.value })}
                 onBlur={() => a.setName(world.name)}
                 onKeyDown={(e) => e.key === "Enter" && next()}
                 placeholder="Festival + Rave"
-                className="hairline w-full bg-black/60 px-5 py-4 text-xl text-paper outline-none placeholder:text-smoke/40 focus:border-pink"
+                className="field text-lg"
               />
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-1.5">
                 {world.subNiches.map((n) => (
-                  <span
-                    key={n.id}
-                    className="border border-paper/15 px-2.5 py-1 text-xs text-smoke"
-                  >
+                  <span key={n.id} className="chip">
                     {n.keyword}
                   </span>
                 ))}
@@ -244,26 +245,23 @@ function SetupBody({
           )}
         </div>
 
-        <div className="mt-12 flex items-center gap-3 border-t border-pink/20 pt-6">
+        <div className="mt-5 flex items-center gap-3">
           {step > 0 && (
-            <button
-              onClick={() => setStep(step - 1)}
-              className="display border border-paper/25 px-5 py-3 text-lg text-paper transition hover:border-pink hover:text-pink"
-            >
+            <button onClick={() => setStep(step - 1)} className="btn btn-ghost">
               Back
             </button>
           )}
           <button
             onClick={next}
             disabled={!canAdvance || saving}
-            className="display flex-1 bg-pink py-4 text-2xl text-black transition hover:bg-pink-hot disabled:cursor-not-allowed disabled:bg-paper/10 disabled:text-smoke"
+            className="btn btn-accent flex-1 py-3 text-base"
           >
             {saving
-              ? "Building"
+              ? "Building your world…"
               : last
                 ? "Build my world"
                 : step === 0 && !canAdvance
-                  ? `${MIN_SUB_NICHES - world.subNiches.length} more sub-niches`
+                  ? `${MIN_SUB_NICHES - world.subNiches.length} more sub-niches needed`
                   : step === 3 && !canAdvance
                     ? "Add at least one area"
                     : "Continue"}
@@ -273,7 +271,7 @@ function SetupBody({
         {(step === 1 || step === 2) && (
           <button
             onClick={() => setStep(step + 1)}
-            className="eyebrow mt-4 text-smoke transition hover:text-pink"
+            className="t-small mt-3 text-plum-3 transition hover:text-plum"
           >
             Skip for now — you can fill this in later
           </button>

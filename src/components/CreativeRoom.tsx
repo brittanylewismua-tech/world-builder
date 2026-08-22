@@ -111,11 +111,11 @@ export default function CreativeRoom({
   }
 
   return (
-    <div className="flex h-full flex-col border border-pink/20 bg-panel/70">
-      <div className="flex items-center gap-2 border-b border-pink/20 px-4 py-3">
-        <Sparkle size={11} className="text-pink" />
-        <span className="eyebrow text-pink">Creative Room</span>
-        <span className="ml-auto text-[11px] text-smoke">
+    <div className="card flex h-full flex-col overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+        <Sparkle size={10} className="text-pink-ink" />
+        <span className="eyebrow text-pink-ink">Creative Room</span>
+        <span className="ml-auto text-[11px] text-plum-3">
           Drop {String(drop.number).padStart(2, "0")} · {drop.items.length}/
           {world.slotsPerDrop}
         </span>
@@ -124,7 +124,7 @@ export default function CreativeRoom({
       <div className="min-h-[300px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {msgs.length === 0 && (
           <div>
-            <p className="text-sm leading-relaxed text-smoke">
+            <p className="t-small text-plum-2">
               I can see the board and everything in your World Profile. Talk to
               me while you look at it.
             </p>
@@ -133,7 +133,7 @@ export default function CreativeRoom({
                 <button
                   key={o}
                   onClick={() => send(o)}
-                  className="block w-full border border-paper/12 px-3 py-2 text-left text-[13px] leading-snug text-paper/75 transition hover:border-pink/60 hover:text-pink"
+                  className="block w-full rounded-xl border border-line bg-white/70 px-3 py-2 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
                 >
                   {o}
                 </button>
@@ -146,14 +146,14 @@ export default function CreativeRoom({
           m.role === "user" ? (
             <p
               key={i}
-              className="ml-6 border-l-2 border-pink/60 bg-pink/5 px-3 py-2 text-sm leading-relaxed text-paper"
+              className="ml-6 rounded-xl bg-white/70 px-3 py-2 text-sm leading-relaxed text-plum"
             >
               {m.content}
             </p>
           ) : (
             <div
               key={i}
-              className="whitespace-pre-wrap text-sm leading-relaxed text-paper/90"
+              className="whitespace-pre-wrap text-sm leading-relaxed text-plum-2"
             >
               {m.content}
             </div>
@@ -161,17 +161,17 @@ export default function CreativeRoom({
         )}
 
         {busy && (
-          <p className="pulse-soft text-sm text-pink">Looking at the board…</p>
+          <p className="pulse-soft t-small text-pink-ink">Looking at the board…</p>
         )}
         {err && (
-          <p className="border-l-2 border-pink bg-pink/10 px-3 py-2 text-sm text-paper">
+          <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-3 py-2 text-sm text-[#8a2020]">
             {err}
           </p>
         )}
         <div ref={endRef} />
       </div>
 
-      <div className="border-t border-pink/20 p-3">
+      <div className="border-t border-line p-3">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -183,12 +183,12 @@ export default function CreativeRoom({
           }}
           rows={2}
           placeholder="Talk about this drop…"
-          className="w-full resize-none border border-paper/15 bg-black/50 px-3 py-2 text-sm text-paper outline-none placeholder:text-smoke/50 focus:border-pink"
+          className="field resize-none"
         />
         <button
           onClick={() => send(draft)}
           disabled={busy || !draft.trim()}
-          className="display mt-2 w-full bg-pink py-2.5 text-lg text-black transition hover:bg-pink-hot disabled:bg-paper/10 disabled:text-smoke"
+          className="btn btn-primary mt-2 w-full"
         >
           Send
         </button>

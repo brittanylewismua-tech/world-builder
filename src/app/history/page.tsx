@@ -14,6 +14,7 @@ import {
 } from "@/lib/drops";
 import type { World } from "@/lib/world";
 import { Globe } from "@/components/Globe";
+import { Page, PageHeader, Empty } from "@/components/ui";
 
 export default function History() {
   return <Shell>{(world) => <HistoryBody world={world} />}</Shell>;
@@ -42,7 +43,7 @@ function HistoryBody({ world }: { world: World }) {
   if (!drops)
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Globe size={140} spin />
+        <Globe size={64} spin className="opacity-70" />
       </div>
     );
 
@@ -50,10 +51,10 @@ function HistoryBody({ world }: { world: World }) {
 
   if (open) {
     return (
-      <main className="mx-auto max-w-5xl px-5 py-6">
+      <main className="mx-auto max-w-5xl px-5 py-8 md:px-8">
         <button
           onClick={() => setOpen(null)}
-          className="eyebrow mb-5 text-smoke transition hover:text-pink"
+          className="t-small mb-5 text-plum-3 transition hover:text-plum"
         >
           ← All drops
         </button>
@@ -64,7 +65,7 @@ function HistoryBody({ world }: { world: World }) {
           onUploadMockup={async () => {}}
           onRemoveMockup={async () => {}}
         />
-        <p className="mt-4 text-sm text-smoke">
+        <p className="t-small mt-3 text-plum-3">
           {STATUS_LABEL[open.status]} · {ageNote(open)}
         </p>
       </main>
@@ -72,37 +73,34 @@ function HistoryBody({ world }: { world: World }) {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-10">
-      <span className="eyebrow text-pink/70">Drop History</span>
-      <h1 className="display mt-3 text-[clamp(2rem,5vw,3rem)] text-paper">
-        Your creative history
-      </h1>
-      <p className="mt-3 max-w-lg text-sm leading-relaxed text-smoke">
-        Every published drop, frozen exactly as you released it. Statuses are
-        lifecycle only — nothing here decides which drops worked.
-      </p>
+    <Page width="wide">
+      <PageHeader
+        eyebrow="Drop History"
+        title="Your creative history"
+        lede="Every published drop, frozen exactly as you released it. Statuses are lifecycle only — nothing here decides which drops worked."
+      />
 
       {frozen.length === 0 ? (
-        <p className="mt-12 border-l-2 border-pink/40 pl-5 text-sm leading-relaxed text-smoke">
-          Nothing frozen yet. Your first drop lands in the archive the day it
-          publishes.
-        </p>
+        <Empty
+          title="Nothing frozen yet"
+          body="Your first drop lands in the archive the day it publishes."
+        />
       ) : (
-        <div className="mt-10 space-y-4">
+        <div className="space-y-3">
           {frozen.map((d) => (
             <button
               key={d.id}
               onClick={() => setOpen(d)}
-              className="block w-full border border-paper/12 p-4 text-left transition hover:border-pink/60 hover:bg-white/[0.02]"
+              className="card block w-full p-4 text-left transition hover:border-pink"
             >
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="display text-xl text-paper">
+                <span className="display text-lg text-plum">
                   DROP {String(d.number).padStart(2, "0")}
                 </span>
-                <span className="eyebrow text-smoke">
+                <span className="t-small text-plum-3">
                   {formatDropDate(d.publishDate)}
                 </span>
-                <span className="eyebrow ml-auto text-pink">
+                <span className="chip chip-accent ml-auto">
                   {STATUS_LABEL[d.status]}
                 </span>
               </div>
@@ -116,24 +114,24 @@ function HistoryBody({ world }: { world: World }) {
                       key={i}
                       src={item.src}
                       alt=""
-                      className="h-16 w-16 shrink-0 object-cover"
+                      className="h-14 w-14 shrink-0 rounded-md object-cover"
                     />
                   ) : (
                     <div
                       key={i}
-                      className="h-16 w-16 shrink-0 border border-paper/10"
+                      className="h-14 w-14 shrink-0 rounded-md border border-dashed border-line"
                     />
                   );
                 })}
               </div>
 
-              <p className="mt-3 text-xs text-smoke">
+              <p className="t-small mt-3 text-plum-3">
                 {d.items.length} of {world.slotsPerDrop} · {ageNote(d)}
               </p>
             </button>
           ))}
         </div>
       )}
-    </main>
+    </Page>
   );
 }

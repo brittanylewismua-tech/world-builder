@@ -88,16 +88,14 @@ function CustomerBody({ world }: { world: World }) {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <div className="border-b border-pink/25 pb-5">
-        <div className="flex items-center gap-2 text-pink">
-          <Sparkle size={11} />
+    <main className="mx-auto max-w-2xl px-5 py-8 md:px-8">
+      <div className="mb-6 border-b border-line pb-5">
+        <div className="flex items-center gap-1.5 text-pink-ink">
+          <Sparkle size={10} />
           <span className="eyebrow">Talk to your customer</span>
         </div>
-        <h1 className="display mt-3 text-[clamp(1.6rem,4vw,2.4rem)] text-paper">
-          World: {world.name}
-        </h1>
-        <p className="mt-3 text-xs leading-relaxed text-smoke">
+        <h1 className="t-h1 mt-2 text-plum">World: {world.name}</h1>
+        <p className="t-small mt-2 text-plum-2">
           A research-informed simulation of someone who lives in this world. She
           is one plausible person, not market truth — useful for thinking from
           inside her life, never as evidence.
@@ -113,7 +111,7 @@ function CustomerBody({ world }: { world: World }) {
               <button
                 key={p}
                 onClick={() => send(p)}
-                className="border border-paper/12 px-3 py-2.5 text-left text-[13px] leading-snug text-paper/75 transition hover:border-pink/60 hover:text-pink"
+                className="rounded-xl border border-line bg-white/70 px-3.5 py-3 text-left text-[13px] leading-snug text-plum-2 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink"
               >
                 {p}
               </button>
@@ -125,23 +123,23 @@ function CustomerBody({ world }: { world: World }) {
           m.role === "user" ? (
             <p
               key={i}
-              className="ml-auto max-w-[80%] bg-pink/15 px-4 py-2.5 text-right text-sm leading-relaxed text-paper"
+              className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-plum px-4 py-2.5 text-sm leading-relaxed text-white"
             >
               {m.content}
             </p>
           ) : (
             <p
               key={i}
-              className="max-w-[85%] whitespace-pre-wrap border-l-2 border-pink px-4 py-2.5 text-[15px] leading-relaxed text-paper/90"
+              className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-line bg-white/80 px-4 py-3 text-[15px] leading-relaxed text-plum"
             >
               {m.content}
             </p>
           ),
         )}
 
-        {busy && <p className="pulse-soft text-sm text-pink">typing…</p>}
+        {busy && <p className="pulse-soft t-small text-pink-ink">typing…</p>}
         {err && (
-          <p className="border-l-2 border-pink bg-pink/10 px-4 py-3 text-sm text-paper">
+          <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-4 py-3 text-sm text-[#8a2020]">
             {err}
           </p>
         )}
@@ -149,18 +147,18 @@ function CustomerBody({ world }: { world: World }) {
       </div>
 
       <div className="sticky bottom-4">
-        <div className="flex gap-2 border border-pink/25 bg-black/90 p-2 backdrop-blur">
+        <div className="card flex gap-2 p-2">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(draft)}
             placeholder="Ask her anything…"
-            className="w-full bg-transparent px-3 py-2 text-sm text-paper outline-none placeholder:text-smoke/50"
+            className="w-full bg-transparent px-3 py-2 text-sm text-plum outline-none placeholder:text-plum-3"
           />
           <button
             onClick={() => send(draft)}
             disabled={busy || !draft.trim()}
-            className="display shrink-0 bg-pink px-5 text-base text-black transition hover:bg-pink-hot disabled:bg-paper/10 disabled:text-smoke"
+            className="btn btn-primary shrink-0"
           >
             Ask
           </button>
@@ -168,7 +166,7 @@ function CustomerBody({ world }: { world: World }) {
         {msgs.length > 0 && (
           <button
             onClick={() => setMsgs([])}
-            className="eyebrow mt-3 text-smoke transition hover:text-pink"
+            className="t-small mt-3 text-plum-3 transition hover:text-plum"
           >
             Start over
           </button>

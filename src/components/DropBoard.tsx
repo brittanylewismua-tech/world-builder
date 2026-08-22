@@ -2,12 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { World } from "@/lib/world";
-import {
-  formatDropDate,
-  STATUS_LABEL,
-  type Drop,
-  type DropItem,
-} from "@/lib/drops";
+import { formatDropDate, type Drop, type DropItem } from "@/lib/drops";
 
 /**
  * SPEC: "It loosely simulates the visual experience of looking at products
@@ -16,8 +11,8 @@ import {
  */
 
 const BACKGROUNDS = [
-  { hex: "#F2EFEA", name: "Paper" },
   { hex: "#FFFFFF", name: "White" },
+  { hex: "#FAF9F8", name: "Paper" },
   { hex: "#FBF6EC", name: "Ivory" },
   { hex: "#F8E4EC", name: "Pale pink" },
   { hex: "#E8EDE9", name: "Sage" },
@@ -28,7 +23,7 @@ const BACKGROUNDS = [
 function bannerColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
-  return `hsl(${h} 42% 26%)`;
+  return `hsl(${h} 38% 24%)`;
 }
 
 export function ShopBanner({
@@ -57,14 +52,14 @@ export function ShopBanner({
         <img
           src={world.shopBannerSrc}
           alt=""
-          className="h-28 w-full object-cover sm:h-36"
+          className="h-24 w-full object-cover sm:h-32"
         />
       ) : (
         <div
-          className="flex h-28 w-full items-center justify-center sm:h-36"
+          className="flex h-24 w-full items-center justify-center sm:h-32"
           style={{ background: bannerColor(world.name || "world") }}
         >
-          <span className="display px-6 text-center text-[clamp(1.4rem,4vw,2.6rem)] text-white/95">
+          <span className="display px-6 text-center text-[clamp(1.25rem,3vw,2rem)] text-white/95">
             {world.name || "Your Shop"}
           </span>
         </div>
@@ -75,10 +70,10 @@ export function ShopBanner({
           <button
             onClick={() => input.current?.click()}
             disabled={busy}
-            className="absolute bottom-2 right-2 bg-black/70 px-3 py-1.5 text-[10px] uppercase tracking-widest text-white/80 opacity-0 transition hover:text-pink group-hover:opacity-100"
+            className="absolute bottom-2.5 right-2.5 rounded-xl bg-plum/72 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition hover:bg-plum group-hover:opacity-100"
           >
             {busy
-              ? "Uploading"
+              ? "Uploading…"
               : world.shopBannerSrc
                 ? "Replace banner"
                 : "Upload banner"}
@@ -107,7 +102,6 @@ function Tile({
   slot: number;
   item?: DropItem;
   frozen: boolean;
-  /** Board background is dark, so the empty-slot furniture has to invert. */
   dark: boolean;
   onUpload: (slot: number, file: File) => Promise<void>;
   onRemove: (item: DropItem) => Promise<void>;
@@ -124,27 +118,26 @@ function Tile({
     if (input.current) input.current.value = "";
   }
 
+  const bar = dark ? "bg-white/14" : "bg-black/8";
+  const barFaint = dark ? "bg-white/7" : "bg-black/5";
+
   if (item) {
     return (
-      <div className="group relative">
-        <div className="aspect-square overflow-hidden bg-black/5">
+      <div className="group">
+        <div className="relative aspect-square overflow-hidden rounded-xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={item.src} alt="" className="h-full w-full object-cover" />
+          {!frozen && (
+            <button
+              onClick={() => onRemove(item)}
+              className="absolute inset-x-0 bottom-0 bg-plum/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
+            >
+              Remove
+            </button>
+          )}
         </div>
-        {!frozen && (
-          <button
-            onClick={() => onRemove(item)}
-            className="absolute right-1.5 top-1.5 bg-black/75 px-2 py-1 text-[10px] uppercase tracking-widest text-white/80 opacity-0 transition hover:text-pink group-hover:opacity-100"
-          >
-            remove
-          </button>
-        )}
-        <div
-          className={`mt-1.5 h-3 w-4/5 ${dark ? "bg-white/15" : "bg-black/10"}`}
-        />
-        <div
-          className={`mt-1 h-3 w-1/3 ${dark ? "bg-white/15" : "bg-black/10"}`}
-        />
+        <div className={`mt-2 h-2 w-4/5 rounded-sm ${bar}`} />
+        <div className={`mt-1 h-2 w-1/3 rounded-sm ${bar}`} />
       </div>
     );
   }
@@ -154,24 +147,18 @@ function Tile({
       <button
         onClick={() => !frozen && input.current?.click()}
         disabled={frozen || busy}
-        className={`flex aspect-square w-full items-center justify-center border border-dashed transition disabled:cursor-default disabled:opacity-40 ${
+        className={`flex aspect-square w-full items-center justify-center rounded-xl border border-dashed transition disabled:cursor-default disabled:opacity-40 ${
           dark
-            ? "border-white/25 hover:border-white/50 hover:bg-white/[0.05]"
-            : "border-black/20 hover:border-black/45 hover:bg-black/[0.03]"
+            ? "border-white/25 text-white/35 hover:border-white/55 hover:bg-white/5"
+            : "border-black/18 text-black/25 hover:border-black/40 hover:bg-black/[0.03]"
         }`}
       >
-        <span
-          className={`display text-3xl ${dark ? "text-white/35" : "text-black/25"}`}
-        >
+        <span className="display text-xl">
           {busy ? "…" : String(slot).padStart(2, "0")}
         </span>
       </button>
-      <div
-        className={`mt-1.5 h-3 w-4/5 ${dark ? "bg-white/8" : "bg-black/[0.06]"}`}
-      />
-      <div
-        className={`mt-1 h-3 w-1/3 ${dark ? "bg-white/8" : "bg-black/[0.06]"}`}
-      />
+      <div className={`mt-2 h-2 w-4/5 rounded-sm ${barFaint}`} />
+      <div className={`mt-1 h-2 w-1/3 rounded-sm ${barFaint}`} />
       <input
         ref={input}
         type="file"
@@ -204,69 +191,81 @@ export default function DropBoard({
   const bySlot = new Map(drop.items.map((i) => [i.slot, i]));
   const done = drop.items.length;
   const dark = world.boardBackground === "#1A1A1C";
+  const pct = (done / world.slotsPerDrop) * 100;
 
   return (
     <div>
-      {/* board */}
-      <div
-        className="border border-pink/20 transition-colors"
-        style={{ background: world.boardBackground }}
-      >
-        <ShopBanner world={world} onUpload={frozen ? undefined : onUploadBanner} />
+      <div className="card-flush overflow-hidden">
+        <ShopBanner
+          world={world}
+          onUpload={frozen ? undefined : onUploadBanner}
+        />
 
         <div
-          className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 px-5 pt-5 ${
-            dark ? "text-white" : "text-black"
-          }`}
+          className="transition-colors"
+          style={{ background: world.boardBackground }}
         >
-          <span className="display text-2xl">
-            DROP {String(drop.number).padStart(2, "0")}
-          </span>
-          <span className="eyebrow opacity-60">
-            {formatDropDate(drop.publishDate)}
-          </span>
-          <span className="ml-auto display text-xl">
-            {done} / {world.slotsPerDrop}
-          </span>
-        </div>
+          <div
+            className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-5 pt-5 ${
+              dark ? "text-white" : "text-plum"
+            }`}
+          >
+            <span className="display text-xl">
+              Drop {String(drop.number).padStart(2, "0")}
+            </span>
+            <span
+              className={`t-small ${dark ? "text-white/60" : "text-black/50"}`}
+            >
+              {formatDropDate(drop.publishDate)}
+            </span>
+            <span className="ml-auto text-sm font-semibold tabular-nums">
+              {done} / {world.slotsPerDrop}
+            </span>
+          </div>
 
-        <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-3 lg:grid-cols-5">
-          {slots.map((s) => (
-            <Tile
-              key={s}
-              slot={s}
-              item={bySlot.get(s)}
-              frozen={frozen}
-              dark={dark}
-              onUpload={onUploadMockup}
-              onRemove={onRemoveMockup}
-            />
-          ))}
+          <div className="px-5 pt-3">
+            <div
+              className={`h-1 w-full overflow-hidden rounded-full ${dark ? "bg-white/12" : "bg-black/8"}`}
+            >
+              <div
+                className="h-full rounded-full bg-pink transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-3 lg:grid-cols-5">
+            {slots.map((s) => (
+              <Tile
+                key={s}
+                slot={s}
+                item={bySlot.get(s)}
+                frozen={frozen}
+                dark={dark}
+                onUpload={onUploadMockup}
+                onRemove={onRemoveMockup}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* board controls */}
       {onBackground && !frozen && (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span className="eyebrow text-smoke">Board</span>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="t-small text-plum-3">Board</span>
           {BACKGROUNDS.map((b) => (
             <button
               key={b.hex}
               onClick={() => onBackground(b.hex)}
               title={b.name}
-              className={`h-7 w-7 border-2 transition ${
+              className={`h-6 w-6 rounded-full border transition ${
                 world.boardBackground === b.hex
-                  ? "border-pink"
-                  : "border-paper/20 hover:border-paper/50"
+                  ? "border-plum ring-2 ring-pink ring-offset-1"
+                  : "border-line-strong hover:border-plum-3"
               }`}
               style={{ background: b.hex }}
             />
           ))}
-          {frozen && (
-            <span className="eyebrow ml-auto text-pink">
-              {STATUS_LABEL[drop.status]}
-            </span>
-          )}
         </div>
       )}
     </div>

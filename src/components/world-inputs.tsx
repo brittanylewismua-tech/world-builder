@@ -10,6 +10,7 @@ import {
   type VisualReference,
   type WorldArea,
 } from "@/lib/world";
+import { Note } from "./ui";
 
 /* ------------------------------------------------------------------ */
 /* W — WORK UP FROM DEMAND                                             */
@@ -27,6 +28,7 @@ export function SubNicheInput({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const remaining = Math.max(0, MIN_SUB_NICHES - subNiches.length);
+  const pct = Math.min(100, (subNiches.length / MIN_SUB_NICHES) * 100);
 
   async function add() {
     const keyword = draft.trim();
@@ -39,11 +41,11 @@ export function SubNicheInput({
 
   return (
     <div>
-      <div className="hairline mb-5 bg-pink/5 px-4 py-3 text-sm leading-relaxed text-paper/85">
+      <Note>
         These should already have been validated by you inside eRank. This tool
         does not check demand or competition — it takes your word for it,
         because your research is the part that has to be real.
-      </div>
+      </Note>
 
       <div className="flex gap-2">
         <input
@@ -51,44 +53,53 @@ export function SubNicheInput({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="jesus loves you shirt"
-          className="hairline w-full bg-black/60 px-4 py-3 text-base text-paper outline-none placeholder:text-smoke/50 focus:border-pink"
+          className="field"
         />
         <button
           onClick={add}
           disabled={!draft.trim() || busy}
-          className="display shrink-0 bg-pink px-6 text-lg text-black transition hover:bg-pink-hot disabled:cursor-not-allowed disabled:bg-paper/10 disabled:text-smoke"
+          className="btn btn-primary"
         >
           Add
         </button>
       </div>
 
-      <div className="mt-3 flex items-baseline gap-2">
-        <span className="display text-3xl text-pink">{subNiches.length}</span>
-        <span className="text-sm text-smoke">
+      {/* progress toward the floor, stated plainly */}
+      <div className="mt-4 flex items-center gap-3">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/60">
+          <div
+            className="h-full rounded-full bg-pink transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="t-small whitespace-nowrap text-plum-2">
           {remaining > 0
-            ? `${remaining} more to reach the minimum of ${MIN_SUB_NICHES}`
-            : "validated sub-niches — no cap, add more any time"}
+            ? `${subNiches.length} of ${MIN_SUB_NICHES}`
+            : `${subNiches.length} added`}
         </span>
       </div>
+      <p className="t-small mt-1.5 text-plum-3">
+        {remaining > 0
+          ? `${remaining} more to reach the minimum of ${MIN_SUB_NICHES}.`
+          : "Minimum reached. There is no cap — keep adding as you validate."}
+      </p>
 
       {subNiches.length > 0 && (
-        <ul className="mt-5 space-y-2">
+        <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line">
           {subNiches.map((s, i) => (
             <li
               key={s.id}
-              className="rise flex items-center gap-3 border border-paper/12 px-4 py-2.5"
+              className="group flex items-center gap-3 bg-white/70 px-4 py-2.5"
             >
-              <span className="display w-7 shrink-0 text-pink/50">
-                {String(i + 1).padStart(2, "0")}
+              <span className="t-small w-5 shrink-0 tabular-nums text-plum-3">
+                {i + 1}
               </span>
-              <span className="flex-1 text-[15px] text-paper/90">
-                {s.keyword}
-              </span>
+              <span className="t-body flex-1 text-plum">{s.keyword}</span>
               <button
                 onClick={() => onRemove(s.id)}
-                className="shrink-0 text-[10px] uppercase tracking-widest text-smoke/50 transition hover:text-pink"
+                className="t-small text-plum-3 opacity-0 transition hover:text-pink-ink group-hover:opacity-100"
               >
-                remove
+                Remove
               </button>
             </li>
           ))}
@@ -110,42 +121,42 @@ export function AffinityInput({
   onChange: (next: Affinity) => void;
 }) {
   return (
-    <div className="space-y-8">
-      <p className="max-w-xl text-sm leading-relaxed text-smoke">
+    <div>
+      <Note>
         Reflection, not a test. Nothing here gets scored, and nothing gets
         approved or rejected — you decide whether this world is worth months of
         your attention.
-      </p>
+      </Note>
 
-      {AFFINITY_QUESTIONS.map((q) => {
-        const value = affinity[q.key];
-        return (
-          <div key={q.key}>
-            <p className="text-[15px] leading-snug text-paper/90">
-              {q.question}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => onChange({ ...affinity, [q.key]: n })}
-                  className={`display h-11 w-11 text-lg transition ${
-                    value === n
-                      ? "bg-pink text-black"
-                      : "border border-paper/15 text-paper/60 hover:border-pink/60 hover:text-pink"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
+      <div className="space-y-6">
+        {AFFINITY_QUESTIONS.map((q) => {
+          const value = affinity[q.key];
+          return (
+            <div key={q.key} className="rounded-2xl border border-line bg-white/55 p-4">
+              <p className="t-h3 text-plum">{q.question}</p>
+              <div className="mt-3 flex gap-1">
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => onChange({ ...affinity, [q.key]: n })}
+                    className={`h-9 flex-1 rounded-lg text-sm font-semibold tabular-nums transition ${
+                      value === n
+                        ? "bg-plum text-white"
+                        : "bg-white/70 text-plum-2 hover:bg-pink-soft"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 flex justify-between">
+                <span className="t-small text-plum-3">{q.low}</span>
+                <span className="t-small text-plum-3">{q.high}</span>
+              </div>
             </div>
-            <div className="mt-2 flex justify-between text-[11px] uppercase tracking-widest text-smoke/60">
-              <span>{q.low}</span>
-              <span>{q.high}</span>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -176,27 +187,27 @@ export function VisualCalibrationInput({
 
   return (
     <div>
-      <div className="hairline mb-5 bg-pink/5 px-4 py-3 text-sm leading-relaxed text-paper/85">
+      <Note>
         Around {SUGGESTED_VISUAL_REFERENCES} existing designs in this world whose
         creative style you love and could imagine designing alongside. Not proof
         of fluency, not demand evidence, and not designs anything will copy —
         they tell the AI what you are picturing when you picture this world.
-      </div>
+      </Note>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         {refs.map((r) => (
-          <div key={r.id} className="rise group relative aspect-square">
+          <div key={r.id} className="group relative aspect-square">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={r.src}
               alt=""
-              className="h-full w-full border border-paper/15 object-cover"
+              className="h-full w-full rounded-xl border border-line object-cover"
             />
             <button
               onClick={() => onRemove(r)}
-              className="absolute right-1.5 top-1.5 bg-black/80 px-2 py-1 text-[10px] uppercase tracking-widest text-paper/70 opacity-0 transition hover:text-pink group-hover:opacity-100"
+              className="absolute inset-x-0 bottom-0 rounded-b-xl bg-plum/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
             >
-              remove
+              Remove
             </button>
           </div>
         ))}
@@ -204,11 +215,11 @@ export function VisualCalibrationInput({
         <button
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="flex aspect-square flex-col items-center justify-center border border-dashed border-pink/40 text-pink transition hover:border-pink hover:bg-pink/5 disabled:opacity-40"
+          className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-line-strong text-plum-3 transition hover:border-pink hover:bg-pink-soft hover:text-pink-ink disabled:opacity-40"
         >
-          <span className="display text-3xl">{busy ? "…" : "+"}</span>
-          <span className="eyebrow mt-1 text-[9px]">
-            {busy ? "Uploading" : "Add images"}
+          <span className="text-xl leading-none">{busy ? "…" : "+"}</span>
+          <span className="text-[11px] font-medium">
+            {busy ? "Uploading" : "Add"}
           </span>
         </button>
       </div>
@@ -222,7 +233,7 @@ export function VisualCalibrationInput({
         className="hidden"
       />
 
-      <p className="mt-3 text-sm text-smoke">
+      <p className="t-small mt-3 text-plum-3">
         {refs.length} reference{refs.length === 1 ? "" : "s"}. Replace or add
         whenever your eye changes.
       </p>
@@ -231,7 +242,7 @@ export function VisualCalibrationInput({
 }
 
 /* ------------------------------------------------------------------ */
-/* ACTIVE WORLD AREAS — these power World Daily                        */
+/* ACTIVE WORLD AREAS                                                  */
 /* ------------------------------------------------------------------ */
 
 export function AreasInput({
@@ -261,12 +272,12 @@ export function AreasInput({
 
   return (
     <div>
-      <div className="hairline mb-5 bg-pink/5 px-4 py-3 text-sm leading-relaxed text-paper/85">
+      <Note>
         The parts of your customer&apos;s world you want watched every day. You
         pick these, not the AI. A festival shop might watch festival fashion,
         EDM culture, streetwear, nightlife, rave humor, festival beauty. Yours
         will be different.
-      </div>
+      </Note>
 
       <div className="flex gap-2">
         <input
@@ -274,28 +285,25 @@ export function AreasInput({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="festival fashion"
-          className="hairline w-full bg-black/60 px-4 py-3 text-base text-paper outline-none placeholder:text-smoke/50 focus:border-pink"
+          className="field"
         />
         <button
           onClick={add}
           disabled={!draft.trim() || busy}
-          className="display shrink-0 bg-pink px-6 text-lg text-black transition hover:bg-pink-hot disabled:cursor-not-allowed disabled:bg-paper/10 disabled:text-smoke"
+          className="btn btn-primary"
         >
           Add
         </button>
       </div>
 
       {areas.length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           {areas.map((a) => (
-            <span
-              key={a.id}
-              className="rise flex items-center gap-2 border border-pink/40 px-3 py-1.5 text-sm text-pink"
-            >
+            <span key={a.id} className="chip chip-accent">
               {a.name}
               <button
                 onClick={() => onRemove(a.id)}
-                className="text-smoke/60 transition hover:text-pink"
+                className="text-pink-ink/55 transition hover:text-pink-ink"
                 aria-label={`Remove ${a.name}`}
               >
                 ×

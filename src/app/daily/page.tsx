@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
-import { Globe, Sparkle } from "@/components/Globe";
+import { Globe } from "@/components/Globe";
+import { Page, Card, Empty, ErrorNote } from "@/components/ui";
 import {
   formatIssueDate,
   generateIssue,
@@ -27,8 +28,6 @@ function DailyBody({ world }: { world: World }) {
   const [dates, setDates] = useState<string[]>([]);
   const [researching, setResearching] = useState(false);
   const [err, setErr] = useState("");
-  // SPEC: "every day the software researches those territories and publishes".
-  // The seller should not have to ask for the paper — it should be waiting.
   const autoRan = useRef(false);
 
   const open = useCallback(
@@ -46,7 +45,9 @@ function DailyBody({ world }: { world: World }) {
   );
 
   useEffect(() => {
-    loadIssueDates(world.id).then(setDates).catch(() => setDates([]));
+    loadIssueDates(world.id)
+      .then(setDates)
+      .catch(() => setDates([]));
     open(today);
   }, [world.id, today, open]);
 
@@ -65,10 +66,9 @@ function DailyBody({ world }: { world: World }) {
 
   const noAreas = world.areas.length === 0;
 
-  // First visit of the day with nothing published yet: go and get it.
+  // SPEC: the paper should be waiting each morning, not requested.
   useEffect(() => {
-    if (autoRan.current) return;
-    if (noAreas || researching) return;
+    if (autoRan.current || noAreas || researching) return;
     if (date !== today) return;
     if (items === null || items.length > 0) return;
     autoRan.current = true;
@@ -76,152 +76,136 @@ function DailyBody({ world }: { world: World }) {
   }, [items, noAreas, researching, date, today, research]);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <Page width="reading">
       {/* masthead */}
-      <div className="border-b-2 border-pink pb-5">
-        <div className="flex items-center gap-2 text-pink">
-          <Sparkle size={11} />
-          <span className="eyebrow">World Daily</span>
-          <span className="ml-auto eyebrow text-smoke">
-            {formatIssueDate(date)}
-          </span>
+      <header className="mb-6 border-b border-line pb-5">
+        <div className="flex items-baseline justify-between gap-4">
+          <span className="eyebrow text-pink-ink">World Daily</span>
+          <span className="t-small text-plum-3">{formatIssueDate(date)}</span>
         </div>
-        <h1 className="display mt-4 text-[clamp(1.8rem,5vw,3rem)] text-paper">
-          {greeting()}
+        <h1 className="t-h1 mt-3 text-plum">
+          {greeting()}. Here&apos;s what&apos;s happening in your world.
         </h1>
-        <p className="display mt-1 text-[clamp(1rem,2.6vw,1.4rem)] text-pink">
-          Here&apos;s what&apos;s happening in your world
-        </p>
-        <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs text-smoke">
-          {world.areas.map((a) => (
-            <span key={a.id}>{a.name}</span>
-          ))}
-        </p>
-      </div>
+        {!noAreas && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {world.areas.map((a) => (
+              <span key={a.id} className="chip">
+                {a.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </header>
 
-      {err && (
-        <p className="mt-6 border-l-2 border-pink bg-pink/10 px-4 py-3 text-sm leading-relaxed text-paper">
-          {err}
-        </p>
-      )}
+      {err && <ErrorNote>{err}</ErrorNote>}
 
       {noAreas && (
-        <div className="mt-10">
-          <p className="text-[15px] leading-relaxed text-paper/85">
-            You have not named any areas to watch yet. World Daily reads the
-            parts of your customer&apos;s world that you choose — not what an AI
-            thinks matters.
-          </p>
-          <Link
-            href="/profile"
-            className="display mt-5 inline-block bg-pink px-6 py-3 text-lg text-black hover:bg-pink-hot"
-          >
-            Add world areas
-          </Link>
-        </div>
+        <Empty
+          title="No areas to watch yet"
+          body="World Daily reads the parts of your customer's world that you choose — not what an AI thinks matters."
+          action={
+            <Link href="/profile" className="btn btn-accent">
+              Add world areas
+            </Link>
+          }
+        />
       )}
 
-      {/* researching */}
       {researching && (
-        <div className="flex flex-col items-center py-20 text-center">
-          <Globe size={150} spin />
-          <p className="display mt-7 text-xl text-paper">
-            Reading your world…
-          </p>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed text-smoke">
+        <Card className="flex flex-col items-center py-14 text-center">
+          <Globe size={64} spin />
+          <p className="t-h3 mt-5 text-plum">Reading your world…</p>
+          <p className="t-small mx-auto mt-1.5 max-w-sm text-plum-2">
             Searching {world.areas.length} area
             {world.areas.length === 1 ? "" : "s"}, then throwing out everything
             that is not genuinely current. This takes a minute.
           </p>
-        </div>
+        </Card>
       )}
 
-      {/* empty issue */}
       {!researching && items?.length === 0 && !noAreas && (
-        <div className="mt-10">
-          <p className="text-[15px] leading-relaxed text-paper/85">
-            {date === today
-              ? "Today's issue has not been researched yet."
-              : "No issue was published on that date."}
-          </p>
-          {date === today && (
-            <button
-              onClick={research}
-              className="display mt-5 bg-pink px-6 py-3 text-lg text-black transition hover:bg-pink-hot"
-            >
-              Research today
-            </button>
-          )}
-        </div>
+        <Empty
+          title={
+            date === today
+              ? "Nothing published yet today"
+              : "No issue on that date"
+          }
+          body={
+            date === today
+              ? "Research runs automatically on your first visit each day. You can also run it now."
+              : "Pick another date from the back issues below."
+          }
+          action={
+            date === today ? (
+              <button onClick={research} className="btn btn-accent">
+                Research today
+              </button>
+            ) : undefined
+          }
+        />
       )}
 
-      {/* the issue */}
       {!researching && items && items.length > 0 && (
         <>
-          <div className="divide-y divide-pink/15">
+          <div className="space-y-4">
             {items.map((it, i) => (
-              <article key={it.id} className="rise py-7">
-                <div className="flex items-baseline gap-3">
-                  <span className="display text-pink/45">
+              <Card key={it.id} className="rise">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="t-small font-semibold tabular-nums text-plum-3">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="eyebrow text-pink">{it.area}</span>
+                  <span className="eyebrow text-pink-ink">{it.area}</span>
                 </div>
-                <h2 className="display mt-2 text-[clamp(1.3rem,3vw,1.9rem)] leading-tight text-paper">
-                  {it.headline}
-                </h2>
-                <p className="mt-3 text-[15px] leading-relaxed text-paper/85">
-                  {it.body}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <h2 className="t-h2 text-plum">{it.headline}</h2>
+                <p className="t-body mt-2 text-plum-2">{it.body}</p>
+                <div className="mt-4 flex flex-wrap gap-1.5 border-t border-line pt-3">
                   {it.sources.map((s, j) => (
                     <a
                       key={j}
                       href={s.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="border border-paper/15 px-2.5 py-1 text-[11px] text-smoke transition hover:border-pink hover:text-pink"
+                      className="chip transition hover:border-pink hover:text-pink-ink"
                     >
                       {hostOf(s.url)} ↗
                     </a>
                   ))}
                 </div>
-              </article>
+              </Card>
             ))}
           </div>
 
-          <div className="mt-6 border-t border-pink/20 pt-6">
-            <p className="max-w-lg text-xs leading-relaxed text-smoke">
-              Signals only. Nothing here is a product instruction, and none of
-              it is sales data — what any of it means for your shop is your
-              call. Every link came back from a real search; anything that
-              could not be verified was dropped.
-            </p>
+          <p className="t-small mt-5 text-plum-3">
+            Signals only. Nothing here is a product instruction and none of it is
+            sales data — what any of it means for your shop is your call. Every
+            link came back from a real search; anything unverifiable was dropped.
             {date === today && (
-              <button
-                onClick={research}
-                className="eyebrow mt-4 text-smoke transition hover:text-pink"
-              >
-                Re-research today
-              </button>
+              <>
+                {" "}
+                <button
+                  onClick={research}
+                  className="font-medium text-plum-2 underline underline-offset-2 transition hover:text-plum"
+                >
+                  Re-research today
+                </button>
+              </>
             )}
-          </div>
+          </p>
         </>
       )}
 
-      {/* back issues */}
       {dates.length > 1 && (
-        <div className="mt-12 border-t border-pink/20 pt-6">
-          <p className="eyebrow text-pink/70">Back issues</p>
-          <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-8 border-t border-line pt-5">
+          <p className="eyebrow mb-3 text-plum-3">Back issues</p>
+          <div className="flex flex-wrap gap-1.5">
             {dates.map((d) => (
               <button
                 key={d}
                 onClick={() => open(d)}
-                className={`border px-3 py-1.5 text-xs transition ${
+                className={`chip transition ${
                   d === date
-                    ? "border-pink bg-pink text-black"
-                    : "border-paper/15 text-smoke hover:border-pink/60 hover:text-pink"
+                    ? "border-plum bg-plum text-white"
+                    : "hover:border-plum-3"
                 }`}
               >
                 {formatIssueDate(d)}
@@ -230,6 +214,6 @@ function DailyBody({ world }: { world: World }) {
           </div>
         </div>
       )}
-    </main>
+    </Page>
   );
 }
