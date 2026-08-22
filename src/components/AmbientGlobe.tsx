@@ -3,15 +3,15 @@
 /**
  * The ambient globe.
  *
- * A very large globe pushed off the right edge of the viewport, fixed so it
- * does not scroll, rotating slowly behind the entire workspace. Content cards
- * float above it on white, which is what stops the app reading as a flat page.
+ * A very large globe entering from the right edge, fixed so it does not
+ * scroll, turning slowly behind the whole workspace. Content cards float above
+ * it in true white — that contrast is what stops the app reading as a flat
+ * page and gives the product depth.
  *
- * Three things keep it from hurting readability:
- *  - it is fixed and mostly off-canvas, so only the left third is ever visible
- *  - a white scrim washes it out under the reading column
- *  - the rotation is slow enough (three minutes a turn) to register as ambience
- *    rather than motion, and it pauses for anyone who asks for reduced motion
+ * Readability is protected by a scrim that washes the globe back to the page
+ * colour underneath the reading column, so the text always sits on clean
+ * ground while the right third of the screen stays alive. Motion stops
+ * entirely for anyone who has asked for reduced motion.
  */
 export default function AmbientGlobe() {
   return (
@@ -19,20 +19,23 @@ export default function AmbientGlobe() {
       aria-hidden
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     >
-      {/* soft bloom so the globe sits in light rather than on top of nothing */}
-      <div className="absolute -right-[18vw] top-1/2 h-[92vh] w-[92vh] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(238,111,192,0.16),rgba(238,111,192,0.05)_45%,transparent_70%)] blur-2xl" />
+      {/* bloom so the globe sits in light rather than floating on nothing */}
+      <div className="absolute -right-[10vw] top-1/2 h-[120vh] w-[120vh] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(238,111,192,0.26),rgba(238,111,192,0.09)_46%,transparent_68%)] blur-3xl" />
 
-      <div className="globe-drift absolute -right-[26vw] top-1/2 -translate-y-1/2">
+      <div className="globe-drift absolute -right-[16vw] top-1/2 -translate-y-1/2">
         <img
           src="/globe.png"
           alt=""
-          className="globe-turn h-[86vh] w-[86vh] max-w-none opacity-[0.17]"
+          className="globe-turn h-[112vh] w-[112vh] max-w-none opacity-[0.42]"
         />
       </div>
 
-      {/* wash the left side back to white so text always has a clean ground */}
-      <div className="absolute inset-0 bg-gradient-to-r from-white via-white/92 to-transparent" />
-      <div className="absolute inset-y-0 right-0 w-[22vw] bg-gradient-to-l from-white/70 to-transparent" />
+      {/*
+        Wash the reading side back to the page colour. Hard to ~52% so body
+        copy never sits on continents, then release quickly so the globe reads
+        at full strength on the right.
+      */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#fcfaf9_0%,#fcfaf9_46%,rgba(252,250,249,0.82)_58%,rgba(252,250,249,0.28)_72%,transparent_86%)]" />
     </div>
   );
 }
