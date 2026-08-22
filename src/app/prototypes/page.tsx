@@ -1,5 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 
+import DirectionD from "@/components/proto-d";
+
 /**
  * Visual directions, side by side.
  *
@@ -336,6 +338,13 @@ function DirectionC() {
 export default function Prototypes() {
   const blocks = [
     {
+      key: "D",
+      name: "Disco",
+      pitch:
+        "Built from your own marketing: iridescent pink ground, white cards floating on top with the Mac window dots, scattered stars, bold lowercase with pink italic emphasis inside the sentence. The ground is dialled back from your Instagram version so it survives eight hours of use.",
+      node: <DirectionD />,
+    },
+    {
       key: "A",
       name: "Poster",
       pitch:
@@ -365,13 +374,12 @@ export default function Prototypes() {
           Visual directions
         </span>
         <h1 className="mt-3 font-[Playfair_Display] text-[2.4rem] leading-tight">
-          Three ways World Builder could look
+          Four ways World Builder could look
         </h1>
         <p className="mt-3 max-w-2xl text-[17px] leading-relaxed text-black/60">
-          Same screen, same real content, three different treatments. All three
-          are black, white and pink, all three use your globe, and all three
-          share Listing Factory&apos;s structure. Tell me a letter — or parts of
-          two — and I will build the whole app in it.
+          Same screen, same real content, four different treatments. D is new
+          — built from your actual marketing rather than my guesses. Tell me a
+          letter, or parts of two, and I will build the whole app in it.
         </p>
 
         <div className="mt-12 space-y-16">
