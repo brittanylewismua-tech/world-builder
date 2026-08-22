@@ -41,6 +41,7 @@
   --color-pink-ink: #b02371;
 
   --font-display: "Playfair Display", Georgia, serif;
+  --font-condensed: "Anton", "Arial Narrow", Impact, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, sans-serif;
 }
 
@@ -58,7 +59,12 @@ body {
 }
 
 body {
-  background: var(--color-canvas);
+  background:
+    linear-gradient(rgba(238, 111, 192, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 111, 192, 0.055) 1px, transparent 1px),
+    var(--color-canvas);
+  background-size: 48px 48px;
+  background-attachment: fixed;
 }
 
 /* ---------------------------------------------------------------- type */
@@ -71,11 +77,19 @@ body {
 }
 
 .eyebrow {
-  font-weight: 600;
+  font-family: var(--font-condensed);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 0.6875rem;
+  letter-spacing: 0.15em;
+  font-size: 0.8125rem;
   line-height: 1.2;
+}
+
+/* Big graphic numerals — the other place the condensed face earns its keep. */
+.numeral {
+  font-family: var(--font-condensed);
+  letter-spacing: 0.01em;
+  line-height: 0.86;
+  font-variant-numeric: tabular-nums;
 }
 
 /* One ramp. Serif for headings, Inter for everything a person operates. */
@@ -115,7 +129,7 @@ body {
   background: #fff;
   border: 1px solid var(--color-line);
   border-radius: 14px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.035);
 }
 
 .card-flush {
@@ -130,6 +144,14 @@ body {
   background: var(--color-pink-soft);
   border: 1px solid #f7d3e9;
   border-radius: 10px;
+}
+
+.rule-accent {
+  display: block;
+  height: 3px;
+  width: 44px;
+  background: var(--color-pink);
+  border-radius: 2px;
 }
 
 .hairline {
