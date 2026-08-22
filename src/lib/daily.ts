@@ -1,0 +1,116 @@
+"use client";
+
+import { supabase } from "./supabase";
+import type { World } from "./world";
+
+export interface DailySource {
+  title: string;
+  url: string;
+}
+
+export interface DailyItem {
+  id: string;
+  area: string;
+  headline: string;
+  body: string;
+  sources: DailySource[];
+}
+
+export function todayISO() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+
+export async function loadIssue(
+  worldId: string,
+  date: string,
+): Promise<DailyItem[]> {
+  const { data, error } = await supabase
+    .from("wb_daily_items")
+    .select("id, area, headline, body, sources")
+    .eq("world_id", worldId)
+    .eq("issue_date", date)
+    .order("position");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as DailyItem[];
+}
+
+/** The dates that already have an issue, newest first. */
+export async function loadIssueDates(worldId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("wb_daily_items")
+    .select("issue_date")
+    .eq("world_id", worldId)
+    .order("issue_date", { ascending: false });
+  if (error) throw new Error(error.message);
+  return Array.from(new Set((data ?? []).map((r) => r.issue_date as string)));
+}
+
+/**
+ * Research today's issue and store it.
+ * Only ever called when today has no issue yet, or the seller asks for a rerun.
+ */
+export async function generateIssue(
+  world: World,
+  date: string,
+): Promise<DailyItem[]> {
+  const r = await fetch("/api/world-daily", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      worldName: world.name,
+      areas: world.areas.map((a) => a.name),
+      subNiches: world.subNiches.map((s) => s.keyword),
+    }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Could not research today's issue.");
+
+  const rows = (j.items as Omit<DailyItem, "id">[]).map((it, i) => ({
+    world_id: world.id,
+    issue_date: date,
+    area: it.area,
+    headline: it.headline,
+    body: it.body,
+    sources: it.sources,
+    position: i,
+  }));
+
+  // Replace rather than append, so a rerun does not double the issue.
+  await supabase
+    .from("wb_daily_items")
+    .delete()
+    .eq("world_id", world.id)
+    .eq("issue_date", date);
+
+  const { error } = await supabase.from("wb_daily_items").insert(rows);
+  if (error) throw new Error(error.message);
+
+  return loadIssue(world.id, date);
+}
+
+export function formatIssueDate(iso: string) {
+  return new Date(`${iso}T00:00:00`)
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    })
+    .toUpperCase();
+}
+
+export function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "GOOD MORNING";
+  if (h < 18) return "GOOD AFTERNOON";
+  return "GOOD EVENING";
+}
+
+export function hostOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}

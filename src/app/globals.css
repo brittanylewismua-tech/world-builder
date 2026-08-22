@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #000000;
+  --color-pink: #ee6fc0;
+  --color-pink-hot: #ff7fd0;
+  --color-pink-deep: #8f2f6d;
+  --color-paper: #f2efea;
+  --color-smoke: #a9a4a0;
+  --color-panel: #0b0b0c;
+  --color-line: #24202340;
+
+  --font-display: "Anton", "Arial Narrow", Impact, sans-serif;
+  --font-script: "Kaushan Script", cursive;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #000;
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- brand primitives ---------- */
+
+.display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.86;
+}
+
+.script {
+  font-family: var(--font-script);
+  text-transform: none;
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.68rem;
+}
+
+/* faint grid, like the banner */
+.gridfield {
+  background-image:
+    linear-gradient(rgba(238, 111, 192, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 111, 192, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.glow {
+  box-shadow: 0 0 0 1px rgba(238, 111, 192, 0.35), 0 0 40px -12px rgba(238, 111, 192, 0.55);
+}
+
+.hairline {
+  border: 1px solid rgba(238, 111, 192, 0.22);
+}
+
+.killed {
+  text-decoration: line-through;
+  text-decoration-color: rgba(238, 111, 192, 0.9);
+  text-decoration-thickness: 2px;
+  opacity: 0.38;
+}
+
+/* the canvas fog: unfilled fields sit behind this until a decision lands */
+.fog {
+  filter: blur(5px);
+  opacity: 0.3;
+  user-select: none;
+}
+
+.sharpen {
+  animation: sharpen 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes sharpen {
+  from {
+    filter: blur(7px);
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.spin-slow {
+  animation: spin 90s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pulse-soft {
+  animation: pulseSoft 1.6s ease-in-out infinite;
+}
+@keyframes pulseSoft {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #33222d;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-pink-deep);
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
