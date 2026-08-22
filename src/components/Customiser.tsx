@@ -52,6 +52,22 @@ export default function Customiser({
     }
   }
 
+  /**
+   * Switching the door back on clears today's "already walked through", so it
+   * appears next time rather than tomorrow. Turning it on and seeing nothing
+   * happen would read as broken.
+   */
+  async function toggleDoor() {
+    const theme = { ...world.theme, door: !world.theme.door };
+    const doorSeenOn = theme.door ? null : world.doorSeenOn;
+    patch({ theme, doorSeenOn });
+    try {
+      await saveWorld(world.id, { theme, doorSeenOn });
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "Could not save that.");
+    }
+  }
+
   async function uploadWallpaper(files: FileList | null) {
     const f = files?.[0];
     if (!f) return;
@@ -418,9 +434,10 @@ export default function Customiser({
           <div className="min-w-0">
             <h3 className="t-h3">The door</h3>
             <p className="t-small mt-1 max-w-md text-ink-2">
-              When you open World Builder you arrive at a door with your world
-              behind it, and click through into your home page. Turn it off and
-              you land straight on home instead.
+              The first time you open World Builder each day you arrive at a
+              door with your world behind it, and click through into your home
+              page. After that it opens straight on home. Turn this off and it
+              always does.
             </p>
           </div>
 
@@ -428,7 +445,7 @@ export default function Customiser({
             role="switch"
             aria-checked={theme.door}
             aria-label="Show the door"
-            onClick={() => apply({ door: !theme.door })}
+            onClick={toggleDoor}
             className="relative h-9 w-16 shrink-0 rounded-full border-2 border-black transition"
             style={{ background: theme.door ? theme.accent : "#fff" }}
           >
@@ -441,7 +458,7 @@ export default function Customiser({
         </div>
 
         <p className="t-small mt-3 font-semibold">
-          {theme.door ? "On — you walk in." : "Off — you land on home."}
+          {theme.door ? "On — you walk in once a day." : "Off — you land on home."}
         </p>
       </section>
 

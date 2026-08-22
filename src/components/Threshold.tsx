@@ -14,10 +14,11 @@ import { Star } from "./ui";
  * You do not open a dashboard, you walk into a place. A door on white, a
  * galaxy behind it, one click to go through.
  *
- * It is a moment, not a toll booth. Anyone who gets tired of it can switch it
- * off from the door itself, in small type that never competes with the door,
- * and switch it back on in Make It Yours. Anyone who has asked their system
- * for less motion gets the door without the swing.
+ * It is a moment, not a toll booth: once a day, then the app opens straight on
+ * Home for the rest of it. Anyone who tires of it can switch the door off from
+ * the door itself, in small type that never competes with it, and switch it
+ * back on in Make It Yours. Anyone who has asked their system for less motion
+ * gets the door without the swing.
  */
 
 /** Deterministic star field — same on the server and the client, no flicker. */
@@ -118,10 +119,13 @@ function Galaxy({ wall }: { wall: string }) {
 
 export default function Threshold({
   world,
+  onOpen,
   onTurnOff,
 }: {
   world: World;
-  /** Stop showing the door on the way in. */
+  /** Walked through — do not show the door again today. */
+  onOpen: () => void;
+  /** Stop showing the door at all. */
   onTurnOff: () => void;
 }) {
   const router = useRouter();
@@ -131,6 +135,7 @@ export default function Threshold({
 
   function open() {
     if (state !== "shut") return;
+    onOpen();
 
     const still =
       typeof window !== "undefined" &&
