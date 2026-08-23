@@ -3,10 +3,37 @@ import { WorldProvider } from "@/lib/useWorld";
 import Boundary from "@/components/Boundary";
 import "./globals.css";
 
+/*
+  The tab said "World Builder" with the default Next.js icon, and a link
+  pasted anywhere unfurled as nothing at all. The globe is already the mark
+  everywhere else in the product; it belongs in the tab too.
+*/
 export const metadata: Metadata = {
-  title: "World Builder",
+  metadataBase: new URL("https://world-builder-u8x3.vercel.app"),
+  title: {
+    default: "World Builder",
+    template: "%s · World Builder",
+  },
   description:
     "Build around one customer world instead of jumping between unrelated niches.",
+  icons: {
+    icon: [{ url: "/globe.png", type: "image/png" }],
+    apple: "/globe.png",
+  },
+  openGraph: {
+    title: "World Builder",
+    description:
+      "Build around one customer world instead of jumping between unrelated niches.",
+    images: ["/globe.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "World Builder",
+    description:
+      "Build around one customer world instead of jumping between unrelated niches.",
+    images: ["/globe.png"],
+  },
 };
 
 export default function RootLayout({
@@ -22,7 +49,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased">
+      {/*
+        The wallpaper globes sit deliberately outside the viewport, which was
+        letting the page scroll a couple of pixels sideways on a phone.
+      */}
+      <body className="overflow-x-hidden antialiased">
         <Boundary>
           <WorldProvider>{children}</WorldProvider>
         </Boundary>

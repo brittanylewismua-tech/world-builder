@@ -105,6 +105,21 @@ function Sources({
   );
 }
 
+/** Newest month first, newest day first inside it. */
+function groupByMonth(dates: string[]): [string, string[]][] {
+  const buckets = new Map<string, string[]>();
+  for (const d of [...dates].sort().reverse()) {
+    const label = new Date(`${d}T00:00:00`).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    const list = buckets.get(label) ?? [];
+    list.push(d);
+    buckets.set(label, list);
+  }
+  return [...buckets.entries()];
+}
+
 export default function Daily() {
   return <Shell>{(world) => <DailyBody world={world} />}</Shell>;
 }
@@ -119,6 +134,8 @@ function DailyBody({ world }: { world: World }) {
   const [researching, setResearching] = useState(false);
   const [err, setErr] = useState("");
   const [nextDrop, setNextDrop] = useState<Drop | null>(null);
+  /** Set when what is on screen is an older issue standing in for today's. */
+  const [standIn, setStandIn] = useState<string | null>(null);
   const [kept, setKept] = useState<Record<string, "saving" | "kept" | "failed">>({});
   const autoRan = useRef(false);
 
@@ -148,6 +165,7 @@ function DailyBody({ world }: { world: World }) {
   const open = useCallback(
     async (d: string) => {
       setItems(null);
+      setStandIn(null);
       setDate(d);
       try {
         setItems(await loadIssue(world.id, d));
@@ -170,11 +188,31 @@ function DailyBody({ world }: { world: World }) {
     async (append = false) => {
       setResearching(true);
       setErr("");
+      setStandIn(null);
       try {
         setItems(await generateIssue(world, date, { append }));
         setDates(await loadIssueDates(world.id));
       } catch (e) {
         setErr(e instanceof Error ? e.message : "Research failed.");
+        /*
+          A failed search used to leave the seller with a blank page, which
+          reads as the product being broken. Yesterday's paper is still real
+          and still useful — show it, clearly labelled as not today's, rather
+          than showing nothing.
+        */
+        try {
+          const back = (await loadIssueDates(world.id)).filter((d) => d !== date);
+          if (back.length) {
+            const fallbackDate = back[0];
+            const older = await loadIssue(world.id, fallbackDate);
+            if (older.length) {
+              setItems(older);
+              setStandIn(fallbackDate);
+            }
+          }
+        } catch {
+          // Nothing to fall back to; the empty state explains itself.
+        }
       } finally {
         setResearching(false);
       }
@@ -236,6 +274,24 @@ function DailyBody({ world }: { world: World }) {
       </header>
 
       {err && <ErrorNote>{err}</ErrorNote>}
+
+      {standIn && (
+        <div className="mb-5 rounded-xl border border-black/15 bg-white px-4 py-3">
+          <p className="t-small text-ink-2">
+            Today&apos;s research did not come back, so this is{" "}
+            <span className="font-semibold text-ink">
+              {formatIssueDate(standIn)}
+            </span>
+            &apos;s issue rather than today&apos;s. Nothing below is from today.{" "}
+            <button
+              onClick={() => research()}
+              className="font-semibold text-ink underline underline-offset-2"
+            >
+              Try today again
+            </button>
+          </p>
+        </div>
+      )}
 
       {noAreas && (
         <Empty
@@ -401,23 +457,39 @@ function DailyBody({ world }: { world: World }) {
       {dates.length > 1 && (
         <div className="mt-8 border-t border-black/12 pt-5">
           <p className="eyebrow mb-3 text-ink-3">Back issues</p>
-          <div className="flex flex-wrap gap-1.5">
-            {dates.map((d) => (
-              <button
-                key={d}
-                onClick={() => open(d)}
-                className={`chip transition ${
-                  d === date
-                    ? "border-black bg-black text-white"
-                    : "hover:border-ink-3"
-                }`}
-              >
-                {formatIssueDate(d)}
-              </button>
+          {/*
+            An ever-growing single row of dates stops being navigable after a
+            few weeks. Grouped by month, the newest first, it stays readable
+            for as long as the world does.
+          */}
+          <div className="space-y-4">
+            {groupByMonth(dates).map(([month, days]) => (
+              <div key={month}>
+                <p className="t-small mb-1.5 font-semibold text-ink-2">
+                  {month}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {days.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => open(d)}
+                      className={`chip tabular-nums transition ${
+                        d === date
+                          ? "border-black bg-black text-white"
+                          : "hover:border-ink-3"
+                      }`}
+                      title={formatIssueDate(d)}
+                    >
+                      {Number(d.slice(8, 10))}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
       )}
+
     </Page>
   );
 }

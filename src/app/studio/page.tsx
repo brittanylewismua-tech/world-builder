@@ -9,7 +9,9 @@ import { useWorld } from "@/lib/useWorld";
 import { saveWorld, setShopBanner } from "@/lib/api";
 import {
   freezeNow,
+  moveItemToSlot,
   removeMockup,
+  renameItem,
   splitDrops,
   syncSchedule,
   uploadMockup,
@@ -63,6 +65,46 @@ function StudioBody({ world }: { world: World }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Rearranging the board is a creative act; it should feel instant. */
+  async function onMoveMockup(from: number, to: number) {
+    if (!drop) return;
+    const before = drop;
+    const moving = drop.items.find((i) => i.slot === from);
+    if (!moving) return;
+    const sitting = drop.items.find((i) => i.slot === to);
+    setDrop({
+      ...drop,
+      items: drop.items.map((i) =>
+        i.id === moving.id
+          ? { ...i, slot: to }
+          : sitting && i.id === sitting.id
+            ? { ...i, slot: from }
+            : i,
+      ),
+    });
+    try {
+      await moveItemToSlot(before, from, to);
+    } catch (e) {
+      setDrop(before);
+      setErr(e instanceof Error ? e.message : "That did not move.");
+    }
+  }
+
+  async function onRenameMockup(item: DropItem, title: string) {
+    if (!drop) return;
+    try {
+      const saved = await renameItem(item, title);
+      setDrop({
+        ...drop,
+        items: drop.items.map((i) =>
+          i.id === item.id ? { ...i, title: saved } : i,
+        ),
+      });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "That name did not save.");
+    }
+  }
 
   async function onUploadMockup(slot: number, file: File) {
     if (!drop) return;
@@ -240,6 +282,8 @@ function StudioBody({ world }: { world: World }) {
           drop={drop}
           onUploadMockup={onUploadMockup}
           onRemoveMockup={onRemoveMockup}
+          onRenameMockup={onRenameMockup}
+          onMoveMockup={onMoveMockup}
           onUploadBanner={onUploadBanner}
           onBackground={onBackground}
         />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import { formatDropDate, type Drop, type DropItem } from "@/lib/drops";
 
@@ -103,6 +103,10 @@ function Tile({
   dark,
   onUpload,
   onRemove,
+  onRename,
+  onDropOn,
+  dragging,
+  setDragging,
 }: {
   slot: number;
   item?: DropItem;
@@ -110,9 +114,39 @@ function Tile({
   dark: boolean;
   onUpload: (slot: number, file: File) => Promise<void>;
   onRemove: (item: DropItem) => Promise<void>;
+  onRename: (item: DropItem, title: string) => Promise<void>;
+  onDropOn: (from: number, to: number) => Promise<void>;
+  dragging: number | null;
+  setDragging: (n: number | null) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [over, setOver] = useState(false);
+  const [title, setTitle] = useState(item?.title ?? "");
+
+  // The board can reorder underneath this tile, so follow the item.
+  useEffect(() => setTitle(item?.title ?? ""), [item?.id, item?.title]);
+
+  const canDrop = !frozen && dragging !== null && dragging !== slot;
+  const dropProps = frozen
+    ? {}
+    : {
+        onDragOver: (e: React.DragEvent) => {
+          if (dragging === null || dragging === slot) return;
+          e.preventDefault();
+          setOver(true);
+        },
+        onDragLeave: () => setOver(false),
+        onDrop: async (e: React.DragEvent) => {
+          e.preventDefault();
+          setOver(false);
+          const from = Number(e.dataTransfer.getData("text/plain"));
+          setDragging(null);
+          if (Number.isFinite(from)) await onDropOn(from, slot);
+        },
+      };
+
+  const ring = over && canDrop ? "ring-2 ring-accent ring-offset-2" : "";
 
   async function pick(files: FileList | null) {
     const f = files?.[0];
@@ -128,8 +162,19 @@ function Tile({
 
   if (item) {
     return (
-      <div className="group">
-        <div className="relative aspect-square overflow-hidden rounded-xl">
+      <div className="group" {...dropProps}>
+        <div
+          draggable={!frozen}
+          onDragStart={(e) => {
+            e.dataTransfer.setData("text/plain", String(slot));
+            e.dataTransfer.effectAllowed = "move";
+            setDragging(slot);
+          }}
+          onDragEnd={() => setDragging(null)}
+          className={`relative aspect-square overflow-hidden rounded-xl transition ${ring} ${
+            frozen ? "" : "cursor-grab active:cursor-grabbing"
+          } ${dragging === slot ? "opacity-40" : ""}`}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={item.src} alt="" className="h-full w-full object-cover" />
           <span className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white">
@@ -161,14 +206,37 @@ function Tile({
           onChange={(e) => pick(e.target.files)}
           className="hidden"
         />
-        <div className={`mt-2 h-2 w-4/5 rounded-sm ${bar}`} />
+        {/*
+          The grey bars were always standing in for a listing's title. One of
+          them is now the real thing, editable in place — the column has
+          existed since the first migration with nothing able to write to it.
+        */}
+        {frozen ? (
+          <p className={`mt-2 truncate text-[12px] font-semibold ${dark ? "text-white/80" : "text-ink-2"}`}>
+            {item.title || `Design ${String(slot).padStart(2, "0")}`}
+          </p>
+        ) : (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => title !== (item.title ?? "") && onRename(item, title)}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            placeholder="Name this design"
+            aria-label={`Name for the design in slot ${slot}`}
+            className={`mt-2 w-full truncate rounded-md bg-transparent px-1 py-0.5 text-[12px] font-semibold outline-none transition placeholder:font-normal ${
+              dark
+                ? "text-white/85 placeholder:text-white/35 hover:bg-white/10 focus:bg-white/10"
+                : "text-ink placeholder:text-ink-3 hover:bg-black/5 focus:bg-black/5"
+            }`}
+          />
+        )}
         <div className={`mt-1 h-2 w-1/3 rounded-sm ${bar}`} />
       </div>
     );
   }
 
   return (
-    <div>
+    <div {...dropProps} className={over && canDrop ? "rounded-xl ring-2 ring-accent ring-offset-2" : ""}>
       {/*
         An empty slot has to say what it wants. Ten numbered squares with an
         invisible file input behind them look like placeholders, and clicking
@@ -220,6 +288,8 @@ export default function DropBoard({
   frozen = false,
   onUploadMockup,
   onRemoveMockup,
+  onRenameMockup,
+  onMoveMockup,
   onUploadBanner,
   onBackground,
 }: {
@@ -228,9 +298,12 @@ export default function DropBoard({
   frozen?: boolean;
   onUploadMockup: (slot: number, file: File) => Promise<void>;
   onRemoveMockup: (item: DropItem) => Promise<void>;
+  onRenameMockup?: (item: DropItem, title: string) => Promise<void>;
+  onMoveMockup?: (from: number, to: number) => Promise<void>;
   onUploadBanner?: (file: File) => Promise<void>;
   onBackground?: (hex: string) => void;
 }) {
+  const [dragging, setDragging] = useState<number | null>(null);
   const slots = Array.from({ length: world.slotsPerDrop }, (_, i) => i + 1);
   const bySlot = new Map(drop.items.map((i) => [i.slot, i]));
   const done = drop.items.length;
@@ -289,6 +362,10 @@ export default function DropBoard({
                 dark={dark}
                 onUpload={onUploadMockup}
                 onRemove={onRemoveMockup}
+                onRename={onRenameMockup ?? (async () => {})}
+                onDropOn={onMoveMockup ?? (async () => {})}
+                dragging={dragging}
+                setDragging={setDragging}
               />
             ))}
           </div>

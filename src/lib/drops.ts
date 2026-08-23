@@ -354,6 +354,97 @@ export async function uploadMockup(
   };
 }
 
+/**
+ * PUBLISHED BY MISTAKE.
+ *
+ * Publish and freeze is deliberately final — that is what makes the archive
+ * worth anything. But "final" and "unrecoverable" are not the same thing, and
+ * a seller who hits the button a day early should not lose a week of work to
+ * a misclick.
+ *
+ * Re-opening brings the drop back to building on the next drop day. The empty
+ * board that was opened behind it is removed so the numbering stays
+ * contiguous and there is only ever one board being built — and only if it is
+ * genuinely empty. A successor with a design in it is somebody's work, and
+ * this will refuse rather than touch it.
+ */
+export async function reopenDrop(world: World, drop: Drop) {
+  const all = await loadDrops(world.id);
+  const successors = all.filter((d) => d.number > drop.number && !d.frozenAt);
+
+  if (successors.some((d) => d.items.length > 0))
+    throw new Error(
+      "There is already a board with designs on it after this one. Clear it first, or keep this drop as it is.",
+    );
+
+  for (const empty of successors) {
+    await supabase.from("wb_drops").delete().eq("id", empty.id);
+  }
+
+  const { error } = await supabase
+    .from("wb_drops")
+    .update({
+      frozen_at: null,
+      status: "building",
+      publish_date: toISODate(nextWeekday(new Date(), world.dropWeekday)),
+    })
+    .eq("id", drop.id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * ARRANGING THE DROP IS PART OF MAKING IT.
+ *
+ * A drop is a collection, and the order designs sit in is a decision — the
+ * strongest piece first, the two that argue with each other kept apart.
+ * Until now the only way to reorder was to delete a design and upload it
+ * again into a different square, which meant destroying work to rearrange it.
+ *
+ * Dropping onto an empty square moves. Dropping onto a filled one swaps. The
+ * swap parks one row on a slot number no square can have, because the
+ * database will not allow two designs in the same slot even for a moment.
+ */
+export async function moveItemToSlot(drop: Drop, from: number, to: number) {
+  if (from === to) return;
+  const moving = drop.items.find((i) => i.slot === from);
+  if (!moving) return;
+  const sitting = drop.items.find((i) => i.slot === to);
+
+  const set = async (id: string, slot: number) => {
+    const { error } = await supabase
+      .from("wb_drop_items")
+      .update({ slot })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  };
+
+  if (!sitting) {
+    await set(moving.id, to);
+    return;
+  }
+
+  await set(moving.id, -1);
+  await set(sitting.id, from);
+  await set(moving.id, to);
+}
+
+/**
+ * Naming a design.
+ *
+ * The column has existed since the first migration and nothing has ever been
+ * able to write to it. A seller who can say "this one is the psalm 23 script"
+ * can talk about their own board, and so can the Creative Room.
+ */
+export async function renameItem(item: DropItem, title: string) {
+  const clean = title.trim().slice(0, 120);
+  const { error } = await supabase
+    .from("wb_drop_items")
+    .update({ title: clean })
+    .eq("id", item.id);
+  if (error) throw new Error(error.message);
+  return clean;
+}
+
 export async function removeMockup(item: DropItem) {
   const { error } = await supabase
     .from("wb_drop_items")

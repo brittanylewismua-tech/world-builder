@@ -5,6 +5,7 @@ import Shell from "@/components/Shell";
 import DropBoard from "@/components/DropBoard";
 import {
   loadDrops,
+  reopenDrop,
   formatDropDate,
   STATUS_LABEL,
   daysSince,
@@ -34,6 +35,28 @@ function ageNote(d: Drop) {
 function HistoryBody({ world }: { world: World }) {
   const [drops, setDrops] = useState<Drop[] | null>(null);
   const [open, setOpen] = useState<Drop | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function reopen(d: Drop) {
+    if (
+      !window.confirm(
+        `Re-open Drop ${String(d.number).padStart(2, "0")}? It goes back to being the board you are building, on your next drop day, and leaves the archive. The empty board opened behind it is removed.`,
+      )
+    )
+      return;
+    setBusy(true);
+    setErr("");
+    try {
+      await reopenDrop(world, d);
+      setOpen(null);
+      setDrops(await loadDrops(world.id));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "That did not re-open.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     loadDrops(world.id).then(setDrops).catch(() => setDrops([]));
@@ -47,6 +70,7 @@ function HistoryBody({ world }: { world: World }) {
     );
 
   const frozen = drops.filter((d) => d.frozenAt);
+  const newest = [...frozen].sort((a, b) => b.number - a.number)[0] ?? null;
 
   if (open) {
     return (
@@ -68,6 +92,26 @@ function HistoryBody({ world }: { world: World }) {
           {STATUS_LABEL[open.status]} · {ageNote(open)} · No Etsy performance
           data attached.
         </p>
+        {/*
+          Only the newest release can be taken back. Re-opening something from
+          two months ago is not a misclick being undone, it is the archive
+          being rewritten.
+        */}
+        {newest?.id === open.id && (
+          <div className="mt-4 border-t border-black/12 pt-4">
+            <p className="t-small text-ink-2">
+              Published this before it was ready?
+            </p>
+            <button
+              onClick={() => reopen(open)}
+              disabled={busy}
+              className="btn btn-ghost mt-2"
+            >
+              {busy ? "Re-opening…" : "Re-open this drop"}
+            </button>
+            {err && <p className="t-small mt-2 text-ink-2">{err}</p>}
+          </div>
+        )}
       </main>
     );
   }
