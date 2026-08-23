@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { waitUntil } from "@vercel/functions";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -72,6 +73,22 @@ export async function POST(req: Request) {
   if (won !== true)
     return NextResponse.json({ ok: true, skipped: "already claimed" });
 
+  /*
+    ANSWER FIRST, RESEARCH AFTER.
+
+    A serverless function is killed the moment it returns, and anything still
+    running is killed with it. Holding the connection open for the full minute
+    of research would put the dispatcher back to waiting on every seller in
+    turn, which is the bottleneck this whole change removes.
+
+    waitUntil is the platform's answer: reply now, keep running until the work
+    is finished. The claim is already taken, so this seller is accounted for
+    the instant we say yes.
+  */
+
+  // Captured so the narrowing survives into the background closure below.
+  const cronSecret: string = secret;
+
   const finish = async (status: string, detail?: string) => {
     await db
       .from("wb_daily_runs")
@@ -80,7 +97,8 @@ export async function POST(req: Request) {
       .eq("issue_date", issueDate);
   };
 
-  try {
+  async function work() {
+   try {
     // Already written by an earlier run or by the seller themselves.
     const { count: already } = await db
       .from("wb_daily_items")
@@ -89,7 +107,7 @@ export async function POST(req: Request) {
       .eq("issue_date", issueDate);
     if (already && already > 0) {
       await finish("done", "already written");
-      return NextResponse.json({ ok: true, skipped: "already written" });
+      return;
     }
 
     const [{ data: world }, { data: areaRows }, { data: nicheRows }] =
@@ -103,7 +121,7 @@ export async function POST(req: Request) {
     const areas = (areaRows ?? []).map((a) => a.name as string);
     if (!areas.length) {
       await finish("done", "nothing being watched");
-      return NextResponse.json({ ok: true, skipped: "no areas" });
+      return;
     }
     const keywords = (nicheRows ?? []).map((n) => n.keyword as string);
 
@@ -145,7 +163,7 @@ export async function POST(req: Request) {
           signal: control.signal,
           headers: {
             "content-type": "application/json",
-            "x-cron-secret": secret,
+            "x-cron-secret": cronSecret,
           },
           body: JSON.stringify({
             worldName: world.name,
@@ -203,8 +221,7 @@ export async function POST(req: Request) {
     if (insertError) throw new Error(insertError.message);
 
     await finish("done");
-    return NextResponse.json({ ok: true, written: items.length });
-  } catch (e) {
+   } catch (e) {
     const message = e instanceof Error ? e.message : "failed";
     /*
       Left as 'failed' rather than deleted, so the next dispatch can see it and
@@ -212,6 +229,9 @@ export async function POST(req: Request) {
       instead of buried in function logs.
     */
     await finish("failed", message.slice(0, 300));
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+   }
   }
+
+  waitUntil(work());
+  return NextResponse.json({ ok: true, claimed: true });
 }

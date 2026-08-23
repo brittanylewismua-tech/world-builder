@@ -14,10 +14,11 @@ export const maxDuration = 300;
  * accident, and the wrong thing to carry into a launch.
  *
  * Now this route does almost nothing. It works out who still needs a paper and
- * fires off one request per seller to /api/cron/world, without waiting for the
- * answers. Each of those is its own function with its own five minutes, and
- * the platform runs many at once. Dispatching costs milliseconds per seller,
- * so ten sellers and ten thousand take the dispatcher about the same time.
+ * hands each one to /api/cron/world, which claims the seller, answers
+ * immediately, and does the minute of research afterwards on its own time.
+ * Each of those is its own function with its own five minutes, and the
+ * platform runs many at once. Handing over costs milliseconds per seller, so
+ * ten sellers and ten thousand take the dispatcher about the same time.
  *
  * WHAT THE REAL LIMIT IS NOW. Not this function. It is the AI provider's rate
  * limit — how many research calls per minute the account is allowed. That is a
@@ -101,27 +102,39 @@ export async function GET(req: Request) {
     .filter((id) => !written.has(id) && watching.has(id));
 
   let dispatched = 0;
+  let failedToDispatch = 0;
   for (let i = 0; i < queue.length; i += PER_WAVE) {
     if (Date.now() - started > BUDGET_MS) break;
     const wave = queue.slice(i, i + PER_WAVE);
 
     /*
-      Deliberately not awaited. The worker does the minute of research on its
-      own time; waiting for it here would rebuild the very bottleneck this
-      change exists to remove. The catch is required — an unhandled rejection
-      from a fire-and-forget request can take the whole function down.
+      These ARE awaited, and that is the whole lesson of this change.
+
+      The first version fired them and returned immediately, which looked
+      elegant and did nothing at all: a serverless function is killed the
+      instant it responds, taking every in-flight request with it. The
+      dispatcher cheerfully reported dispatching five sellers and not one
+      worker ever ran.
+
+      Awaiting is cheap now only because the worker answers the moment it has
+      claimed its seller and does the actual minute of research afterwards
+      under waitUntil. So this waits for "yes, mine", not for the research —
+      milliseconds each, and the whole wave in parallel.
     */
-    for (const worldId of wave) {
-      void fetch(`${origin}/api/cron/world`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-cron-secret": secret ?? "",
-        },
-        body: JSON.stringify({ worldId, issueDate }),
-      }).catch(() => {});
-      dispatched++;
-    }
+    const sent = await Promise.allSettled(
+      wave.map((worldId) =>
+        fetch(`${origin}/api/cron/world`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-cron-secret": secret ?? "",
+          },
+          body: JSON.stringify({ worldId, issueDate }),
+        }),
+      ),
+    );
+    dispatched += sent.filter((r) => r.status === "fulfilled").length;
+    failedToDispatch += sent.filter((r) => r.status === "rejected").length;
 
     if (i + PER_WAVE < queue.length) await wait(WAVE_GAP_MS);
   }
@@ -144,7 +157,8 @@ export async function GET(req: Request) {
     established: (worlds ?? []).length,
     needed: queue.length,
     dispatched,
-    notDispatched: Math.max(0, queue.length - dispatched),
+    failedToDispatch,
+    notReached: Math.max(0, queue.length - dispatched - failedToDispatch),
     soFarToday: tally,
     note: "Workers research in the background. Re-running this is safe — anyone already claimed or written is skipped.",
   });
