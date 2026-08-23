@@ -14,12 +14,31 @@ import {
 import { worldActions } from "@/lib/worldActions";
 import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
 import Customiser from "@/components/Customiser";
+import DropRhythm from "@/components/DropRhythm";
 import SecureWorld from "@/components/SecureWorld";
 import NameYourWorld from "@/components/NameYourWorld";
 import AccountCard from "@/components/AccountCard";
+import OwnYourWorld from "@/components/OwnYourWorld";
 import { PRESETS } from "@/lib/theme";
 
-type ModuleKey = "demand" | "connection" | "visual" | "areas" | "look";
+/** For the collapsed summary line only. */
+const DAY_NAME: Record<number, string> = {
+  1: "Mondays",
+  2: "Tuesdays",
+  3: "Wednesdays",
+  4: "Thursdays",
+  5: "Fridays",
+  6: "Saturdays",
+  7: "Sundays",
+};
+
+type ModuleKey =
+  | "demand"
+  | "connection"
+  | "visual"
+  | "areas"
+  | "rhythm"
+  | "look";
 
 /**
  * The foundation of the world, in one editable place.
@@ -161,6 +180,15 @@ function ProfileBody({ world }: { world: World }) {
           />
         </Module>
         <Module
+          title="Drop Rhythm"
+          summary={`${world.slotsPerDrop} designs, ${DAY_NAME[world.dropWeekday] ?? "weekly"}${world.paused ? " · paused" : ""}`}
+          open={open === "rhythm"}
+          onToggle={() => toggle("rhythm")}
+        >
+          <DropRhythm world={world} patch={patch} onError={setErr} />
+        </Module>
+
+        <Module
           title="Appearance"
           summary={
             PRESETS.find((p) => p.id === world.theme.preset)?.name ??
@@ -180,8 +208,9 @@ function ProfileBody({ world }: { world: World }) {
 
       </div>
 
-      <div className="mt-10 border-t-2 border-black/10 pt-6">
+      <div className="mt-10 space-y-4 border-t-2 border-black/10 pt-6">
         <AccountCard />
+        <OwnYourWorld world={world} />
       </div>
     </Page>
   );

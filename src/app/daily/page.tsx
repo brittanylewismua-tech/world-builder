@@ -15,6 +15,8 @@ import {
   type DailyItem,
 } from "@/lib/daily";
 import { deriveAreas } from "@/lib/api";
+import { saveSignalToBoard } from "@/lib/board";
+import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 
@@ -33,11 +35,61 @@ const KIND_LABEL: Record<string, string> = {
   moment: "a moment",
 };
 
+/**
+ * KEEPING A SIGNAL.
+ *
+ * The paper is read a week before the drop it will feed, so anything worth
+ * keeping goes onto next week's research board rather than into a note the
+ * seller has to remember. One press, no dialog, and it says where it went so
+ * the rhythm is visible rather than magic.
+ */
+function KeepIt({
+  item,
+  drop,
+  onKeep,
+  state,
+}: {
+  item: DailyItem;
+  drop: Drop | null;
+  onKeep: (item: DailyItem) => void;
+  state: "idle" | "saving" | "kept" | "failed";
+}) {
+  if (!drop) return null;
+  if (state === "kept")
+    return (
+      <span className="t-small font-medium text-ink-2">
+        Kept for Drop {String(drop.number).padStart(2, "0")}
+      </span>
+    );
+  return (
+    <button
+      onClick={() => onKeep(item)}
+      disabled={state === "saving"}
+      className="t-small font-medium text-ink-2 underline underline-offset-2 transition hover:text-ink disabled:opacity-50"
+    >
+      {state === "saving"
+        ? "Keeping…"
+        : state === "failed"
+          ? "That did not save — try again"
+          : "Keep this for next week"}
+    </button>
+  );
+}
+
 /** Source links, deliberately quiet — they are provenance, not content. */
-function Sources({ item, small = false }: { item: DailyItem; small?: boolean }) {
+function Sources({
+  item,
+  small = false,
+  bare = false,
+}: {
+  item: DailyItem;
+  small?: boolean;
+  /** Drop the top margin when a surrounding row already spaces it. */
+  bare?: boolean;
+}) {
   if (!item.sources.length) return null;
   return (
-    <div className={`flex flex-wrap gap-1.5 ${small ? "mt-2" : "mt-4"}`}>
+    <div className={`flex flex-wrap gap-1.5 ${bare ? "" : small ? "mt-2" : "mt-4"}`}>
       {item.sources.map((s, j) => (
         <a
           key={j}
@@ -66,7 +118,32 @@ function DailyBody({ world }: { world: World }) {
   const [dates, setDates] = useState<string[]>([]);
   const [researching, setResearching] = useState(false);
   const [err, setErr] = useState("");
+  const [nextDrop, setNextDrop] = useState<Drop | null>(null);
+  const [kept, setKept] = useState<Record<string, "saving" | "kept" | "failed">>({});
   const autoRan = useRef(false);
+
+  // Which board a kept signal lands on: next week's, because that is the one
+  // being researched while this week is being built.
+  useEffect(() => {
+    syncSchedule(world)
+      .then((all) => setNextDrop(splitDrops(all).next))
+      .catch(() => setNextDrop(null));
+  }, [world]);
+
+  async function keep(item: DailyItem) {
+    if (!nextDrop || kept[item.id] === "saving" || kept[item.id] === "kept") return;
+    setKept((k) => ({ ...k, [item.id]: "saving" }));
+    try {
+      await saveSignalToBoard(world, nextDrop, {
+        headline: item.headline,
+        body: item.body,
+        url: item.sources[0]?.url ?? null,
+      });
+      setKept((k) => ({ ...k, [item.id]: "kept" }));
+    } catch {
+      setKept((k) => ({ ...k, [item.id]: "failed" }));
+    }
+  }
 
   const open = useCallback(
     async (d: string) => {
@@ -241,7 +318,15 @@ function DailyBody({ world }: { world: World }) {
               <div className="px-5 pb-5 pt-4 md:px-6">
                 <h2 className="t-h2 text-ink">{lead.headline}</h2>
                 <p className="t-body mt-2 text-ink-2">{lead.body}</p>
-                <Sources item={lead} />
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <Sources item={lead} bare />
+                  <KeepIt
+                    item={lead}
+                    drop={nextDrop}
+                    onKeep={keep}
+                    state={kept[lead.id] ?? "idle"}
+                  />
+                </div>
               </div>
             </Card>
 
@@ -257,7 +342,15 @@ function DailyBody({ world }: { world: World }) {
                       <div className="min-w-0">
                         <h3 className="t-h3 text-ink">{it.headline}</h3>
                         <p className="t-small mt-0.5 text-ink-2">{it.body}</p>
-                        <Sources item={it} small />
+                        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                          <Sources item={it} small bare />
+                          <KeepIt
+                            item={it}
+                            drop={nextDrop}
+                            onKeep={keep}
+                            state={kept[it.id] ?? "idle"}
+                          />
+                        </div>
                       </div>
                     </article>
                   ))}
@@ -271,7 +364,15 @@ function DailyBody({ world }: { world: World }) {
                 <Card className="p-5">
                   <h3 className="t-h2 text-ink">{language.headline}</h3>
                   <p className="t-body mt-2 text-ink-2">{language.body}</p>
-                  <Sources item={language} />
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <Sources item={language} bare />
+                    <KeepIt
+                      item={language}
+                      drop={nextDrop}
+                      onKeep={keep}
+                      state={kept[language.id] ?? "idle"}
+                    />
+                  </div>
                 </Card>
               </section>
             )}

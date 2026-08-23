@@ -32,10 +32,26 @@ const OPENERS = [
 ];
 
 /** Fetch signed mockup URLs and shrink them for the vision call. */
+/**
+ * Encode the board once, not once per message.
+ *
+ * Every send used to re-download all ten mockups and re-draw each one through
+ * a canvas, which is a visible pause before the room even starts thinking. A
+ * mockup's pixels do not change while it sits in a slot, so the encoded copy
+ * is kept against the item id and only recomputed when the design itself is
+ * replaced. The signed URL rotating is not a reason to redo the work.
+ */
+const encoded = new Map<string, string>();
+
 async function boardImages(drop: Drop): Promise<string[]> {
   const sorted = [...drop.items].sort((a, b) => a.slot - b.slot).slice(0, 10);
   const out: string[] = [];
   for (const item of sorted) {
+    const hit = encoded.get(item.id);
+    if (hit) {
+      out.push(hit);
+      continue;
+    }
     try {
       const blob = await (await fetch(item.src)).blob();
       const b64 = await new Promise<string>((resolve, reject) => {
@@ -53,6 +69,7 @@ async function boardImages(drop: Drop): Promise<string[]> {
         };
         img.src = url;
       });
+      encoded.set(item.id, b64);
       out.push(b64);
     } catch {
       // A mockup that will not load is not worth failing the whole message over.

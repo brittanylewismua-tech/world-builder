@@ -210,6 +210,49 @@ export async function openBoard(world: World, drop: Drop): Promise<Board> {
 }
 
 /**
+ * SAVING A SIGNAL FROM THE PAPER STRAIGHT ONTO NEXT WEEK'S BOARD
+ *
+ * Reading something useful and then having to remember it until you next
+ * open the studio is how good observations get lost. Research runs a week
+ * ahead of building, so a signal saved today belongs on next week's board —
+ * where the Creative Room will find it when that drop comes round.
+ *
+ * It is saved as the seller's own note, not as evidence: the headline, what
+ * the paper said, and the source to go back to.
+ */
+export async function saveSignalToBoard(
+  world: World,
+  drop: Drop,
+  signal: { headline: string; body: string; url?: string | null },
+) {
+  const board = await openBoard(world, drop);
+  const note = `${signal.headline} — ${signal.body}`.slice(0, 2000);
+  if (signal.url) {
+    let label: string | null = null;
+    try {
+      label = new URL(signal.url).hostname.replace(/^www\./, "");
+    } catch {
+      label = null;
+    }
+    if (label)
+      return insert({
+        world_id: world.id,
+        board_id: board.id,
+        kind: "link",
+        source_url: signal.url,
+        source_label: label,
+        note,
+      });
+  }
+  return insert({
+    world_id: world.id,
+    board_id: board.id,
+    kind: "text",
+    body: note,
+  });
+}
+
+/**
  * A cheap glance at a board for Home — how much is on it and how many
  * findings are waiting. Deliberately does not create the board or sign any
  * image URLs; Home should never pay for a board nobody has opened.

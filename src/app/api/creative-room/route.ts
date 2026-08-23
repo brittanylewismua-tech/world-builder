@@ -70,28 +70,43 @@ export async function POST(req: Request) {
   if (!messages.length)
     return NextResponse.json({ error: "Nothing to say." }, { status: 400 });
 
-  // The board goes in as images on the first user turn so the model can
-  // actually look at the collection instead of being told about it.
+  /*
+    THE BOARD IS SHOWN ONCE, AT THE FRONT.
+
+    It used to be attached to whichever message was newest, which meant every
+    single turn re-sent ten images to the vision model and paid for them
+    again. Because the newest message changes every turn, none of it could
+    ever be cached either — the most expensive part of the request was also
+    the least reusable.
+
+    Now the board is a fixed opening exchange: here is the collection, then
+    the conversation about it. That prefix is identical on every turn, so it
+    is marked cacheable and subsequent messages are a fraction of the cost.
+  */
   const images = (body.images ?? []).slice(0, 10);
-  const history: Anthropic.MessageParam[] = messages.map((m, i) => {
-    const isLastUser = i === messages.length - 1 && m.role === "user";
-    if (!isLastUser || !images.length) {
-      return { role: m.role, content: m.content };
-    }
-    return {
-      role: "user",
-      content: [
-        ...images.map(
-          (b64) =>
-            ({
-              type: "image",
-              source: { type: "base64", media_type: "image/jpeg", data: b64 },
-            }) as const,
-        ),
-        { type: "text" as const, text: m.content },
-      ],
-    };
-  });
+  const history: Anthropic.MessageParam[] = [];
+
+  if (images.length) {
+    const blocks: Anthropic.ContentBlockParam[] = images.map((b64, i) => ({
+      type: "image",
+      source: { type: "base64", media_type: "image/jpeg", data: b64 },
+      // Cache through the end of the board so the whole set is reused.
+      ...(i === images.length - 1
+        ? { cache_control: { type: "ephemeral" as const } }
+        : {}),
+    }));
+    blocks.push({
+      type: "text",
+      text: `These are the ${images.length} design${images.length === 1 ? "" : "s"} currently on the board, in slot order.`,
+    });
+    history.push({ role: "user", content: blocks });
+    history.push({
+      role: "assistant",
+      content: "I can see the board. What would you like to think about?",
+    });
+  }
+
+  for (const m of messages) history.push({ role: m.role, content: m.content });
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
