@@ -28,6 +28,10 @@ export async function GET() {
       ? "set via env"
       : "built-in default (in source)",
     model: process.env.WB_MODEL || "claude-sonnet-5 (default)",
+    scheduledDaily: process.env.SUPABASE_SERVICE_ROLE_KEY
+      ? "on — the paper is written overnight"
+      : "waiting for SUPABASE_SERVICE_ROLE_KEY (researches on demand until then)",
+    cronSecret: Boolean(process.env.CRON_SECRET),
   };
 
   const surfaces = {

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import { admit } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -55,6 +56,9 @@ interface Body {
 }
 
 export async function POST(req: Request) {
+  const door = await admit(req, "areas");
+  if ("deny" in door) return door.deny;
+
   if (!process.env.ANTHROPIC_API_KEY)
     return NextResponse.json(
       { error: "This deployment is missing its ANTHROPIC_API_KEY." },

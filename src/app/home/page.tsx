@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import { Page, Card, Dots, Star } from "@/components/ui";
 import {
   formatIssueDate,
+  generateIssue,
   greeting,
   loadIssue,
   todayISO,
@@ -39,6 +40,35 @@ function HomeBody({ world }: { world: World }) {
   const today = todayISO();
   const [items, setItems] = useState<DailyItem[] | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
+  const [writing, setWriting] = useState(false);
+  const started = useRef(false);
+
+  /**
+   * Start today's research the moment someone lands, not when they open the
+   * paper. Research takes about a minute; by starting it here it is usually
+   * finished — or nearly — by the time they click through, instead of them
+   * watching a spinner on the screen they came to read.
+   *
+   * A world whose issue is already written costs nothing extra: this only
+   * fires when today is genuinely empty.
+   */
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    loadIssue(world.id, today)
+      .then(async (existing) => {
+        if (existing.length || world.areas.length === 0) return;
+        setWriting(true);
+        try {
+          setItems(await generateIssue(world, today));
+        } catch {
+          // World Daily will offer to run it again; nothing to say here.
+        } finally {
+          setWriting(false);
+        }
+      })
+      .catch(() => {});
+  }, [world, today]);
 
   useEffect(() => {
     loadIssue(world.id, today)
@@ -153,6 +183,11 @@ function HomeBody({ world }: { world: World }) {
 
             {items === null ? (
               <p className="t-small mt-4 text-ink-3">Checking…</p>
+            ) : writing ? (
+              <p className="pulse-soft t-small mt-4 text-ink-2">
+                Reading your world… today&apos;s issue is being written while
+                you get started.
+              </p>
             ) : items.length === 0 ? (
               <>
                 <p className="t-body mt-3 text-ink-2">

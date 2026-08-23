@@ -335,30 +335,3 @@ body {
   background: #b8b3af;
   background-clip: content-box;
 }
-
-/* ---- prototype-only styles (comparison page) ------------------------ */
-.proto-d,
-.proto-d *,
-.proto-e,
-.proto-e * {
-  font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
-}
-.proto-d-card {
-  transition:
-    transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    box-shadow 220ms ease;
-}
-.proto-d-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 22px 50px -20px rgba(120, 60, 100, 0.55);
-}
-.proto-e-card {
-  box-shadow: 4px 4px 0 #000;
-  transition:
-    transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    box-shadow 160ms ease;
-}
-.proto-e-card:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 #ee6fc0;
-}

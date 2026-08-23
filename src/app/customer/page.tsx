@@ -12,6 +12,7 @@ import {
   remember,
   type Msg,
 } from "@/lib/memory";
+import { askAI } from "@/lib/askAI";
 import type { World } from "@/lib/world";
 
 const PROMPTS = [
@@ -85,13 +86,10 @@ function CustomerBody({ world }: { world: World }) {
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch("/api/customer", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: recent(next), context: context() }),
+      const j = await askAI<{ text: string }>("/api/customer", {
+        messages: recent(next),
+        context: context(),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || "That did not go through.");
       const reply = { role: "assistant" as const, content: j.text };
       setMsgs([...next, reply]);
       const thread = await openThread(world.id, "customer");

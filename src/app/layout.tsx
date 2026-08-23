@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { WorldProvider } from "@/lib/useWorld";
+import Boundary from "@/components/Boundary";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,9 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <WorldProvider>{children}</WorldProvider>
+        <Boundary>
+          <WorldProvider>{children}</WorldProvider>
+        </Boundary>
       </body>
     </html>
   );

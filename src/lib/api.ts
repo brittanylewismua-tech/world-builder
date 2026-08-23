@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase, ASSET_BUCKET } from "./supabase";
+import { askAI } from "./askAI";
 import { DEFAULT_THEME, type RailStyle, type Theme, type WallpaperKind } from "./theme";
 import {
   EMPTY_AFFINITY,
@@ -9,7 +10,12 @@ import {
   type VisualReference,
 } from "./world";
 
-const SIGNED_TTL = 60 * 60; // one hour is plenty for a session
+/**
+ * How long an image link lives. Eight hours covers a working day, and the
+ * world reloads its links well before then anyway — an hour was short enough
+ * that leaving a tab open over lunch came back to broken mockups.
+ */
+const SIGNED_TTL = 60 * 60 * 8;
 
 /* ------------------------------------------------------------------ */
 /* images                                                              */
@@ -275,13 +281,11 @@ export async function deriveAreas(
   existing: string[] = [],
 ) {
   try {
-    const r = await fetch("/api/suggest-areas", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ worldName, subNiches: keywords, existing }),
+    const { areas } = await askAI<{ areas?: string[] }>("/api/suggest-areas", {
+      worldName,
+      subNiches: keywords,
+      existing,
     });
-    if (!r.ok) return [];
-    const { areas } = (await r.json()) as { areas?: string[] };
     if (!areas?.length) return [];
     return await addAreas(worldId, areas.slice(0, 7));
   } catch {

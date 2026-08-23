@@ -11,6 +11,7 @@ import {
   type WorldArea,
 } from "@/lib/world";
 import { against, parseKeywords } from "@/lib/keywords";
+import { askAI } from "@/lib/askAI";
 import { Note } from "./ui";
 
 /* ------------------------------------------------------------------ */
@@ -414,18 +415,12 @@ export function AreasSuggest({
     setThinking(true);
     setErr("");
     try {
-      const r = await fetch("/api/suggest-areas", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          worldName: world.name,
-          subNiches: world.subNiches.map((s) => s.keyword),
-          existing: world.areas.map((a) => a.name),
-        }),
+      const j = await askAI<{ areas: string[] }>("/api/suggest-areas", {
+        worldName: world.name,
+        subNiches: world.subNiches.map((s) => s.keyword),
+        existing: world.areas.map((a) => a.name),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || "Could not read your keywords.");
-      setSuggestions(j.areas as string[]);
+      setSuggestions(j.areas);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not read your keywords.");
       setSuggestions([]);

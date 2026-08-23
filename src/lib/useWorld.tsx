@@ -69,6 +69,34 @@ export function WorldProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refresh]);
 
+  /**
+   * Image links are signed and do expire. Anyone who leaves the app open all
+   * day would otherwise come back to broken mockups and references, so the
+   * world quietly reloads itself well inside that window, and again whenever
+   * the tab is brought back to the front.
+   */
+  useEffect(() => {
+    if (!session) return;
+    const REFRESH = 1000 * 60 * 90;
+    const timer = setInterval(() => void refresh(), REFRESH);
+
+    let hiddenAt = 0;
+    const onVisible = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+        return;
+      }
+      if (hiddenAt && Date.now() - hiddenAt > REFRESH) void refresh();
+      hiddenAt = 0;
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [session, refresh]);
+
   const patch = useCallback((p: Partial<World>) => {
     setWorld((cur) => (cur ? { ...cur, ...p } : cur));
   }, []);

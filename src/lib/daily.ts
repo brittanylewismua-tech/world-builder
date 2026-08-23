@@ -1,6 +1,7 @@
 "use client";
 
 import { supabase } from "./supabase";
+import { askAI } from "./askAI";
 import type { World } from "./world";
 
 export interface DailySource {
@@ -57,19 +58,13 @@ export async function generateIssue(
   world: World,
   date: string,
 ): Promise<DailyItem[]> {
-  const r = await fetch("/api/world-daily", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      worldName: world.name,
-      areas: world.areas.map((a) => a.name),
-      subNiches: world.subNiches.map((s) => s.keyword),
-    }),
+  const j = await askAI<{ items: Omit<DailyItem, "id">[] }>("/api/world-daily", {
+    worldName: world.name,
+    areas: world.areas.map((a) => a.name),
+    subNiches: world.subNiches.map((s) => s.keyword),
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error || "Could not research today's issue.");
 
-  const rows = (j.items as Omit<DailyItem, "id">[]).map((it, i) => ({
+  const rows = j.items.map((it, i) => ({
     world_id: world.id,
     issue_date: date,
     area: it.area,

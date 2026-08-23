@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
 import { formatDropDate } from "@/lib/drops";
+import { askAI } from "@/lib/askAI";
 import {
   loadMessages,
   openThread,
@@ -104,17 +105,11 @@ export default function CreativeRoom({
     setErr("");
     try {
       const images = await boardImages(drop);
-      const r = await fetch("/api/creative-room", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          messages: recent(next),
-          context: buildContext(world, drop),
-          images,
-        }),
+      const j = await askAI<{ text: string }>("/api/creative-room", {
+        messages: recent(next),
+        context: buildContext(world, drop),
+        images,
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || "That did not go through.");
       const reply = { role: "assistant" as const, content: j.text };
       setMsgs([...next, reply]);
       const thread = await openThread(world.id, "room", drop.id);
