@@ -21,6 +21,7 @@ import { Loading } from "@/components/Shell";
 import { Globe } from "@/components/Globe";
 import { ThemeStyle, Wallpaper } from "@/components/Wallpaper";
 import { DEFAULT_THEME } from "@/lib/theme";
+import { report } from "@/lib/report";
 import { ErrorNote, Note } from "@/components/ui";
 
 /**
@@ -113,9 +114,11 @@ export default function Setup() {
     creating.current = true;
     createWorld()
       .then(() => refresh())
-      .catch((e) =>
-        setErr(e instanceof Error ? e.message : "Could not start a world."),
-      );
+      .catch((e) => {
+        // The very first thing that can fail for a new seller.
+        report("setup", e, { step: "create-world" });
+        setErr(e instanceof Error ? e.message : "Could not start a world.");
+      });
   }, [loading, session, world, refresh]);
 
   if (loading || !session || !world) return <Loading />;

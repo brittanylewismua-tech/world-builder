@@ -23,6 +23,7 @@ import {
 } from "@/lib/board";
 import { formatDropDate, type Drop } from "@/lib/drops";
 import type { World } from "@/lib/world";
+import { report } from "@/lib/report";
 import { Dots, Star } from "./ui";
 
 /**
@@ -65,6 +66,7 @@ export default function ResearchBoard({
       setIntent(b.intention);
       setLater(await loadLater(world.id));
     } catch (e) {
+      report("board", e, { worldId: world.id, step: "open" });
       setErr(e instanceof Error ? e.message : "Could not open the board.");
     }
   }, [world, drop]);
@@ -140,6 +142,7 @@ export default function ResearchBoard({
       ))
         put(await addImage(world, board.id, f));
     } catch (e) {
+      report("board", e, { worldId: world.id, step: "upload" });
       setErr(e instanceof Error ? e.message : "That upload failed.");
     } finally {
       setBusy("");
@@ -198,6 +201,7 @@ export default function ResearchBoard({
       setBoard((b) => (b ? { ...b, findings } : b));
       setShowFindings(true);
     } catch (e) {
+      report("board", e, { worldId: world.id, step: "patterns" });
       setErr(e instanceof Error ? e.message : "Could not read the board.");
     } finally {
       setThinking(false);
@@ -255,7 +259,8 @@ export default function ResearchBoard({
           try {
             put(await addLink(world, board.id, url, note));
           } catch (e) {
-            setErr(e instanceof Error ? e.message : "That link did not work.");
+            report("board", e, { worldId: world.id, step: "link" });
+      setErr(e instanceof Error ? e.message : "That link did not work.");
           }
         }}
       />
