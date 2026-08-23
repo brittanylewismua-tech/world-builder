@@ -126,8 +126,8 @@ function HistoryBody({ world }: { world: World }) {
 
       {frozen.length === 0 ? (
         <Empty
-          title="Nothing frozen yet"
-          body="Your first drop lands in the archive the day it publishes."
+          title="Nothing released yet"
+          body="A drop lands here the day it publishes, frozen exactly as you released it — the designs, their order, the banner. It stops being editable at that point, which is what makes the archive worth keeping. Over months this becomes the record of how your eye changed."
         />
       ) : (
         <div className="space-y-3">

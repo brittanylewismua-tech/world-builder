@@ -20,6 +20,7 @@ import {
 } from "@/lib/drops";
 import ResearchBoard from "@/components/ResearchBoard";
 import type { World } from "@/lib/world";
+import { report } from "@/lib/report";
 import { ErrorNote } from "@/components/ui";
 
 export default function Studio() {
@@ -56,6 +57,7 @@ function StudioBody({ world }: { world: World }) {
       setNext(upcoming);
       setErr("");
     } catch (e) {
+      report("studio", e, { worldId: world.id });
       setErr(e instanceof Error ? e.message : "Could not load your drops.");
     } finally {
       setLoading(false);

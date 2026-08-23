@@ -15,6 +15,7 @@ import {
 import { askAI } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
 import type { World } from "@/lib/world";
+import { report } from "@/lib/report";
 
 /**
  * Six at a time, not ten. A screen of ten questions reads as a survey; six
@@ -110,6 +111,7 @@ function CustomerBody({ world }: { world: World }) {
       const thread = await openThread(world.id, "customer");
       await remember(thread, [{ role: "user", content: asked }, reply]);
     } catch (e) {
+      report("customer", e, { worldId: world.id, turns: all.length });
       setErr(e instanceof Error ? e.message : "That did not go through.");
       setStuck(true);
     } finally {

@@ -12,6 +12,7 @@ import {
   remember,
   type Msg,
 } from "@/lib/memory";
+import { report } from "@/lib/report";
 import { Star } from "./ui";
 
 /**
@@ -142,6 +143,7 @@ export default function CreativeRoom({
       const thread = await openThread(world.id, "room", drop.id);
       await remember(thread, [{ role: "user", content }, reply]);
     } catch (e) {
+      report("room", e, { worldId: world.id, dropId: drop.id });
       setErr(e instanceof Error ? e.message : "That did not go through.");
     } finally {
       setBusy(false);

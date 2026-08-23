@@ -19,6 +19,7 @@ import { saveSignalToBoard } from "@/lib/board";
 import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
+import { report } from "@/lib/report";
 
 /**
  * What sort of signal each item is. This is the one label on the card — the
@@ -193,6 +194,7 @@ function DailyBody({ world }: { world: World }) {
         setItems(await generateIssue(world, date, { append }));
         setDates(await loadIssueDates(world.id));
       } catch (e) {
+        report("daily", e, { worldId: world.id, date, append });
         setErr(e instanceof Error ? e.message : "Research failed.");
         /*
           A failed search used to leave the seller with a blank page, which
