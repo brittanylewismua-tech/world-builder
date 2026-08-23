@@ -59,12 +59,7 @@ function HomeBody({ world }: { world: World }) {
     <Page width="wide">
       <header className="mb-8">
         <span className="t-small text-ink-3">{formatIssueDate(today)}</span>
-        <h1 className="t-h1 mt-2 text-ink">
-          {greeting().toLowerCase()} — you&apos;re in{" "}
-          <span className="italic" style={{ color: "var(--accent)" }}>
-            {world.name.toLowerCase()}
-          </span>
-        </h1>
+        <h1 className="t-h1 mt-2 text-ink">{greeting().toLowerCase()}</h1>
         <span className="rule-accent mt-4" />
       </header>
 

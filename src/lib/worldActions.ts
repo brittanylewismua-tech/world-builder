@@ -28,6 +28,12 @@ export function worldActions(
         patch({ subNiches: [...world.subNiches, row] });
       }),
 
+    addSubNiches: (keywords: string[]) =>
+      guard(async () => {
+        const rows = await api.addSubNiches(world.id, keywords);
+        patch({ subNiches: [...world.subNiches, ...rows] });
+      }),
+
     removeSubNiche: (id: string) =>
       guard(async () => {
         await api.removeSubNiche(id);

@@ -9,7 +9,7 @@ import {
   SubNicheInput,
   AffinityInput,
   VisualCalibrationInput,
-  AreasInput,
+  AreasSuggest,
 } from "@/components/world-inputs";
 import { worldActions } from "@/lib/worldActions";
 import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
@@ -74,6 +74,7 @@ function ProfileBody({ world }: { world: World }) {
           <SubNicheInput
             subNiches={world.subNiches}
             onAdd={a.addSubNiche}
+            onAddMany={a.addSubNiches}
             onRemove={a.removeSubNiche}
           />
         </Module>
@@ -162,8 +163,8 @@ function ProfileBody({ world }: { world: World }) {
             )
           }
         >
-          <AreasInput
-            areas={world.areas}
+          <AreasSuggest
+            world={world}
             onAdd={a.addArea}
             onRemove={a.removeArea}
           />

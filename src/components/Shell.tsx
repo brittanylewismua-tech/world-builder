@@ -131,17 +131,13 @@ export default function Shell({
             borderColor: railDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.12)",
           }}
         >
-          <p className="eyebrow opacity-45">your world</p>
-          <p className="mt-1 truncate text-[18px] font-extrabold tracking-tight">
-            {world.name || "untitled"}
-          </p>
+          <button
+            onClick={handleSignOut}
+            className="text-[12px] opacity-50 transition hover:opacity-100"
+          >
+            sign out
+          </button>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="mt-3 text-[12px] opacity-50 transition hover:opacity-100"
-        >
-          sign out
-        </button>
       </div>
     </div>
   );
@@ -165,7 +161,7 @@ export default function Shell({
         </button>
         <img src="/globe.png" alt="" className="h-5 w-5" />
         <span className="text-[15px] font-extrabold tracking-tight">
-          {world.name || "world builder"}
+          world builder
         </span>
       </div>
 

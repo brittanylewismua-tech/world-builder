@@ -222,6 +222,17 @@ export async function addSubNiche(worldId: string, keyword: string) {
   return data as World["subNiches"][number];
 }
 
+/** Bulk add, so a paste from eRank is one round trip rather than thirty. */
+export async function addSubNiches(worldId: string, keywords: string[]) {
+  if (!keywords.length) return [];
+  const { data, error } = await supabase
+    .from("wb_sub_niches")
+    .insert(keywords.map((keyword) => ({ world_id: worldId, keyword })))
+    .select("id, keyword, note");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as World["subNiches"];
+}
+
 export async function removeSubNiche(id: string) {
   const { error } = await supabase.from("wb_sub_niches").delete().eq("id", id);
   if (error) throw new Error(error.message);

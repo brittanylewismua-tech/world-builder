@@ -16,7 +16,7 @@ import {
   SubNicheInput,
   AffinityScale,
   VisualCalibrationInput,
-  AreasInput,
+  AreasSuggest,
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
 import { Globe } from "@/components/Globe";
@@ -88,8 +88,8 @@ const STEPS: Step[] = [
   {
     letter: "L",
     phase: "Layer the world",
-    question: "What should I watch every day?",
-    line: "Name the parts of her world you want read every morning. You choose these, not the AI, and you can keep adding forever.",
+    question: "Here is what I will be watching",
+    line: "Read from the keywords you just gave me. Keep what fits your customer, drop what does not, add anything I missed.",
   },
   {
     letter: "D",
@@ -257,6 +257,7 @@ function SetupBody({
               <SubNicheInput
                 subNiches={world.subNiches}
                 onAdd={a.addSubNiche}
+                onAddMany={a.addSubNiches}
                 onRemove={a.removeSubNiche}
               />
             )}
@@ -283,8 +284,8 @@ function SetupBody({
             )}
 
             {step === 6 && (
-              <AreasInput
-                areas={world.areas}
+              <AreasSuggest
+                world={world}
                 onAdd={a.addArea}
                 onRemove={a.removeArea}
               />

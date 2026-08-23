@@ -1,0 +1,115 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
+
+/**
+ * SUGGESTED WORLD AREAS
+ *
+ * Asking a seller on day one to name the parts of their customer's world worth
+ * watching every morning demands the fluency the product exists to build. They
+ * have not lived in this world yet. So the keywords they already validated do
+ * the talking, and the seller edits.
+ *
+ * SPEC: "The seller chooses these; the AI does not decide what matters." That
+ * still holds — nothing here is applied on its own. These are proposals on a
+ * screen where every one can be removed and anything can be added. The AI is
+ * breaking the blank page, not making the call.
+ */
+const SYSTEM = `You read a print-on-demand seller's validated Etsy keywords and name the parts of their customer's wider world that would be worth reading about every morning.
+
+WHAT AN AREA IS
+A living slice of culture around this customer that keeps producing new things to notice — how they dress, what they listen to, where they gather, what they joke about, what they celebrate, what they are into outside of shopping.
+
+Good areas for a festival/rave seller: festival fashion · EDM culture · rave humor · festival beauty · nightlife style · music festival lineups.
+Good areas for a Christian motherhood seller: christian motherhood · worship music culture · bible journaling · modest fashion · faith-based home decor.
+
+RULES
+1. Areas are about the customer's WORLD, not about products. "Festival fashion" is an area. "Rave t-shirts" is a product category — do not return it.
+2. Never just restate a keyword. Zoom out from the keywords to the culture underneath them.
+3. Two to four words each, lowercase, plain language the customer would recognise.
+4. Between 6 and 8 of them. Cover genuinely different ground; no two near-duplicates.
+5. Each one has to be something that changes — a thing you could read news about every week. If nothing new ever happens in it, leave it out.
+6. Do not judge the seller's niche, score anything, or comment on whether it is a good world.
+
+Return ONLY raw JSON, no markdown fence:
+{"areas":["festival fashion","edm culture"]}`;
+
+interface Body {
+  worldName?: string;
+  subNiches?: string[];
+  existing?: string[];
+}
+
+export async function POST(req: Request) {
+  if (!process.env.ANTHROPIC_API_KEY)
+    return NextResponse.json(
+      { error: "This deployment is missing its ANTHROPIC_API_KEY." },
+      { status: 503 },
+    );
+
+  let body: Body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Bad request." }, { status: 400 });
+  }
+
+  const keywords = (body.subNiches ?? []).filter(Boolean);
+  if (keywords.length < 2)
+    return NextResponse.json(
+      { error: "Add a few validated keywords first and I can read them." },
+      { status: 400 },
+    );
+
+  const existing = (body.existing ?? []).filter(Boolean);
+
+  const prompt = `${body.worldName ? `The seller calls this world: ${body.worldName}\n` : ""}Keywords they validated in eRank:
+${keywords.map((k) => `- ${k}`).join("\n")}
+${existing.length ? `\nThey are already watching these, so suggest different ground:\n${existing.map((e) => `- ${e}`).join("\n")}` : ""}
+
+Name the areas of this customer's world worth reading every morning.`;
+
+  try {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const res = await client.messages.create({
+      model: MODEL,
+      max_tokens: 800,
+      system: SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = res.content
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("")
+      .trim();
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1)
+      return NextResponse.json(
+        { error: "That came back unreadable. Try again." },
+        { status: 502 },
+      );
+
+    const parsed = JSON.parse(text.slice(start, end + 1)) as {
+      areas?: string[];
+    };
+
+    const have = new Set(existing.map((e) => e.toLowerCase()));
+    const areas = (parsed.areas ?? [])
+      .map((a) => String(a).trim().toLowerCase())
+      .filter((a) => a.length > 1 && a.length <= 40 && !have.has(a))
+      .filter((a, i, all) => all.indexOf(a) === i)
+      .slice(0, 8);
+
+    return NextResponse.json({ areas });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Could not read your keywords." },
+      { status: 500 },
+    );
+  }
+}
