@@ -188,13 +188,21 @@ export function splitDrops(drops: Drop[]) {
 export async function syncSchedule(world: World): Promise<Drop[]> {
   let drops = await loadDrops(world.id);
 
+  /*
+    A brand-new world used to get Drop 01 and stop there, because this
+    returned early. That left the seller with nothing for next week on their
+    very first day — no board for research to attach to, and Home telling
+    them research had not started yet, which is the opposite of the habit
+    this software exists to build. Create the first drop, then carry on
+    through the normal path so next week opens with it.
+  */
   if (!drops.length) {
     await createDrop(
       world.id,
       1,
       toISODate(nextWeekday(new Date(), world.dropWeekday)),
     );
-    return loadDrops(world.id);
+    drops = await loadDrops(world.id);
   }
 
   let changed = false;
@@ -216,25 +224,69 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
     changed = true;
   }
 
+  /*
+    PAUSING STOPS THE CLOCK.
+
+    It used to only stop the freezing, which meant the publish date kept
+    sliding into the past while the seller was away. Coming back from a month
+    off, they owed four drops they had never worked on, and the software
+    walked them through freezing each one on successive page loads.
+
+    A pause means this week has not happened yet. So while paused, the board
+    keeps its date level with the calendar instead of falling behind it, and
+    resuming picks up on the next publish day with nothing owed.
+  */
   if (world.paused) {
-    const { current: paused } = splitDrops(drops);
-    if (paused) await ensureNextExists(paused);
+    const { current: paused, next: after } = splitDrops(drops);
+    if (paused) {
+      if (daysSince(paused.publishDate) > 0) {
+        const moved = toISODate(nextWeekday(new Date(), world.dropWeekday));
+        await supabase
+          .from("wb_drops")
+          .update({ publish_date: moved })
+          .eq("id", paused.id);
+        if (after) {
+          const week = new Date(`${moved}T00:00:00`);
+          week.setDate(week.getDate() + 7);
+          await supabase
+            .from("wb_drops")
+            .update({ publish_date: toISODate(week) })
+            .eq("id", after.id);
+        }
+        changed = true;
+        drops = await loadDrops(world.id);
+      }
+      await ensureNextExists(splitDrops(drops).current!);
+    }
     return changed ? loadDrops(world.id) : drops;
   }
 
-  const current = splitDrops(drops).current!;
-  // Freeze only once the publish day has fully passed. Using >= 0 here meant a
-  // seller who signed up on a Friday had Drop 01 frozen empty the moment they
-  // opened the studio.
-  if (daysSince(current.publishDate) > 0 && !current.frozenAt) {
+  /*
+    Freeze every drop whose day has passed, not just the oldest one.
+
+    Freezing one per call meant a seller who had been away for a month landed
+    on a board from three weeks ago, and had to reload three more times to
+    reach the present — quietly freezing a drop they had never opened on each
+    one. Catching up happens in a single pass so they always arrive in the
+    current week.
+
+    Freeze only once the publish day has fully passed. Using >= 0 here meant a
+    seller who signed up on a Friday had Drop 01 frozen empty the moment they
+    opened the studio.
+  */
+  for (let guard = 0; guard < 260; guard++) {
+    const current = splitDrops(drops).current!;
+    if (!current || current.frozenAt || daysSince(current.publishDate) <= 0) {
+      await ensureNextExists(current);
+      break;
+    }
     await supabase
       .from("wb_drops")
       .update({ frozen_at: new Date().toISOString(), status: "live" })
       .eq("id", current.id);
     await ensureNextExists(current);
     changed = true;
-  } else {
-    await ensureNextExists(current);
+    drops = await loadDrops(world.id);
   }
 
   // Age frozen drops through the lifecycle. Status is age, not performance.
