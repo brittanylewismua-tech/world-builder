@@ -114,3 +114,59 @@ export async function admit(
 
   return { caller: { userId: data.user.id, token } };
 }
+
+/* ------------------------------------------------------------------ */
+/* what it costs                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Record what one AI call actually consumed.
+ *
+ * There was no way to answer "what does an active seller cost me a month",
+ * which is the number a price has to be built on. Written server-side, where
+ * the real token counts are, with the service role so no client can see or
+ * forge it — this is business data, not seller data.
+ *
+ * Fire-and-forget by design. Accounting must never be the reason a seller's
+ * request fails, so every error here is swallowed.
+ */
+export function meter(
+  surface: Route,
+  userId: string | null,
+  usage: {
+    model: string;
+    // The SDK reports these as number | null; normalise on the way in.
+    input_tokens?: number | null;
+    output_tokens?: number | null;
+    cache_read_input_tokens?: number | null;
+    cache_creation_input_tokens?: number | null;
+    web_searches?: number | null;
+    ms?: number;
+    worldId?: string | null;
+  },
+) {
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!service) return;
+
+  void (async () => {
+    try {
+      const admin = createClient(URL, service, {
+        auth: { persistSession: false },
+      });
+      await admin.from("wb_ai_usage").insert({
+        user_id: userId,
+        world_id: usage.worldId ?? null,
+        surface,
+        model: usage.model,
+        input_tokens: usage.input_tokens ?? 0,
+        output_tokens: usage.output_tokens ?? 0,
+        cache_read_tokens: usage.cache_read_input_tokens ?? 0,
+        cache_write_tokens: usage.cache_creation_input_tokens ?? 0,
+        web_searches: usage.web_searches ?? 0,
+        ms: usage.ms ?? 0,
+      });
+    } catch {
+      // Never let accounting break the thing being accounted for.
+    }
+  })();
+}

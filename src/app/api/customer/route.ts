@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit } from "@/lib/guard";
+import { admit, meter } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -71,12 +71,19 @@ export async function POST(req: Request) {
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const began = Date.now();
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 900,
       system: `${SYSTEM}\n\n--- THE WORLD YOU LIVE IN ---\n${body.context ?? "(sparse profile — improvise carefully and stay plausible)"}`,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     });
+    meter("customer", door.caller.userId, {
+      model: MODEL,
+      ...res.usage,
+      ms: Date.now() - began,
+    });
+
     const text = res.content
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("")

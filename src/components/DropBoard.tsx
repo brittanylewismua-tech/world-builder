@@ -107,6 +107,7 @@ function Tile({
   onDropOn,
   dragging,
   setDragging,
+  total,
 }: {
   slot: number;
   item?: DropItem;
@@ -118,6 +119,8 @@ function Tile({
   onDropOn: (from: number, to: number) => Promise<void>;
   dragging: number | null;
   setDragging: (n: number | null) => void;
+  /** Highest slot number, so the last tile cannot move further right. */
+  total: number;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -181,10 +184,28 @@ function Tile({
             {String(slot).padStart(2, "0")}
           </span>
           {!frozen && (
-            <div className="absolute inset-x-0 bottom-0 flex opacity-0 transition group-hover:opacity-100">
+            /*
+              Dragging is the quick way, not the only way. Reordering by mouse
+              alone would mean anyone who cannot drag — a trackpad they fight
+              with, a tremor, a keyboard — simply cannot arrange their own
+              drop. The arrows do the same job and are reachable by tab.
+
+              focus-within matters as much as hover: buttons hidden at zero
+              opacity are still in the tab order, so without it a keyboard
+              user lands on controls they cannot see.
+            */
+            <div className="absolute inset-x-0 bottom-0 flex opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+              <button
+                onClick={() => onDropOn(slot, slot - 1)}
+                disabled={slot === 1}
+                className="bg-black/80 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-black disabled:opacity-30"
+                aria-label={`Move this design to slot ${slot - 1}`}
+              >
+                ←
+              </button>
               <button
                 onClick={() => input.current?.click()}
-                className="flex-1 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
+                className="flex-1 border-l border-white/25 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
                 aria-label={`Replace the design in slot ${slot}`}
               >
                 Replace
@@ -195,6 +216,14 @@ function Tile({
                 aria-label={`Remove the design in slot ${slot}`}
               >
                 Remove
+              </button>
+              <button
+                onClick={() => onDropOn(slot, slot + 1)}
+                disabled={slot === total}
+                className="border-l border-white/25 bg-black/80 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-black disabled:opacity-30"
+                aria-label={`Move this design to slot ${slot + 1}`}
+              >
+                →
               </button>
             </div>
           )}
@@ -366,6 +395,7 @@ export default function DropBoard({
                 onDropOn={onMoveMockup ?? (async () => {})}
                 dragging={dragging}
                 setDragging={setDragging}
+                total={world.slotsPerDrop}
               />
             ))}
           </div>

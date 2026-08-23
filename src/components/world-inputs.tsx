@@ -417,15 +417,20 @@ export function VisualCalibrationInput({
     meant the first thing a seller ever grabbed spoke for their whole eye,
     permanently.
   */
-  async function land(to: number) {
-    const from = drag;
-    setDrag(null);
-    setOver(null);
-    if (from === null || from === to || !onReorder) return;
+  async function move(from: number, to: number) {
+    if (!onReorder || to < 0 || to >= refs.length || from === to) return;
     const next = [...refs];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
     await onReorder(next);
+  }
+
+  async function land(to: number) {
+    const from = drag;
+    setDrag(null);
+    setOver(null);
+    if (from === null) return;
+    await move(from, to);
   }
 
   async function handle(files: FileList | null) {
@@ -482,12 +487,40 @@ export function VisualCalibrationInput({
               alt=""
               className="h-full w-full rounded-xl border border-black/12 object-cover"
             />
-            <button
-              onClick={() => onRemove(r)}
-              className="absolute inset-x-0 bottom-0 rounded-b-xl bg-black/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
-            >
-              Remove
-            </button>
+            {/*
+              Same reasoning as the drop board: dragging is the quick path,
+              never the only one. Shown on focus as well as hover, because a
+              control at zero opacity is still in the tab order.
+            */}
+            <div className="absolute inset-x-0 bottom-0 flex overflow-hidden rounded-b-xl opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+              {onReorder && (
+                <button
+                  onClick={() => void move(i, i - 1)}
+                  disabled={i === 0}
+                  aria-label={`Move this reference earlier`}
+                  className="bg-black/80 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-black disabled:opacity-30"
+                >
+                  ←
+                </button>
+              )}
+              <button
+                onClick={() => onRemove(r)}
+                aria-label="Remove this reference"
+                className="flex-1 border-x border-white/20 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
+              >
+                Remove
+              </button>
+              {onReorder && (
+                <button
+                  onClick={() => void move(i, i + 1)}
+                  disabled={i === refs.length - 1}
+                  aria-label={`Move this reference later`}
+                  className="bg-black/80 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-black disabled:opacity-30"
+                >
+                  →
+                </button>
+              )}
+            </div>
           </div>
         ))}
 
@@ -515,7 +548,9 @@ export function VisualCalibrationInput({
       <p className="t-small mt-3 text-ink-3">
         {refs.length} reference{refs.length === 1 ? "" : "s"}. Replace or add
         whenever your eye changes.
-        {onReorder && refs.length > 1 && " Drag to change what leads."}
+        {onReorder &&
+          refs.length > 1 &&
+          " Drag, or use the arrows on each one, to change what leads."}
       </p>
     </div>
   );

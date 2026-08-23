@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit } from "@/lib/guard";
+import { admit, meter } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -153,6 +153,7 @@ Then write the ${TARGET_ITEMS}-item newspaper.`;
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const began = Date.now();
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 6000,
@@ -166,6 +167,22 @@ Then write the ${TARGET_ITEMS}-item newspaper.`;
         PUBLISH_TOOL as unknown as Anthropic.Tool,
       ],
       messages: [{ role: "user", content: prompt }],
+    });
+
+    /*
+      The most expensive call in the product: a long generation on top of up
+      to twelve live web searches, once per seller per day. If a price is
+      going to be wrong anywhere, it will be wrong here — so the searches are
+      counted alongside the tokens.
+    */
+    const searchCount =
+      (res.usage as unknown as { server_tool_use?: { web_search_requests?: number } })
+        ?.server_tool_use?.web_search_requests ?? 0;
+    meter("daily", door.caller.userId, {
+      model: MODEL,
+      ...res.usage,
+      web_searches: searchCount,
+      ms: Date.now() - began,
     });
 
     // Collect every URL the search tool genuinely returned.

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -175,6 +177,19 @@ export default function Login() {
             <p className="text-[13px] text-accent">
               Those two do not match.
             </p>
+          )}
+          {/*
+            A way back has to be visible at the moment someone is failing to
+            get in, not buried. Only shown when signing in, because it makes
+            no sense next to a form that is creating the account.
+          */}
+          {mode === "in" && (
+            <Link
+              href="/reset"
+              className="self-start text-[13px] text-ink-3 underline underline-offset-2 transition hover:text-ink"
+            >
+              Forgotten your password?
+            </Link>
           )}
           <button
             onClick={submit}
