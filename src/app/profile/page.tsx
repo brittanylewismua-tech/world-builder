@@ -15,6 +15,7 @@ import { worldActions } from "@/lib/worldActions";
 import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
 import Customiser from "@/components/Customiser";
 import SecureWorld from "@/components/SecureWorld";
+import AccountCard from "@/components/AccountCard";
 import { PRESETS } from "@/lib/theme";
 
 type ModuleKey = "demand" | "connection" | "visual" | "areas" | "look";
@@ -54,6 +55,7 @@ function ProfileBody({ world }: { world: World }) {
       {err && <ErrorNote>{err}</ErrorNote>}
 
       <SecureWorld />
+      <AccountCard />
 
       <div className="mb-6">
         <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
