@@ -27,6 +27,9 @@ export const DAILY_CAP = {
   customer: 80,
   room: 80,
   areas: 15,
+  /* One analysis per saved item plus pattern runs. A busy research week is
+     perhaps forty pieces; this leaves room for that and then some. */
+  board: 120,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -39,6 +42,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
   room: "That is a lot of conversation for one day. The board will still be here tomorrow.",
   areas:
     "You have asked for suggestions plenty of times today. Add areas by hand for now; this resets tomorrow.",
+  board:
+    "That is a lot of research in one day. Everything you saved is safe — the reading of it picks up again tomorrow.",
 };
 
 export interface Caller {

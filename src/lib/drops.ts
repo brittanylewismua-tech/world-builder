@@ -161,11 +161,29 @@ async function createDrop(worldId: string, number: number, publishDate: string) 
 }
 
 /**
+ * The three things a seller has at any moment.
+ *
+ * There are always two live drops now, not one: the board being built, and
+ * the one after it that exists only so next week's research has somewhere to
+ * land. "Current" is therefore the *earliest* unfrozen drop — the newest one
+ * is next week's, and putting a seller in front of that by accident would be
+ * a confusing way to lose an afternoon.
+ */
+export function splitDrops(drops: Drop[]) {
+  const open = drops.filter((d) => !d.frozenAt).sort((a, b) => a.number - b.number);
+  const current = open[0] ?? drops[0] ?? null;
+  const next = current ? (open.find((d) => d.number === current.number + 1) ?? null) : null;
+  const released = drops.filter((d) => d.frozenAt);
+  return { current, next, released };
+}
+
+/**
  * Bring the schedule up to date, then return every drop.
  *
- * Freezes any unfrozen drop whose publish date has passed, and opens the next
- * board. Paused worlds freeze nothing and open nothing — the current board just
- * stays put until the seller resumes.
+ * Freezes any unfrozen drop whose publish date has passed, opens the next
+ * board, and always keeps one drop ahead of the current one in existence so
+ * the research board for next week has something to attach to. Paused worlds
+ * freeze nothing — the current board just stays put until the seller resumes.
  */
 export async function syncSchedule(world: World): Promise<Drop[]> {
   let drops = await loadDrops(world.id);
@@ -179,11 +197,32 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
     return loadDrops(world.id);
   }
 
-  if (world.paused) return drops;
-
   let changed = false;
-  // Newest first, so the open board is drops[0].
-  const current = drops[0];
+
+  /**
+   * Next week's drop exists from the moment this week's does, because the
+   * research board attaches to it. It carries no mockups and the seller is
+   * never sent to it by mistake — see splitDrops.
+   */
+  async function ensureNextExists(cur: Drop) {
+    if (drops.some((d) => d.number === cur.number + 1)) return;
+    const after = new Date(`${cur.publishDate}T00:00:00`);
+    after.setDate(after.getDate() + 1);
+    await createDrop(
+      world.id,
+      cur.number + 1,
+      toISODate(nextWeekday(after, world.dropWeekday)),
+    );
+    changed = true;
+  }
+
+  if (world.paused) {
+    const { current: paused } = splitDrops(drops);
+    if (paused) await ensureNextExists(paused);
+    return changed ? loadDrops(world.id) : drops;
+  }
+
+  const current = splitDrops(drops).current!;
   // Freeze only once the publish day has fully passed. Using >= 0 here meant a
   // seller who signed up on a Friday had Drop 01 frozen empty the moment they
   // opened the studio.
@@ -192,14 +231,10 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
       .from("wb_drops")
       .update({ frozen_at: new Date().toISOString(), status: "live" })
       .eq("id", current.id);
-    const next = new Date(`${current.publishDate}T00:00:00`);
-    next.setDate(next.getDate() + 1);
-    await createDrop(
-      world.id,
-      current.number + 1,
-      toISODate(nextWeekday(next, world.dropWeekday)),
-    );
+    await ensureNextExists(current);
     changed = true;
+  } else {
+    await ensureNextExists(current);
   }
 
   // Age frozen drops through the lifecycle. Status is age, not performance.
@@ -213,6 +248,15 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
   }
 
   if (changed) drops = await loadDrops(world.id);
+
+  // After a freeze, the drop that was "next" is now the one being built, so
+  // the week after it needs opening too.
+  const { current: nowCurrent, next } = splitDrops(drops);
+  if (nowCurrent && !next) {
+    await ensureNextExists(nowCurrent);
+    drops = await loadDrops(world.id);
+  }
+
   return drops;
 }
 

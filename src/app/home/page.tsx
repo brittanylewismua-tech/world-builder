@@ -14,6 +14,7 @@ import {
 } from "@/lib/daily";
 import {
   formatDropDate,
+  splitDrops,
   syncSchedule,
   STATUS_LABEL,
   type Drop,
@@ -78,7 +79,7 @@ function HomeBody({ world }: { world: World }) {
     // Same call Drop Studio makes, so the board exists the moment the world
     // does and Home is never the only screen that thinks there is no drop.
     syncSchedule(world)
-      .then((d) => setDrop(d.find((x) => !x.frozenAt) ?? d[0] ?? null))
+      .then((d) => setDrop(splitDrops(d).current))
       .catch(() => setDrop(null));
   }, [world, today]);
 

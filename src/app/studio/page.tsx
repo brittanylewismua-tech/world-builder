@@ -10,11 +10,13 @@ import { saveWorld, setShopBanner } from "@/lib/api";
 import {
   freezeNow,
   removeMockup,
+  splitDrops,
   syncSchedule,
   uploadMockup,
   type Drop,
   type DropItem,
 } from "@/lib/drops";
+import ResearchBoard from "@/components/ResearchBoard";
 import type { World } from "@/lib/world";
 import { ErrorNote } from "@/components/ui";
 
@@ -25,7 +27,10 @@ export default function Studio() {
 function StudioBody({ world }: { world: World }) {
   const { patch } = useWorld();
   const [drop, setDrop] = useState<Drop | null>(null);
+  const [next, setNext] = useState<Drop | null>(null);
   const [drops, setDrops] = useState<Drop[]>([]);
+  /** Make this week, research next week. Both always one click apart. */
+  const [tab, setTab] = useState<"build" | "research">("build");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
@@ -33,8 +38,9 @@ function StudioBody({ world }: { world: World }) {
     try {
       const all = await syncSchedule(world);
       setDrops(all);
-      // Newest first; the open board is the one that has not been frozen.
-      setDrop(all.find((d) => !d.frozenAt) ?? all[0] ?? null);
+      const { current, next: upcoming } = splitDrops(all);
+      setDrop(current);
+      setNext(upcoming);
       setErr("");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not load your drops.");
@@ -121,7 +127,45 @@ function StudioBody({ world }: { world: World }) {
         <ErrorNote>{err}</ErrorNote>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      {/* The weekly rhythm, made obvious: build this one, research the next. */}
+      <div className="mb-5 flex flex-wrap gap-1 rounded-xl border-2 border-black p-1">
+        <button
+          onClick={() => setTab("build")}
+          className={`flex-1 rounded-lg px-4 py-2.5 text-left transition ${
+            tab === "build" ? "bg-black text-white" : "hover:bg-black/5"
+          }`}
+        >
+          <span className="block text-[13.5px] font-bold">
+            Drop {String(drop.number).padStart(2, "0")} · building
+          </span>
+          <span className="block text-[11.5px] opacity-70">
+            {drop.items.length} of {world.slotsPerDrop} designs in
+          </span>
+        </button>
+        {next && (
+          <button
+            onClick={() => setTab("research")}
+            className={`flex-1 rounded-lg px-4 py-2.5 text-left transition ${
+              tab === "research" ? "bg-black text-white" : "hover:bg-black/5"
+            }`}
+          >
+            <span className="block text-[13.5px] font-bold">
+              Drop {String(next.number).padStart(2, "0")} · research
+            </span>
+            <span className="block text-[11.5px] opacity-70">
+              collecting for next week
+            </span>
+          </button>
+        )}
+      </div>
+
+      {tab === "research" && next && (
+        <ResearchBoard world={world} drop={next} />
+      )}
+
+      <div
+        className={`mb-4 flex flex-wrap items-center gap-3 ${tab === "research" ? "hidden" : ""}`}
+      >
         <span className="eyebrow text-ink-3">Drop Studio</span>
         {world.paused && (
           <span className="chip chip-accent">Schedule paused</span>
@@ -143,7 +187,9 @@ function StudioBody({ world }: { world: World }) {
       </div>
 
       {/* SPEC: ~70% board / ~30% Creative Room */}
-      <div className="grid gap-6 lg:grid-cols-[7fr_3fr]">
+      <div
+        className={`grid gap-6 lg:grid-cols-[7fr_3fr] ${tab === "research" ? "hidden" : ""}`}
+      >
         <DropBoard
           world={world}
           drop={drop}
