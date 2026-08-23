@@ -18,6 +18,7 @@ import {
   STATUS_LABEL,
   type Drop,
 } from "@/lib/drops";
+import SecureWorld from "@/components/SecureWorld";
 import type { World } from "@/lib/world";
 
 /**
@@ -87,6 +88,8 @@ function HomeBody({ world }: { world: World }) {
 
   return (
     <Page width="wide">
+      <SecureWorld />
+
       <header className="mb-8">
         <span className="t-small text-ink-3">{formatIssueDate(today)}</span>
         <h1 className="t-h1 mt-2 text-ink">{greeting().toLowerCase()}</h1>

@@ -87,8 +87,8 @@ export default function Login() {
             {busy ? "opening…" : "enter"}
           </button>
           <p className="mt-3 text-[13px] leading-relaxed text-white/50">
-            No email, no password. Your world saves to this browser&apos;s
-            account and stays yours.
+            No email, no password. Your world saves to this browser — you can
+            add an email later so you can reach it from anywhere.
           </p>
         </div>
 
@@ -106,9 +106,9 @@ export default function Login() {
             <div className="mt-4 rounded-lg border border-white/12 bg-white/[0.05] px-4 py-4">
               <p className="text-sm font-semibold text-accent">Check your email</p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-white/65">
-                A link is on its way to {email.trim()}. Supabase&apos;s built-in
-                mailer is rate limited, so if nothing arrives in a couple of
-                minutes, use Enter above instead.
+                A link is on its way to {email.trim()}. If it has not arrived
+                in a minute, check spam — or use Enter above and add your email
+                afterwards.
               </p>
               <button
                 onClick={() => setSent(false)}
