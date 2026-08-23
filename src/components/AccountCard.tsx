@@ -20,6 +20,7 @@ import { useWorld } from "@/lib/useWorld";
 export default function AccountCard() {
   const { session } = useWorld();
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
@@ -29,7 +30,7 @@ export default function AccountCard() {
   if (!email) return null;
 
   async function save() {
-    if (password.length < 8 || busy) return;
+    if (password.length < 8 || password !== confirm || busy) return;
     setBusy(true);
     setErr("");
     const { error } = await supabase.auth.updateUser({ password });
@@ -39,6 +40,7 @@ export default function AccountCard() {
       return;
     }
     setPassword("");
+    setConfirm("");
     setDone(true);
   }
 
@@ -71,14 +73,28 @@ export default function AccountCard() {
               placeholder="new password, 8+ characters"
               className="field max-w-sm"
             />
+            <input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && save()}
+              type="password"
+              autoComplete="new-password"
+              placeholder="type it again"
+              className="field max-w-sm"
+            />
             <button
               onClick={save}
-              disabled={busy || password.length < 8}
+              disabled={busy || password.length < 8 || password !== confirm}
               className="btn btn-accent shrink-0"
             >
               {busy ? "Saving…" : "Set password"}
             </button>
           </div>
+          {confirm.length > 0 && confirm !== password && (
+            <p className="t-small mt-2 font-semibold text-ink">
+              Those two do not match.
+            </p>
+          )}
           {err && <p className="t-small mt-2 text-ink-2">{err}</p>}
         </>
       )}

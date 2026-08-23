@@ -24,8 +24,16 @@ export default function Login() {
   const [mode, setMode] = useState<Mode>("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  /** Only when creating — signing in has nothing to mistype twice. */
+  const mismatch = mode === "new" && confirm.length > 0 && confirm !== password;
+  const ready =
+    email.trim().length > 0 &&
+    password.length > 0 &&
+    (mode === "in" || (password.length >= 8 && confirm === password));
 
   useEffect(() => {
     if (!loading && session) router.replace("/");
@@ -33,7 +41,7 @@ export default function Login() {
 
   async function submit() {
     const addr = email.trim().toLowerCase();
-    if (!addr || !password || busy) return;
+    if (!addr || !password || busy || !ready) return;
     setBusy(true);
     setErr("");
 
@@ -120,6 +128,7 @@ export default function Login() {
               onClick={() => {
                 setMode(m);
                 setErr("");
+                setConfirm("");
               }}
               className={`flex-1 rounded-md py-2 text-[13px] font-bold transition ${
                 mode === m
@@ -151,9 +160,25 @@ export default function Login() {
             placeholder={mode === "new" ? "at least 8 characters" : "password"}
             className={field}
           />
+          {mode === "new" && (
+            <input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              type="password"
+              autoComplete="new-password"
+              placeholder="type it again"
+              className={field}
+            />
+          )}
+          {mismatch && (
+            <p className="text-[13px] text-accent">
+              Those two do not match.
+            </p>
+          )}
           <button
             onClick={submit}
-            disabled={busy || !email.trim() || !password}
+            disabled={busy || !ready}
             className="w-full rounded-xl border-2 border-white bg-[#ee6fc0] py-3 text-base font-extrabold text-black shadow-[4px_4px_0_#fff] transition hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_#fff] disabled:opacity-50"
           >
             {busy

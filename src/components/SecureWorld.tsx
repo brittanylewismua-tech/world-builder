@@ -32,6 +32,7 @@ export default function SecureWorld() {
   const [hidden, setHidden] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
@@ -41,7 +42,7 @@ export default function SecureWorld() {
 
   async function attach() {
     const addr = email.trim();
-    if (!addr || password.length < 8) return;
+    if (!addr || password.length < 8 || password !== confirm) return;
     setBusy(true);
     setErr("");
 
@@ -73,6 +74,7 @@ export default function SecureWorld() {
     setBusy(false);
     setDone(true);
     setPassword("");
+    setConfirm("");
     void refresh();
   }
 
@@ -136,17 +138,37 @@ export default function SecureWorld() {
               placeholder="password, 8+ characters"
               className="field"
             />
+            <input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && attach()}
+              type="password"
+              autoComplete="new-password"
+              placeholder="type it again"
+              className="field"
+            />
             <button
               onClick={attach}
-              disabled={busy || !email.trim() || password.length < 8}
+              disabled={
+                busy ||
+                !email.trim() ||
+                password.length < 8 ||
+                password !== confirm
+              }
               className="btn btn-accent shrink-0"
             >
               {busy ? "Saving…" : "Save"}
             </button>
           </div>
+          {confirm.length > 0 && confirm !== password && (
+            <p className="t-small mt-2 font-semibold text-ink">
+              Those two do not match.
+            </p>
+          )}
           {err && <p className="t-small mt-2 text-ink-2">{err}</p>}
           <p className="t-small mt-2 text-ink-3">
-            Your world stays exactly as it is. This only adds a way back in.
+            Typed twice on purpose — there is no email on this account yet, so
+            a typo here would lock you out of your own world.
           </p>
         </div>
       )}
