@@ -4,6 +4,7 @@
 import { useRef, useState } from "react";
 import { setWallpaper, saveWorld } from "@/lib/api";
 import {
+  DEFAULT_THEME,
   PRESETS,
   RAIL_LABEL,
   WALLPAPER_LABEL,
@@ -41,6 +42,22 @@ export default function Customiser({
   const theme = world.theme;
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  /*
+    Somewhere to step back to.
+
+    Playing with colour is the one part of this software people fiddle with
+    for fun, and there was no undo and no way home. Six presets, a free
+    accent, three rails and four wallpapers is a lot of rope, and a seller
+    who ends up somewhere they hate should not have to reconstruct the
+    original from memory.
+  */
+  const [undo, setUndo] = useState<Theme | null>(null);
+  const atDefault =
+    theme.preset === DEFAULT_THEME.preset &&
+    theme.accent === DEFAULT_THEME.accent &&
+    theme.rail === DEFAULT_THEME.rail &&
+    theme.wallpaperKind === DEFAULT_THEME.wallpaperKind &&
+    theme.wallpaperAccent === DEFAULT_THEME.wallpaperAccent;
 
   async function apply(next: Partial<Theme>) {
     const merged = { ...theme, ...next };
@@ -72,6 +89,13 @@ export default function Customiser({
     }
   }
 
+  async function resetToSignature() {
+    setUndo(theme);
+    // A custom wallpaper the seller uploaded is theirs; keep the file and
+    // only stop using it, so resetting is never destructive.
+    await apply({ ...DEFAULT_THEME, wallpaperPath: null, wallpaperSrc: null });
+  }
+
   const textOnAccent = onAccent(theme.accent);
   const ratio = contrastRatio(theme.accent, textOnAccent);
 
@@ -85,7 +109,30 @@ export default function Customiser({
 
       {/* ---------------------------------------------------- presets */}
       <section>
-        <h3 className="t-h3 mb-3">Start from a look</h3>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+          <h3 className="t-h3">Start from a look</h3>
+          {undo ? (
+            <button
+              onClick={async () => {
+                const back = undo;
+                setUndo(null);
+                await apply(back);
+              }}
+              className="t-small font-medium text-ink-2 underline underline-offset-2 transition hover:text-ink"
+            >
+              Undo — put it back how it was
+            </button>
+          ) : (
+            !atDefault && (
+              <button
+                onClick={resetToSignature}
+                className="t-small font-medium text-ink-3 underline underline-offset-2 transition hover:text-ink"
+              >
+                Reset to Signature
+              </button>
+            )
+          )}
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {PRESETS.map((p) => {
             const active = theme.preset === p.id;

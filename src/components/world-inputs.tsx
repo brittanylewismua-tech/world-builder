@@ -18,16 +18,89 @@ import { Note } from "./ui";
 /* W — WORK UP FROM DEMAND                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * A keyword and what the seller knows about it.
+ *
+ * The note stays folded away, because the list is scanned far more often than
+ * it is read. What someone learns about a keyword — who is actually searching
+ * it, what it turned out to mean, why it surprised them — is worth more than
+ * the keyword on its own, and it evaporates between sessions otherwise.
+ */
+function SubNicheRow({
+  index,
+  sub,
+  onRemove,
+  onNote,
+}: {
+  index: number;
+  sub: SubNiche;
+  onRemove: (id: string) => void | Promise<void>;
+  onNote?: (id: string, note: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState(sub.note ?? "");
+
+  return (
+    <li className="group bg-white px-4 py-2.5">
+      <div className="flex items-center gap-3">
+        <span className="t-small w-5 shrink-0 tabular-nums text-ink-3">
+          {index + 1}
+        </span>
+        <span className="t-body flex-1 text-ink">{sub.keyword}</span>
+        {onNote && (
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className={`t-small transition ${
+              note.trim()
+                ? "font-medium text-ink-2 hover:text-ink"
+                : "text-ink-3 opacity-0 hover:text-ink group-hover:opacity-100"
+            }`}
+          >
+            {note.trim() ? "Note" : "Add a note"}
+          </button>
+        )}
+        <button
+          onClick={() => onRemove(sub.id)}
+          className="t-small text-ink-3 opacity-0 transition hover:text-ink group-hover:opacity-100"
+        >
+          Remove
+        </button>
+      </div>
+
+      {open && onNote && (
+        <div className="rise pl-8 pt-2">
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onBlur={() => note !== (sub.note ?? "") && onNote(sub.id, note)}
+            rows={2}
+            placeholder="What do you know about this one? Who searches it, what it really means, what surprised you."
+            className="field w-full text-[13px]"
+          />
+        </div>
+      )}
+
+      {!open && note.trim() && (
+        <p className="t-small truncate pl-8 pt-0.5 text-ink-3">{note}</p>
+      )}
+    </li>
+  );
+}
+
 export function SubNicheInput({
   subNiches,
   onAdd,
   onAddMany,
   onRemove,
+  onNote,
 }: {
   subNiches: SubNiche[];
   onAdd: (keyword: string) => Promise<void>;
   onAddMany: (keywords: string[]) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  /** Absent during onboarding, where a note would be noise. */
+  onNote?: (id: string, note: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -200,21 +273,13 @@ export function SubNicheInput({
       {subNiches.length > 0 && (
         <ul className="mt-5 divide-y divide-black/10 overflow-hidden rounded-2xl border border-black/12">
           {subNiches.map((s, i) => (
-            <li
+            <SubNicheRow
               key={s.id}
-              className="group flex items-center gap-3 bg-white px-4 py-2.5"
-            >
-              <span className="t-small w-5 shrink-0 tabular-nums text-ink-3">
-                {i + 1}
-              </span>
-              <span className="t-body flex-1 text-ink">{s.keyword}</span>
-              <button
-                onClick={() => onRemove(s.id)}
-                className="t-small text-ink-3 opacity-0 transition hover:text-ink group-hover:opacity-100"
-              >
-                Remove
-              </button>
-            </li>
+              index={i}
+              sub={s}
+              onRemove={onRemove}
+              onNote={onNote}
+            />
           ))}
         </ul>
       )}
@@ -331,16 +396,37 @@ export function VisualCalibrationInput({
   refs,
   onAdd,
   onRemove,
+  onReorder,
   hideNote = false,
 }: {
   refs: VisualReference[];
   onAdd: (files: File[]) => Promise<void>;
   onRemove: (ref: VisualReference) => Promise<void>;
+  /** Absent during onboarding, where arranging is premature. */
+  onReorder?: (next: VisualReference[]) => Promise<void>;
   /** Onboarding already says this above the card; do not say it twice. */
   hideNote?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [drag, setDrag] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+
+  /*
+    What leads the set says as much as what is in it. Ordering by upload time
+    meant the first thing a seller ever grabbed spoke for their whole eye,
+    permanently.
+  */
+  async function land(to: number) {
+    const from = drag;
+    setDrag(null);
+    setOver(null);
+    if (from === null || from === to || !onReorder) return;
+    const next = [...refs];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    await onReorder(next);
+  }
 
   async function handle(files: FileList | null) {
     if (!files?.length) return;
@@ -363,8 +449,33 @@ export function VisualCalibrationInput({
       )}
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-        {refs.map((r) => (
-          <div key={r.id} className="group relative aspect-square">
+        {refs.map((r, i) => (
+          <div
+            key={r.id}
+            draggable={!!onReorder}
+            onDragStart={() => setDrag(i)}
+            onDragEnd={() => {
+              setDrag(null);
+              setOver(null);
+            }}
+            onDragOver={(e) => {
+              if (drag === null || drag === i) return;
+              e.preventDefault();
+              setOver(i);
+            }}
+            onDragLeave={() => setOver((o) => (o === i ? null : o))}
+            onDrop={(e) => {
+              e.preventDefault();
+              void land(i);
+            }}
+            className={`group relative aspect-square transition ${
+              onReorder ? "cursor-grab active:cursor-grabbing" : ""
+            } ${drag === i ? "opacity-40" : ""} ${
+              over === i && drag !== null
+                ? "rounded-xl ring-2 ring-accent ring-offset-2"
+                : ""
+            }`}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={r.src}
@@ -404,6 +515,7 @@ export function VisualCalibrationInput({
       <p className="t-small mt-3 text-ink-3">
         {refs.length} reference{refs.length === 1 ? "" : "s"}. Replace or add
         whenever your eye changes.
+        {onReorder && refs.length > 1 && " Drag to change what leads."}
       </p>
     </div>
   );

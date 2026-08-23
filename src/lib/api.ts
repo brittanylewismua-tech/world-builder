@@ -132,12 +132,18 @@ export async function loadWorld(): Promise<World | null> {
       .order("created_at"),
     supabase
       .from("wb_visual_refs")
-      .select("id, storage_path")
+      .select("id, storage_path, position")
       .eq("world_id", row.id)
+      // The seller's chosen order, with upload time only as a tiebreak.
+      .order("position")
       .order("created_at"),
   ]);
 
-  const refRows = (refs ?? []) as { id: string; storage_path: string }[];
+  const refRows = (refs ?? []) as {
+    id: string;
+    storage_path: string;
+    position: number;
+  }[];
   const signed = await signMany(refRows.map((r) => r.storage_path));
 
   return {
@@ -239,6 +245,22 @@ export async function addSubNiches(worldId: string, keywords: string[]) {
   return (data ?? []) as World["subNiches"];
 }
 
+/**
+ * A note on a sub-niche.
+ *
+ * The column has been there since the first migration doing nothing. What a
+ * seller knows about a keyword — who searches it, what it really means, why
+ * it surprised them — is exactly the kind of thing that evaporates between
+ * sessions and is worth more than the keyword on its own.
+ */
+export async function setSubNicheNote(id: string, note: string) {
+  const { error } = await supabase
+    .from("wb_sub_niches")
+    .update({ note: note.trim().slice(0, 400) })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function removeSubNiche(id: string) {
   const { error } = await supabase.from("wb_sub_niches").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -305,9 +327,14 @@ export async function addVisualReference(
   file: File,
 ): Promise<VisualReference> {
   const path = await uploadAsset(file, "calibration");
+  // New references land at the end rather than jumping the queue.
+  const { count } = await supabase
+    .from("wb_visual_refs")
+    .select("id", { count: "exact", head: true })
+    .eq("world_id", worldId);
   const { data, error } = await supabase
     .from("wb_visual_refs")
-    .insert({ world_id: worldId, storage_path: path })
+    .insert({ world_id: worldId, storage_path: path, position: count ?? 0 })
     .select("id, storage_path")
     .single();
   if (error) throw new Error(error.message);
@@ -316,6 +343,19 @@ export async function addVisualReference(
     path,
     src: (await sign(path)) ?? "",
   };
+}
+
+/**
+ * The order references sit in is a statement about the eye — what leads, what
+ * supports. Writing every position in one pass keeps them contiguous, so a
+ * later insert or delete cannot quietly scramble the arrangement.
+ */
+export async function reorderVisualReferences(refs: VisualReference[]) {
+  await Promise.all(
+    refs.map((r, i) =>
+      supabase.from("wb_visual_refs").update({ position: i }).eq("id", r.id),
+    ),
+  );
 }
 
 export async function removeVisualReference(ref: VisualReference) {

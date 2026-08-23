@@ -108,6 +108,7 @@ function ProfileBody({ world }: { world: World }) {
             onAdd={a.addSubNiche}
             onAddMany={a.addSubNiches}
             onRemove={a.removeSubNiche}
+            onNote={a.setSubNicheNote}
           />
         </Module>
 
@@ -149,6 +150,7 @@ function ProfileBody({ world }: { world: World }) {
             refs={world.visualReferences}
             onAdd={a.addVisualReferences}
             onRemove={a.removeVisualReference}
+            onReorder={a.reorderVisualReferences}
           />
         </Module>
 

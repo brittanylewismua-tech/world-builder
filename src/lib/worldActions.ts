@@ -61,6 +61,26 @@ export function worldActions(
         patch({ visualReferences: [...world.visualReferences, ...added] });
       }),
 
+    setSubNicheNote: async (id: string, note: string) => {
+      await api.setSubNicheNote(id, note);
+      patch({
+        subNiches: world.subNiches.map((s) =>
+          s.id === id ? { ...s, note } : s,
+        ),
+      });
+    },
+
+    reorderVisualReferences: async (next: VisualReference[]) => {
+      // Show the new arrangement immediately; it is a drag, it must feel live.
+      patch({ visualReferences: next });
+      try {
+        await api.reorderVisualReferences(next);
+      } catch (e) {
+        patch({ visualReferences: world.visualReferences });
+        onError(e instanceof Error ? e.message : "That order did not save.");
+      }
+    },
+
     removeVisualReference: (ref: VisualReference) =>
       guard(async () => {
         await api.removeVisualReference(ref);
