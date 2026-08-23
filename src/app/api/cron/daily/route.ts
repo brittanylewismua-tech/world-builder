@@ -2,43 +2,33 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-/**
- * Kept at the limit that is safe on every Vercel plan and compute mode. The
- * job is built to finish early and be run again rather than to rely on a
- * generous ceiling it might not have.
- */
 export const maxDuration = 300;
 
 /**
- * WRITING THE PAPER BEFORE ANYONE ASKS FOR IT
+ * HANDING OUT THE WORK, NOT DOING IT
  *
- * World Daily's promise is that you open it in the morning and it is already
- * there. Researching on demand costs a minute of watching a spinner, which is
- * the opposite of that. This runs before anyone is awake.
+ * This job used to research every seller itself, inside one function that the
+ * platform kills after five minutes. Research takes about a minute each, so
+ * the arithmetic set a customer limit of roughly sixty — the product could not
+ * grow past it no matter what was sold. That is a ceiling designed in by
+ * accident, and the wrong thing to carry into a launch.
  *
- * HOW IT SURVIVES GROWTH — the part that matters:
+ * Now this route does almost nothing. It works out who still needs a paper and
+ * fires off one request per seller to /api/cron/world, without waiting for the
+ * answers. Each of those is its own function with its own five minutes, and
+ * the platform runs many at once. Dispatching costs milliseconds per seller,
+ * so ten sellers and ten thousand take the dispatcher about the same time.
  *
- * Research takes 40–90 seconds per world. A single loop is fine for two
- * worlds and quietly fails for fifty: the function is killed partway and the
- * sellers at the end of the list get nothing, on the morning that matters
- * most. So this job does not try to be a loop that finishes.
+ * WHAT THE REAL LIMIT IS NOW. Not this function. It is the AI provider's rate
+ * limit — how many research calls per minute the account is allowed. That is a
+ * number that goes up as spend does, and until then the workers back off and
+ * retry rather than failing. Requests leave in paced waves rather than all at
+ * once, so a thousand sellers do not become a thousand simultaneous calls and
+ * a wall of 429s.
  *
- *  1. It only looks at worlds that do not already have today's issue, so a
- *     second run is cheap and never writes or bills twice.
- *  2. It researches several worlds at once rather than one after another.
- *  3. It stops starting new work before the platform can kill it, and returns
- *     an honest count of what is left.
- *  4. It is scheduled several times each morning, so whatever one run cannot
- *     reach, the next one picks up. Nothing is ever dropped — it is deferred
- *     by an hour, and only ever under load.
- *
- * That makes the worst case "some sellers get their paper at 9 instead of 8"
- * rather than "some sellers get nothing".
- *
- * Needs SUPABASE_SERVICE_ROLE_KEY, because it writes for people who are not
- * here — row level security is doing its job by refusing that to the public
- * key. Without it the route says so plainly instead of failing quietly, and
- * the app still researches on demand meanwhile.
+ * Nothing is ever researched twice: each worker claims its seller in the
+ * database before starting, and a duplicate dispatch is simply turned away.
+ * That makes running this more often harmless.
  */
 
 const SUPABASE_URL =
@@ -46,36 +36,24 @@ const SUPABASE_URL =
   "https://ywncfltxrnrchicjwcse.supabase.co";
 
 /**
- * How many worlds are researched at once.
+ * How many workers to launch per second.
  *
- * Six was measurably too many: a load test of eight worlds finished in 79
- * seconds but three of them came back as failures within moments of starting,
- * which is the signature of hitting the model's rate limit rather than of
- * anything being slow. Three at a time with retries completes fewer worlds per
- * run and far more worlds per morning, which is the number that matters.
+ * Not a limit on how many run at once — it is a limit on how fast they start,
+ * which is what turns a stampede into a queue. Workers that hit a rate limit
+ * wait and retry, so this only needs to be gentle enough that the provider
+ * sees a stream rather than a spike.
  */
-const AT_ONCE = 3;
+const PER_WAVE = 12;
+const WAVE_GAP_MS = 1000;
 
-/** Attempts per world, including the first. */
-const TRIES = 3;
-
-/** A single world's research should never hold the whole run hostage. */
-const PER_WORLD_MS = 150_000;
-
-/** Stop starting new work after this, leaving room to finish and respond. */
+/** Stop dispatching in time to answer honestly about what was handed out. */
 const BUDGET_MS = 240_000;
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-interface WorldRow {
-  id: string;
-  name: string;
-}
-
 export async function GET(req: Request) {
   const started = Date.now();
 
-  // Vercel signs its own cron calls; a shared secret covers manual runs.
   const auth = req.headers.get("authorization") ?? "";
   const secret = process.env.CRON_SECRET;
   const fromVercel = req.headers.get("x-vercel-cron") !== null;
@@ -100,200 +78,74 @@ export async function GET(req: Request) {
   const issueDate = new Date().toISOString().slice(0, 10);
   const origin = new URL(req.url).origin;
 
-  /* ---------------------------------------------------------------- */
-  /* work out who still needs a paper — in two queries, not two per world */
-  /* ---------------------------------------------------------------- */
-
-  // Four days back, so the paper does not reprint what it printed yesterday.
-  const since = new Date();
-  since.setDate(since.getDate() - 4);
-
-  const [{ data: worlds, error }, { data: done }, { data: allAreas }, { data: recent }] =
+  /*
+    Three queries regardless of how many sellers there are. Anything that runs
+    once per seller here — a lookup, a check — is a thousand round trips at a
+    thousand sellers, so the dispatcher does none of it. The workers look up
+    their own details.
+  */
+  const [{ data: worlds, error }, { data: done }, { data: withAreas }] =
     await Promise.all([
-      db.from("wb_worlds").select("id, name").eq("established", true),
+      db.from("wb_worlds").select("id").eq("established", true),
       db.from("wb_daily_items").select("world_id").eq("issue_date", issueDate),
-      db.from("wb_areas").select("world_id, name"),
-      db
-        .from("wb_daily_items")
-        .select("world_id, issue_date, headline")
-        .gte("issue_date", since.toISOString().slice(0, 10))
-        .order("issue_date", { ascending: false }),
+      db.from("wb_areas").select("world_id"),
     ]);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const written = new Set((done ?? []).map((r) => r.world_id as string));
-  const areasBy = new Map<string, string[]>();
-  for (const a of allAreas ?? []) {
-    const id = a.world_id as string;
-    areasBy.set(id, [...(areasBy.get(id) ?? []), a.name as string]);
-  }
+  const watching = new Set((withAreas ?? []).map((r) => r.world_id as string));
 
-  const seenBy = new Map<string, string[]>();
-  for (const r of recent ?? []) {
-    const id = r.world_id as string;
-    const line = `- [${r.issue_date}] ${r.headline}`;
-    const have = seenBy.get(id) ?? [];
-    if (have.length < 14) seenBy.set(id, [...have, line]);
-  }
+  const queue = ((worlds ?? []) as { id: string }[])
+    .map((w) => w.id)
+    .filter((id) => !written.has(id) && watching.has(id));
 
-  const queue = ((worlds ?? []) as WorldRow[]).filter(
-    (w) => !written.has(w.id) && (areasBy.get(w.id)?.length ?? 0) > 0,
-  );
+  let dispatched = 0;
+  for (let i = 0; i < queue.length; i += PER_WAVE) {
+    if (Date.now() - started > BUDGET_MS) break;
+    const wave = queue.slice(i, i + PER_WAVE);
 
-  const report = {
-    established: (worlds ?? []).length,
-    needed: queue.length,
-    written: 0,
-    failed: 0,
-    deferred: 0,
-  };
-
-  /* ---------------------------------------------------------------- */
-  /* research several at a time, and stop before we are stopped        */
-  /* ---------------------------------------------------------------- */
-
-  const outOfTime = () => Date.now() - started > BUDGET_MS;
-
-  /**
-   * The same shared memory the app assembles in the browser, rebuilt here for
-   * sellers who are asleep. Kept to what matters overnight: who this world is
-   * for, and what it has already been told.
-   */
-  function memoryFor(world: WorldRow, keywords: string[]) {
-    const lines = [
-      `THE WORLD: ${world.name}`,
-      `Sub-niches the seller validated in eRank: ${keywords.join(" · ") || "none recorded"}.`,
-      `Parts of this world being watched: ${(areasBy.get(world.id) ?? []).join(" · ")}.`,
-    ];
-    const seen = seenBy.get(world.id);
-    if (seen?.length)
-      lines.push(
-        "",
-        "ALREADY REPORTED IN THE LAST 4 DAYS — do not report any of these again, and do not report a near-duplicate. Find something new, or return fewer items.",
-        ...seen,
-      );
-    return lines.join("\n");
-  }
-
-  async function research(world: WorldRow, keywords: string[]) {
-    const control = new AbortController();
-    const bell = setTimeout(() => control.abort(), PER_WORLD_MS);
-    try {
-      const res = await fetch(`${origin}/api/world-daily`, {
+    /*
+      Deliberately not awaited. The worker does the minute of research on its
+      own time; waiting for it here would rebuild the very bottleneck this
+      change exists to remove. The catch is required — an unhandled rejection
+      from a fire-and-forget request can take the whole function down.
+    */
+    for (const worldId of wave) {
+      void fetch(`${origin}/api/cron/world`, {
         method: "POST",
-        signal: control.signal,
         headers: {
           "content-type": "application/json",
           "x-cron-secret": secret ?? "",
         },
-        body: JSON.stringify({
-          worldName: world.name,
-          areas: areasBy.get(world.id) ?? [],
-          subNiches: keywords,
-          memory: memoryFor(world, keywords),
-        }),
-      });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        const err = new Error(`research ${res.status}: ${detail.slice(0, 200)}`);
-        // 429 and 5xx are worth another go; a 400 never will be.
-        (err as { retryable?: boolean }).retryable =
-          res.status === 429 || res.status >= 500;
-        throw err;
-      }
-      return res.json();
-    } finally {
-      clearTimeout(bell);
-    }
-  }
-
-  async function writeFor(world: WorldRow) {
-    const { data: niches } = await db
-      .from("wb_sub_niches")
-      .select("keyword")
-      .eq("world_id", world.id);
-    const keywords = (niches ?? []).map((n) => n.keyword as string);
-
-    let payload: unknown;
-    for (let attempt = 1; ; attempt++) {
-      try {
-        payload = await research(world, keywords);
-        break;
-      } catch (e) {
-        const retryable =
-          (e as { retryable?: boolean }).retryable ??
-          (e as Error).name === "AbortError";
-        if (!retryable || attempt >= TRIES || outOfTime()) throw e;
-        // Back off, and stagger so the whole batch does not retry in lockstep.
-        await wait(attempt * 4000 + Math.random() * 3000);
-      }
+        body: JSON.stringify({ worldId, issueDate }),
+      }).catch(() => {});
+      dispatched++;
     }
 
-    const { items } = payload as {
-      items: {
-        area: string;
-        kind: string;
-        headline: string;
-        body: string;
-        sources: unknown;
-      }[];
-    };
-    if (!items?.length) throw new Error("nothing verifiable came back");
-
-    // Unique index on (world_id, issue_date, position) would be ideal; until
-    // then a last-moment re-check keeps a concurrent run from doubling up.
-    const { count } = await db
-      .from("wb_daily_items")
-      .select("id", { count: "exact", head: true })
-      .eq("world_id", world.id)
-      .eq("issue_date", issueDate);
-    if (count && count > 0) return;
-
-    const { error: insertError } = await db.from("wb_daily_items").insert(
-      items.map((it, i) => ({
-        world_id: world.id,
-        issue_date: issueDate,
-        area: it.area,
-        kind: it.kind,
-        headline: it.headline,
-        body: it.body,
-        sources: it.sources,
-        position: i,
-      })),
-    );
-    if (insertError) throw new Error(insertError.message);
+    if (i + PER_WAVE < queue.length) await wait(WAVE_GAP_MS);
   }
 
-  let next = 0;
-  async function worker() {
-    for (;;) {
-      if (outOfTime()) return;
-      const world = queue[next++];
-      if (!world) return;
-      try {
-        await writeFor(world);
-        report.written++;
-      } catch (e) {
-        console.error("cron/daily failed for", world.id, e);
-        report.failed++;
-      }
-    }
+  /* How this morning is actually going, in one place rather than in logs. */
+  const { data: runs } = await db
+    .from("wb_daily_runs")
+    .select("status")
+    .eq("issue_date", issueDate);
+  const tally = { running: 0, done: 0, failed: 0 };
+  for (const r of runs ?? []) {
+    const s = r.status as keyof typeof tally;
+    if (s in tally) tally[s]++;
   }
-
-  await Promise.all(
-    Array.from({ length: Math.min(AT_ONCE, queue.length) }, worker),
-  );
-
-  report.deferred = Math.max(0, report.needed - report.written - report.failed);
 
   return NextResponse.json({
     ok: true,
     issueDate,
     seconds: Math.round((Date.now() - started) / 1000),
-    ...report,
-    note: report.deferred
-      ? "Ran out of time before finishing. The next scheduled run picks these up — nothing is lost."
-      : undefined,
+    established: (worlds ?? []).length,
+    needed: queue.length,
+    dispatched,
+    notDispatched: Math.max(0, queue.length - dispatched),
+    soFarToday: tally,
+    note: "Workers research in the background. Re-running this is safe — anyone already claimed or written is skipped.",
   });
 }
