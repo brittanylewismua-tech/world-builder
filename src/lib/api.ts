@@ -250,6 +250,45 @@ export async function addArea(worldId: string, name: string) {
   return data as World["areas"][number];
 }
 
+export async function addAreas(worldId: string, names: string[]) {
+  if (!names.length) return [];
+  const { data, error } = await supabase
+    .from("wb_areas")
+    .insert(names.map((name) => ({ world_id: worldId, name })))
+    .select("id, name");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as World["areas"];
+}
+
+/**
+ * Work out what to watch from the keywords, and start watching it.
+ *
+ * Sellers should never have to answer "what should I read about every
+ * morning?" — that is the fluency this product is supposed to build. So the
+ * world sets its own watch list, and the seller adjusts it later if they care
+ * to. Returns what it started watching, or an empty list if it could not.
+ */
+export async function deriveAreas(
+  worldId: string,
+  worldName: string,
+  keywords: string[],
+  existing: string[] = [],
+) {
+  try {
+    const r = await fetch("/api/suggest-areas", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ worldName, subNiches: keywords, existing }),
+    });
+    if (!r.ok) return [];
+    const { areas } = (await r.json()) as { areas?: string[] };
+    if (!areas?.length) return [];
+    return await addAreas(worldId, areas.slice(0, 7));
+  } catch {
+    return [];
+  }
+}
+
 export async function removeArea(id: string) {
   const { error } = await supabase.from("wb_areas").delete().eq("id", id);
   if (error) throw new Error(error.message);

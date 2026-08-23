@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWorld } from "@/lib/useWorld";
-import { createWorld } from "@/lib/api";
+import { createWorld, deriveAreas } from "@/lib/api";
 import { worldActions } from "@/lib/worldActions";
 import {
   AFFINITY_QUESTIONS,
@@ -16,7 +16,6 @@ import {
   SubNicheInput,
   AffinityScale,
   VisualCalibrationInput,
-  AreasSuggest,
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
 import { Globe } from "@/components/Globe";
@@ -27,16 +26,24 @@ import { ErrorNote, Note } from "@/components/ui";
 /**
  * ONBOARDING — one card, one question.
  *
+ * These cards are not a tour of the WORLD framework. That gets taught in the
+ * challenge; here we only ask for what the software genuinely cannot work out
+ * on its own. Anything derivable from the answers is derived, not asked.
+ *
+ * Which is why there is no "what should I watch every day?" card. A seller on
+ * day one has no way to answer that, and their validated keywords already
+ * imply it — so the world sets its own watch list when it is built, and stays
+ * adjustable afterwards in World Profile.
+ *
  * SPEC: "This is not a one-time onboarding wizard that disappears forever."
  * Every question here is the same question World Profile asks, so nothing
- * answered now is ever locked. The four affinity questions are separate cards
- * rather than one long form; a 1–10 scale asked on its own gets a considered
- * answer, and the same four stacked together get four identical sevens.
+ * answered now is ever locked. The four connection questions are separate
+ * cards rather than one long form; a 1–10 scale asked on its own gets a
+ * considered answer, and the same four stacked together get four sevens.
  */
 
 interface Step {
-  letter: string;
-  phase: string;
+  eyebrow: string;
   question: string;
   line: string;
   /** Optional — steps without one cannot be skipped. */
@@ -45,55 +52,42 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    letter: "W",
-    phase: "Work up from demand",
+    eyebrow: "your research",
     question: "Which sub-niches did you validate?",
     line: `Worlds are found from the bottom up. Bring the keywords you already researched in eRank — at least ${MIN_SUB_NICHES} — and the world underneath them will show itself.`,
   },
   {
-    letter: "O",
-    phase: "Own the world",
+    eyebrow: "your connection",
     question: AFFINITY_QUESTIONS[0].question,
     line: "Demand on its own is not enough. Fluency comes faster when you like the person you are building for.",
     optional: true,
   },
   {
-    letter: "O",
-    phase: "Own the world",
+    eyebrow: "your connection",
     question: AFFINITY_QUESTIONS[1].question,
     line: "Wanting the thing yourself is the shortest route to understanding why someone else would.",
     optional: true,
   },
   {
-    letter: "O",
-    phase: "Own the world",
+    eyebrow: "your connection",
     question: AFFINITY_QUESTIONS[2].question,
     line: "This is a long game. Months of curiosity is the actual requirement.",
     optional: true,
   },
   {
-    letter: "O",
-    phase: "Own the world",
+    eyebrow: "your connection",
     question: AFFINITY_QUESTIONS[3].question,
     line: "Nothing here is scored, and nothing gets approved or rejected. You decide what your answers mean.",
     optional: true,
   },
   {
-    letter: "R",
-    phase: "Research until you speak it",
+    eyebrow: "your eye",
     question: "What are you picturing?",
     line: "Around six existing designs in this world whose style you love. Not designs anything will copy — they show the AI what you see when you imagine this world.",
     optional: true,
   },
   {
-    letter: "L",
-    phase: "Layer the world",
-    question: "Here is what I will be watching",
-    line: "Read from the keywords you just gave me. Keep what fits your customer, drop what does not, add anything I missed.",
-  },
-  {
-    letter: "D",
-    phase: "Drop. Data. Deepen.",
+    eyebrow: "your world",
     question: "What is this world called?",
     line: "Look at your sub-niches together. What is the broader customer universe underneath them? You name it — not the AI.",
   },
@@ -176,8 +170,7 @@ function SetupBody({
 
   const canAdvance = (() => {
     if (step === 0) return hasDemandFloor(world);
-    if (step === 6) return world.areas.length > 0;
-    if (step === 7) return world.name.trim().length > 0;
+    if (step === 6) return world.name.trim().length > 0;
     return true;
   })();
 
@@ -192,7 +185,17 @@ function SetupBody({
     if (!canAdvance) return;
     if (last) {
       setSaving(true);
-      await a.establish(world.name.trim());
+      const name = world.name.trim();
+      await a.establish(name);
+      // Nobody was asked what to watch, so the world works it out from the
+      // keywords. Failure here is survivable — World Daily offers to do it.
+      if (!revisit && world.areas.length === 0) {
+        await deriveAreas(
+          world.id,
+          name,
+          world.subNiches.map((n) => n.keyword),
+        );
+      }
       setSaving(false);
       onDone();
       return;
@@ -241,14 +244,9 @@ function SetupBody({
 
         {/* ONE CARD. ONE QUESTION. */}
         <section key={step} className="card rise p-6 md:p-8">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-black text-[13px] font-extrabold text-white">
-              {s.letter}
-            </span>
-            <span className="eyebrow text-ink-3">{s.phase}</span>
-          </div>
+          <span className="eyebrow text-ink-3">{s.eyebrow}</span>
 
-          <h1 className="t-h1 mt-4 text-ink">{s.question}</h1>
+          <h1 className="t-h1 mt-3 text-ink">{s.question}</h1>
           <p className="t-body mt-2.5 text-ink-2">{s.line}</p>
           <span className="rule-accent mt-5" />
 
@@ -284,14 +282,6 @@ function SetupBody({
             )}
 
             {step === 6 && (
-              <AreasSuggest
-                world={world}
-                onAdd={a.addArea}
-                onRemove={a.removeArea}
-              />
-            )}
-
-            {step === 7 && (
               <div>
                 <input
                   value={world.name}
@@ -335,9 +325,7 @@ function SetupBody({
                   : "Build my world"
                 : step === 0 && !canAdvance
                   ? `${MIN_SUB_NICHES - world.subNiches.length} more to go`
-                  : step === 6 && !canAdvance
-                    ? "Add at least one area"
-                    : "Continue"}
+                  : "Continue"}
           </button>
         </div>
 

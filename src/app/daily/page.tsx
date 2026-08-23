@@ -15,6 +15,8 @@ import {
   todayISO,
   type DailyItem,
 } from "@/lib/daily";
+import { deriveAreas } from "@/lib/api";
+import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 
 /**
@@ -37,7 +39,9 @@ export default function Daily() {
 }
 
 function DailyBody({ world }: { world: World }) {
+  const { patch } = useWorld();
   const today = todayISO();
+  const [deriving, setDeriving] = useState(false);
   const [date, setDate] = useState(today);
   const [items, setItems] = useState<DailyItem[] | null>(null);
   const [dates, setDates] = useState<string[]>([]);
@@ -81,6 +85,25 @@ function DailyBody({ world }: { world: World }) {
 
   const noAreas = world.areas.length === 0;
 
+  /** Fallback for a world whose watch list never got worked out. */
+  async function deriveNow() {
+    setDeriving(true);
+    const areas = await deriveAreas(
+      world.id,
+      world.name,
+      world.subNiches.map((n) => n.keyword),
+    );
+    setDeriving(false);
+    if (areas.length) {
+      autoRan.current = false;
+      patch({ areas });
+    } else {
+      setErr(
+        "I could not work out a watch list from those keywords. You can pick them yourself in World Profile.",
+      );
+    }
+  }
+
   // SPEC: the paper should be waiting each morning, not requested.
   useEffect(() => {
     if (autoRan.current || noAreas || researching) return;
@@ -112,12 +135,21 @@ function DailyBody({ world }: { world: World }) {
 
       {noAreas && (
         <Empty
-          title="No areas to watch yet"
-          body="World Daily reads the parts of your customer's world that you choose — not what an AI thinks matters."
+          title="Nothing being watched yet"
+          body="Your world reads its own watch list off the keywords you validated. It looks like that never happened here — one click and it will."
           action={
-            <Link href="/profile" className="btn btn-accent">
-              Add world areas
-            </Link>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                onClick={deriveNow}
+                disabled={deriving || world.subNiches.length < 2}
+                className="btn btn-accent"
+              >
+                {deriving ? "Reading your keywords…" : "Work out what to watch"}
+              </button>
+              <Link href="/profile" className="btn btn-ghost">
+                Choose them myself
+              </Link>
+            </div>
           }
         />
       )}
