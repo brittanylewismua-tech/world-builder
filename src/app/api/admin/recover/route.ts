@@ -38,17 +38,17 @@ export async function POST(req: Request) {
       { status: 503 },
     );
 
-  let body: { userId?: string; email?: string };
+  let body: { userId?: string; email?: string; password?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
 
-  const { userId, email } = body;
-  if (!userId || !email)
+  const { userId, email, password } = body;
+  if (!userId || (!email && !password))
     return NextResponse.json(
-      { error: "Both userId and email are required." },
+      { error: "userId plus an email and/or password are required." },
       { status: 400 },
     );
 
@@ -64,8 +64,9 @@ export async function POST(req: Request) {
       { status: 404 },
     );
 
-  // Refuse to overwrite an address someone is already signing in with.
-  if (found.user.email)
+  // Refuse to move an address someone is already signing in with. Setting a
+  // password on such an account is fine — that is the recovery case.
+  if (email && found.user.email && found.user.email !== email)
     return NextResponse.json(
       {
         error: `That account already uses ${found.user.email}. Sign in with it rather than reassigning.`,
@@ -75,7 +76,10 @@ export async function POST(req: Request) {
 
   const { data: updated, error } = await admin.auth.admin.updateUserById(
     userId,
-    { email, email_confirm: true },
+    {
+      ...(email ? { email, email_confirm: true } : {}),
+      ...(password ? { password } : {}),
+    },
   );
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -85,6 +89,7 @@ export async function POST(req: Request) {
     userId,
     email: updated.user?.email,
     wasAnonymous: found.user.is_anonymous ?? null,
-    note: "Sign in with a magic link to this address to reach that world again. Nothing moved — every uploaded file still resolves.",
+    passwordSet: Boolean(password),
+    note: "Sign in with this address to reach that world again. Nothing moved — every uploaded file still resolves.",
   });
 }

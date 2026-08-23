@@ -9,12 +9,21 @@ import { Star } from "@/components/ui";
 /**
  * The sign-in door stays dark with the globe — this is the brand moment, and
  * it matches the challenge artwork. The workspace behind it is light.
+ *
+ * Passwords, not magic links. The first real test of the sending domain put
+ * the sign-in link straight into Gmail spam, and a cohort of sellers hunting
+ * through junk folders during launch week is not a sign-in flow. Accounts are
+ * created server-side already confirmed, so nothing is ever emailed and
+ * nothing can be filtered.
  */
+type Mode = "in" | "new";
+
 export default function Login() {
   const router = useRouter();
   const { session, loading } = useWorld();
+  const [mode, setMode] = useState<Mode>("in");
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -22,18 +31,40 @@ export default function Login() {
     if (!loading && session) router.replace("/");
   }, [loading, session, router]);
 
-  async function sendLink() {
-    const addr = email.trim();
-    if (!addr) return;
+  async function submit() {
+    const addr = email.trim().toLowerCase();
+    if (!addr || !password || busy) return;
     setBusy(true);
     setErr("");
-    const { error } = await supabase.auth.signInWithOtp({
+
+    if (mode === "new") {
+      const r = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: addr, password }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setBusy(false);
+        setErr(j.error || "Could not create that account.");
+        return;
+      }
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
       email: addr,
-      options: { emailRedirectTo: `${window.location.origin}/` },
+      password,
     });
     setBusy(false);
-    if (error) setErr(error.message);
-    else setSent(true);
+    if (error) {
+      setErr(
+        /invalid login/i.test(error.message)
+          ? "That email and password do not match. Check both, or create an account."
+          : error.message,
+      );
+      return;
+    }
+    router.replace("/");
   }
 
   async function enterAnonymously() {
@@ -44,13 +75,16 @@ export default function Login() {
     if (error) {
       setErr(
         /disabled|not enabled/i.test(error.message)
-          ? "Anonymous sign-in is switched off for this Supabase project. Turn it on under Authentication → Sign In / Providers."
+          ? "Anonymous sign-in is switched off for this Supabase project."
           : error.message,
       );
       return;
     }
     router.replace("/");
   }
+
+  const field =
+    "w-full rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-accent";
 
   return (
     <main className="gridfield relative min-h-dvh overflow-hidden bg-[#0d0c0c]">
@@ -78,65 +112,83 @@ export default function Login() {
         </p>
         <span className="mt-5 block h-0.5 w-16 bg-accent" />
 
-        <div className="mt-9">
+        {/* ------------------------------------------------ email + password */}
+        <div className="mt-9 flex gap-1 rounded-lg border border-white/12 p-1">
+          {(["in", "new"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => {
+                setMode(m);
+                setErr("");
+              }}
+              className={`flex-1 rounded-md py-2 text-[13px] font-bold transition ${
+                mode === m
+                  ? "bg-[#ee6fc0] text-black"
+                  : "text-white/55 hover:text-white"
+              }`}
+            >
+              {m === "in" ? "Sign in" : "Create account"}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            type="email"
+            autoComplete="email"
+            placeholder="you@yourshop.com"
+            className={field}
+          />
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            type="password"
+            autoComplete={mode === "new" ? "new-password" : "current-password"}
+            placeholder={mode === "new" ? "at least 8 characters" : "password"}
+            className={field}
+          />
           <button
-            onClick={enterAnonymously}
-            disabled={busy}
-            className="w-full rounded-xl border-2 border-white bg-[#ee6fc0] py-3.5 text-base font-extrabold text-black shadow-[4px_4px_0_#fff] transition hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_#fff] disabled:opacity-50"
+            onClick={submit}
+            disabled={busy || !email.trim() || !password}
+            className="w-full rounded-xl border-2 border-white bg-[#ee6fc0] py-3 text-base font-extrabold text-black shadow-[4px_4px_0_#fff] transition hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_#fff] disabled:opacity-50"
           >
-            {busy ? "opening…" : "enter"}
+            {busy
+              ? "one moment…"
+              : mode === "new"
+                ? "create my account"
+                : "sign in"}
           </button>
-          <p className="mt-3 text-[13px] leading-relaxed text-white/50">
-            No email, no password. Your world saves to this browser — you can
-            add an email later so you can reach it from anywhere.
-          </p>
         </div>
 
         {err && (
-          <p className="mt-5 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-[13px] leading-relaxed text-white">
+          <p className="mt-4 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-[13px] leading-relaxed text-white">
             {err}
           </p>
         )}
 
-        <details className="mt-10 border-t border-white/12 pt-5">
+        {/* ------------------------------------------------ or just look */}
+        <details className="mt-8 border-t border-white/12 pt-5">
           <summary className="eyebrow cursor-pointer text-white/45 transition hover:text-accent">
-            Or sign in with email
+            Or look around without an account
           </summary>
-          {sent ? (
-            <div className="mt-4 rounded-lg border border-white/12 bg-white/[0.05] px-4 py-4">
-              <p className="text-sm font-semibold text-accent">Check your email</p>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-white/65">
-                A link is on its way to {email.trim()}. If it has not arrived
-                in a minute, check spam — or use Enter above and add your email
-                afterwards.
-              </p>
-              <button
-                onClick={() => setSent(false)}
-                className="mt-3 text-[12px] text-white/45 transition hover:text-accent"
-              >
-                Different email
-              </button>
-            </div>
-          ) : (
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendLink()}
-                type="email"
-                autoComplete="email"
-                placeholder="you@yourshop.com"
-                className="w-full rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-accent"
-              />
-              <button
-                onClick={sendLink}
-                disabled={busy || !email.trim()}
-                className="shrink-0 rounded-lg border border-white/20 px-4 py-2.5 text-sm font-medium text-white transition hover:border-accent hover:text-accent disabled:opacity-40"
-              >
-                Send link
-              </button>
-            </div>
-          )}
+          <div className="mt-4">
+            <button
+              onClick={enterAnonymously}
+              disabled={busy}
+              className="rounded-lg border border-white/20 px-4 py-2.5 text-sm font-medium text-white transition hover:border-accent hover:text-accent disabled:opacity-40"
+            >
+              {busy ? "opening…" : "Enter without signing up"}
+            </button>
+            <p className="mt-3 text-[13px] leading-relaxed text-white/50">
+              Your world saves to this browser only. Clear your history or move
+              to another device and it is gone — you can add an email and
+              password later to keep it.
+            </p>
+          </div>
         </details>
       </div>
     </main>
