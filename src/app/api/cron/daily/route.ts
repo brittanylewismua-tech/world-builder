@@ -45,11 +45,27 @@ const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
   "https://ywncfltxrnrchicjwcse.supabase.co";
 
-/** How many worlds are researched at once. */
-const AT_ONCE = 6;
+/**
+ * How many worlds are researched at once.
+ *
+ * Six was measurably too many: a load test of eight worlds finished in 79
+ * seconds but three of them came back as failures within moments of starting,
+ * which is the signature of hitting the model's rate limit rather than of
+ * anything being slow. Three at a time with retries completes fewer worlds per
+ * run and far more worlds per morning, which is the number that matters.
+ */
+const AT_ONCE = 3;
+
+/** Attempts per world, including the first. */
+const TRIES = 3;
+
+/** A single world's research should never hold the whole run hostage. */
+const PER_WORLD_MS = 150_000;
 
 /** Stop starting new work after this, leaving room to finish and respond. */
 const BUDGET_MS = 240_000;
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface WorldRow {
   id: string;
@@ -122,27 +138,60 @@ export async function GET(req: Request) {
 
   const outOfTime = () => Date.now() - started > BUDGET_MS;
 
+  async function research(world: WorldRow, keywords: string[]) {
+    const control = new AbortController();
+    const bell = setTimeout(() => control.abort(), PER_WORLD_MS);
+    try {
+      const res = await fetch(`${origin}/api/world-daily`, {
+        method: "POST",
+        signal: control.signal,
+        headers: {
+          "content-type": "application/json",
+          "x-cron-secret": secret ?? "",
+        },
+        body: JSON.stringify({
+          worldName: world.name,
+          areas: areasBy.get(world.id) ?? [],
+          subNiches: keywords,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        const err = new Error(`research ${res.status}: ${detail.slice(0, 200)}`);
+        // 429 and 5xx are worth another go; a 400 never will be.
+        (err as { retryable?: boolean }).retryable =
+          res.status === 429 || res.status >= 500;
+        throw err;
+      }
+      return res.json();
+    } finally {
+      clearTimeout(bell);
+    }
+  }
+
   async function writeFor(world: WorldRow) {
     const { data: niches } = await db
       .from("wb_sub_niches")
       .select("keyword")
       .eq("world_id", world.id);
+    const keywords = (niches ?? []).map((n) => n.keyword as string);
 
-    const res = await fetch(`${origin}/api/world-daily`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-cron-secret": secret ?? "",
-      },
-      body: JSON.stringify({
-        worldName: world.name,
-        areas: areasBy.get(world.id) ?? [],
-        subNiches: (niches ?? []).map((n) => n.keyword as string),
-      }),
-    });
-    if (!res.ok) throw new Error(`research ${res.status}`);
+    let payload: unknown;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        payload = await research(world, keywords);
+        break;
+      } catch (e) {
+        const retryable =
+          (e as { retryable?: boolean }).retryable ??
+          (e as Error).name === "AbortError";
+        if (!retryable || attempt >= TRIES || outOfTime()) throw e;
+        // Back off, and stagger so the whole batch does not retry in lockstep.
+        await wait(attempt * 4000 + Math.random() * 3000);
+      }
+    }
 
-    const { items } = (await res.json()) as {
+    const { items } = payload as {
       items: {
         area: string;
         kind: string;
