@@ -110,8 +110,7 @@ export default function Setup() {
   useEffect(() => {
     if (loading) return;
     if (!session) router.replace("/login");
-    else if (world?.established) router.replace("/home");
-  }, [loading, session, world, router]);
+  }, [loading, session, router]);
 
   useEffect(() => {
     if (loading || !session || world || creating.current) return;
@@ -127,6 +126,7 @@ export default function Setup() {
 
   return (
     <SetupBody
+      key={world.id}
       world={world}
       patch={patch}
       step={step}
@@ -135,7 +135,8 @@ export default function Setup() {
       setErr={setErr}
       saving={saving}
       setSaving={setSaving}
-      onDone={() => router.replace("/home")}
+      revisit={world.established}
+      onDone={() => router.replace(world.established ? "/profile" : "/home")}
     />
   );
 }
@@ -149,6 +150,7 @@ function SetupBody({
   setErr,
   saving,
   setSaving,
+  revisit,
   onDone,
 }: {
   world: World;
@@ -159,6 +161,8 @@ function SetupBody({
   setErr: (s: string) => void;
   saving: boolean;
   setSaving: (b: boolean) => void;
+  /** Walking it again on a world that already exists. */
+  revisit: boolean;
   onDone: () => void;
 }) {
   const a = worldActions(world, patch, setErr);
@@ -212,6 +216,14 @@ function SetupBody({
           <span className="t-small ml-auto tabular-nums text-ink-3">
             {step + 1} of {STEPS.length}
           </span>
+          {revisit && (
+            <button
+              onClick={onDone}
+              className="t-small ml-4 font-semibold underline underline-offset-4 transition hover:opacity-70"
+            >
+              Done
+            </button>
+          )}
         </div>
         <div className="h-[3px] w-full bg-black/8">
           <div
@@ -313,9 +325,13 @@ function SetupBody({
             className="btn btn-accent flex-1 py-3 text-base"
           >
             {saving
-              ? "Building your world…"
+              ? revisit
+                ? "Saving…"
+                : "Building your world…"
               : last
-                ? "Build my world"
+                ? revisit
+                  ? "Save and close"
+                  : "Build my world"
                 : step === 0 && !canAdvance
                   ? `${MIN_SUB_NICHES - world.subNiches.length} more to go`
                   : step === 6 && !canAdvance
@@ -324,19 +340,22 @@ function SetupBody({
           </button>
         </div>
 
-        {s.optional && (
+        {s.optional && !last && (
           <button
             onClick={() => go(step + 1)}
             className="t-small mt-3 text-ink-3 transition hover:text-ink"
           >
-            Skip — you can answer this any time in World Profile
+            {revisit
+              ? "Leave this one as it is"
+              : "Skip — you can answer this any time in World Profile"}
           </button>
         )}
 
         <div className="mt-8">
           <Note>
-            Nothing here is locked. Every one of these questions stays open and
-            editable in World Profile for as long as the world exists.
+            {revisit
+              ? "Every answer saves as you make it. Close whenever you like — you do not have to reach the end."
+              : "Nothing here is locked. Every one of these questions stays open and editable in World Profile for as long as the world exists."}
           </Note>
         </div>
       </div>

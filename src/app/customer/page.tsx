@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import Shell from "@/components/Shell";
 import { Star, Dots } from "@/components/ui";
 import { loadIssue, todayISO, type DailyItem } from "@/lib/daily";
+import {
+  forget,
+  loadMessages,
+  openThread,
+  recent,
+  remember,
+  type Msg,
+} from "@/lib/memory";
 import type { World } from "@/lib/world";
-
-interface Msg {
-  role: "user" | "assistant";
-  content: string;
-}
 
 const PROMPTS = [
   "What are you doing this weekend?",
@@ -34,7 +37,17 @@ function CustomerBody({ world }: { world: World }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [daily, setDaily] = useState<DailyItem[]>([]);
+  const [ready, setReady] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // She remembers. Everything said before is loaded back in and travels with
+  // the next message, so the conversation picks up rather than restarting.
+  useEffect(() => {
+    loadMessages(world.id, "customer")
+      .then(setMsgs)
+      .catch(() => setMsgs([]))
+      .finally(() => setReady(true));
+  }, [world.id]);
 
   // Today's issue gets folded in, so she can reference what is actually
   // happening in her world right now.
@@ -75,11 +88,14 @@ function CustomerBody({ world }: { world: World }) {
       const r = await fetch("/api/customer", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next, context: context() }),
+        body: JSON.stringify({ messages: recent(next), context: context() }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "That did not go through.");
-      setMsgs([...next, { role: "assistant", content: j.text }]);
+      const reply = { role: "assistant" as const, content: j.text };
+      setMsgs([...next, reply]);
+      const thread = await openThread(world.id, "customer");
+      await remember(thread, [{ role: "user", content }, reply]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "That did not go through.");
     } finally {
@@ -106,7 +122,7 @@ function CustomerBody({ world }: { world: World }) {
       </div>
 
       <div className="min-h-[40vh] space-y-5 py-7">
-        {msgs.length === 0 && (
+        {ready && msgs.length === 0 && (
           <div className="grid gap-2 sm:grid-cols-2">
             {PROMPTS.map((p) => (
               <button
@@ -166,7 +182,16 @@ function CustomerBody({ world }: { world: World }) {
         </div>
         {msgs.length > 0 && (
           <button
-            onClick={() => setMsgs([])}
+            onClick={async () => {
+              if (
+                !window.confirm(
+                  "Clear this conversation? She will forget everything you have talked about.",
+                )
+              )
+                return;
+              setMsgs([]);
+              await forget(world.id, "customer");
+            }}
             className="t-small mt-3 text-ink-3 transition hover:text-ink"
           >
             Start over

@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
 import { formatDropDate } from "@/lib/drops";
-import { Star, Dots } from "./ui";
-
-interface Msg {
-  role: "user" | "assistant";
-  content: string;
-}
+import {
+  loadMessages,
+  openThread,
+  recent,
+  remember,
+  type Msg,
+} from "@/lib/memory";
+import { Star } from "./ui";
 
 const OPENERS = [
   "I'm stuck on the last three.",
@@ -75,7 +77,18 @@ export default function CreativeRoom({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [ready, setReady] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // One thread per drop — the thinking stays attached to the board it was
+  // about, so opening Drop 04 again brings back the conversation about it.
+  useEffect(() => {
+    setReady(false);
+    loadMessages(world.id, "room", drop.id)
+      .then(setMsgs)
+      .catch(() => setMsgs([]))
+      .finally(() => setReady(true));
+  }, [world.id, drop.id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -95,14 +108,17 @@ export default function CreativeRoom({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          messages: next,
+          messages: recent(next),
           context: buildContext(world, drop),
           images,
         }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "That did not go through.");
-      setMsgs([...next, { role: "assistant", content: j.text }]);
+      const reply = { role: "assistant" as const, content: j.text };
+      setMsgs([...next, reply]);
+      const thread = await openThread(world.id, "room", drop.id);
+      await remember(thread, [{ role: "user", content }, reply]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "That did not go through.");
     } finally {
@@ -122,7 +138,7 @@ export default function CreativeRoom({
       </div>
 
       <div className="min-h-[300px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {msgs.length === 0 && (
+        {ready && msgs.length === 0 && (
           <div>
             <p className="t-small text-ink-2">
               I can see the board and everything in your World Profile. Talk to

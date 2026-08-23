@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useWorld } from "@/lib/useWorld";
 import Shell from "@/components/Shell";
 import { Page, PageHeader, ErrorNote } from "@/components/ui";
@@ -42,6 +43,11 @@ function ProfileBody({ world }: { world: World }) {
         eyebrow="World Profile"
         title={world.name}
         lede="Everything here stays editable. Add sub-niches as you validate them, swap references as your eye changes, adjust what gets watched."
+        actions={
+          <Link href="/setup" className="btn btn-ghost">
+            Walk through setup again
+          </Link>
+        }
       />
 
       {err && <ErrorNote>{err}</ErrorNote>}
