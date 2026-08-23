@@ -69,9 +69,14 @@ function ProfileBody({ world }: { world: World }) {
 
   return (
     <Page width="reading">
+      {/*
+        An unnamed world left this page with no heading at all — an eyebrow, a
+        rule, and then straight into the modules. A page has to say what it is
+        even before the seller has decided what their world is called.
+      */}
       <PageHeader
         eyebrow="World Profile"
-        title={world.name}
+        title={world.name.trim() || "Your world"}
         lede="Everything here stays editable. Add sub-niches as you validate them, swap references as your eye changes, adjust what gets watched."
         actions={
           <Link href="/setup" className="btn btn-ghost">
@@ -85,15 +90,22 @@ function ProfileBody({ world }: { world: World }) {
       <SecureWorld />
       <NameYourWorld world={world} />
 
-      <div className="mb-6">
-        <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
-        <input
-          value={world.name}
-          onChange={(e) => patch({ name: e.target.value })}
-          onBlur={() => a.setName(world.name)}
-          className="field max-w-sm"
-        />
-      </div>
+      {/*
+        Asked once, not twice. The prompt above only appears while the world
+        is nameless, and it was sitting directly on top of a second field
+        asking for the same thing.
+      */}
+      {world.name.trim() && (
+        <div className="mb-6">
+          <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
+          <input
+            value={world.name}
+            onChange={(e) => patch({ name: e.target.value })}
+            onBlur={() => a.setName(world.name)}
+            className="field max-w-sm"
+          />
+        </div>
+      )}
 
       <div className="space-y-3">
         <Module

@@ -236,6 +236,15 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
     keeps its date level with the calendar instead of falling behind it, and
     resuming picks up on the next publish day with nothing owed.
   */
+  /*
+    If the first board could not be created — a denied insert, a dropped
+    connection — there is genuinely nothing to schedule. Saying so and
+    letting the screen offer to try again is the honest outcome. Asserting a
+    drop exists here is how a seller's first ever visit ended in
+    "Cannot read properties of null".
+  */
+  if (!drops.length) return [];
+
   if (world.paused) {
     const { current: paused, next: after } = splitDrops(drops);
     if (paused) {
@@ -256,7 +265,8 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
         changed = true;
         drops = await loadDrops(world.id);
       }
-      await ensureNextExists(splitDrops(drops).current!);
+      const stillCurrent = splitDrops(drops).current;
+      if (stillCurrent) await ensureNextExists(stillCurrent);
     }
     return changed ? loadDrops(world.id) : drops;
   }
@@ -275,8 +285,9 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
     opened the studio.
   */
   for (let guard = 0; guard < 260; guard++) {
-    const current = splitDrops(drops).current!;
-    if (!current || current.frozenAt || daysSince(current.publishDate) <= 0) {
+    const current = splitDrops(drops).current;
+    if (!current) break;
+    if (current.frozenAt || daysSince(current.publishDate) <= 0) {
       await ensureNextExists(current);
       break;
     }

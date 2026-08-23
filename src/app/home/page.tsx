@@ -188,12 +188,20 @@ function HomeBody({ world }: { world: World }) {
               </>
             ) : (
               <>
+                {/*
+                  Both boards are created the moment a world exists, so
+                  reaching this means something went wrong on the way in.
+                  One card carries the action; the other explains.
+                */}
                 <p className="t-body mt-2 text-ink-2">
-                  Your first board is waiting to be opened.
+                  Your first board has not opened yet. It is created for you,
+                  so this usually just means the connection dropped.
                 </p>
-                <Link href="/studio" className="btn btn-primary mt-5 self-start">
-                  Open Drop Studio
-                </Link>
+                <div className="mt-auto pt-6">
+                  <Link href="/studio" className="btn btn-primary">
+                    Open Drop Studio
+                  </Link>
+                </div>
               </>
             )}
           </div>
@@ -250,12 +258,13 @@ function HomeBody({ world }: { world: World }) {
             ) : (
               <>
                 <p className="t-body mt-2 text-ink-2">
-                  Once your first drop is scheduled, next week&apos;s research
-                  board opens here.
+                  Every week you build one drop and research the next at the
+                  same time. This side is next week — it opens alongside your
+                  first board.
                 </p>
-                <Link href="/studio" className="btn btn-accent mt-5 self-start">
-                  Open Drop Studio
-                </Link>
+                <p className="t-small mt-3 text-ink-3">
+                  Nothing to do here yet.
+                </p>
               </>
             )}
           </div>

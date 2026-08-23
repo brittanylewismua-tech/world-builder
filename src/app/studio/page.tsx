@@ -206,11 +206,41 @@ function StudioBody({ world }: { world: World }) {
       </div>
     );
 
+  /*
+    A seller should never meet a raw exception here. Their first board is
+    created automatically, so reaching this screen means something went
+    wrong on the way — almost always transient. Say that plainly and give
+    them the button rather than a sentence written for a developer.
+  */
   if (!drop)
     return (
-      <p className="t-body mx-auto max-w-xl px-6 py-20 text-ink-2">
-        {err || "No drop board yet."}
-      </p>
+      <main className="mx-auto max-w-xl px-6 py-20 text-center">
+        <img
+          src="/globe.png"
+          alt=""
+          className="mx-auto h-12 w-12 opacity-60"
+        />
+        <h1 className="t-h2 mt-5 text-ink">Your board could not be opened</h1>
+        <p className="t-body mt-2 text-ink-2">
+          Your first drop board is created for you the moment you arrive, so
+          this usually means the connection dropped on the way. Nothing has
+          been lost — try again.
+        </p>
+        <button
+          onClick={() => {
+            setLoading(true);
+            void load();
+          }}
+          className="btn btn-accent mt-5"
+        >
+          Try again
+        </button>
+        {err && (
+          <p className="t-small mt-4 text-ink-3">
+            If it keeps happening, this is what it said: {err}
+          </p>
+        )}
+      </main>
     );
 
   return (
