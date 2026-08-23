@@ -79,9 +79,16 @@ const STEPS: Step[] = [
     optional: true,
   },
   {
+    /*
+      Naming is a nicety, not a requirement. It lets a few screens address
+      the world directly and nothing more, so it must never be the thing
+      standing between a seller and the tool they just paid for. Optional,
+      skippable, and editable forever in World Profile.
+    */
     eyebrow: "your world",
-    question: "What is this world called?",
-    line: "Look at your sub-niches together. What is the broader customer universe underneath them? You name it — not the AI.",
+    question: "Want to name this world?",
+    line: "Some people like calling it something. If a name comes to you looking at your sub-niches, use it — otherwise skip and carry on.",
+    optional: true,
   },
 ];
 
@@ -161,7 +168,7 @@ function SetupBody({
 
   const canAdvance = (() => {
     if (step === 0) return hasDemandFloor(world);
-    if (step === NAME_STEP) return world.name.trim().length > 0;
+    // Never gate the last step on a name.
     return true;
   })();
 
@@ -335,6 +342,11 @@ function SetupBody({
           >
             Skip — you can answer this any time in World Profile
           </button>
+        )}
+        {last && !world.name.trim() && (
+          <p className="t-small mt-3 text-ink-3">
+            Leave it blank if nothing fits. You can name it later, or never.
+          </p>
         )}
 
         <div className="mt-8">

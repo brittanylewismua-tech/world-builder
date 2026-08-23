@@ -16,7 +16,6 @@ import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
 import Customiser from "@/components/Customiser";
 import DropRhythm from "@/components/DropRhythm";
 import SecureWorld from "@/components/SecureWorld";
-import NameYourWorld from "@/components/NameYourWorld";
 import AccountCard from "@/components/AccountCard";
 import OwnYourWorld from "@/components/OwnYourWorld";
 import { PRESETS } from "@/lib/theme";
@@ -88,24 +87,25 @@ function ProfileBody({ world }: { world: World }) {
       {err && <ErrorNote>{err}</ErrorNote>}
 
       <SecureWorld />
-      <NameYourWorld world={world} />
 
       {/*
-        Asked once, not twice. The prompt above only appears while the world
-        is nameless, and it was sitting directly on top of a second field
-        asking for the same thing.
+        One quiet field, never a prompt.
+
+        This used to be a card that appeared on Home and again here, asking to
+        be named until it got its way. A name is a convenience — it lets a few
+        screens address the world directly — not a thing the software needs.
+        Nagging for it made a nicety feel like an unfinished task.
       */}
-      {world.name.trim() && (
-        <div className="mb-6">
-          <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
-          <input
-            value={world.name}
-            onChange={(e) => patch({ name: e.target.value })}
-            onBlur={() => a.setName(world.name)}
-            className="field max-w-sm"
-          />
-        </div>
-      )}
+      <div className="mb-6">
+        <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
+        <input
+          value={world.name}
+          onChange={(e) => patch({ name: e.target.value })}
+          onBlur={() => a.setName(world.name)}
+          placeholder="Optional"
+          className="field max-w-sm"
+        />
+      </div>
 
       <div className="space-y-3">
         <Module
