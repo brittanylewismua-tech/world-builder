@@ -130,9 +130,13 @@ export async function admit(
  * Fire-and-forget by design. Accounting must never be the reason a seller's
  * request fails, so every error here is swallowed.
  */
+/** Postgres will reject anything else in a uuid column. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function meter(
   surface: Route,
-  userId: string | null,
+  /** A real user id, or "cron" for the overnight job. */
+  actor: string | null,
   usage: {
     model: string;
     // The SDK reports these as number | null; normalise on the way in.
@@ -148,13 +152,22 @@ export function meter(
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!service) return;
 
+  /*
+    The overnight job identifies itself as "cron", which is not a uuid, and
+    Postgres rejected the whole row for it — silently, because this swallows
+    its own errors. The result was usage data that looked complete while
+    missing every paper written overnight, which is most of the spend.
+  */
+  const isUser = !!actor && UUID.test(actor);
+
   void (async () => {
     try {
       const admin = createClient(URL, service, {
         auth: { persistSession: false },
       });
       await admin.from("wb_ai_usage").insert({
-        user_id: userId,
+        user_id: isUser ? actor : null,
+        via: isUser ? "app" : (actor ?? "unknown"),
         world_id: usage.worldId ?? null,
         surface,
         model: usage.model,
