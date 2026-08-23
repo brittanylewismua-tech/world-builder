@@ -104,11 +104,20 @@ export async function GET(req: Request) {
   /* work out who still needs a paper — in two queries, not two per world */
   /* ---------------------------------------------------------------- */
 
-  const [{ data: worlds, error }, { data: done }, { data: allAreas }] =
+  // Four days back, so the paper does not reprint what it printed yesterday.
+  const since = new Date();
+  since.setDate(since.getDate() - 4);
+
+  const [{ data: worlds, error }, { data: done }, { data: allAreas }, { data: recent }] =
     await Promise.all([
       db.from("wb_worlds").select("id, name").eq("established", true),
       db.from("wb_daily_items").select("world_id").eq("issue_date", issueDate),
       db.from("wb_areas").select("world_id, name"),
+      db
+        .from("wb_daily_items")
+        .select("world_id, issue_date, headline")
+        .gte("issue_date", since.toISOString().slice(0, 10))
+        .order("issue_date", { ascending: false }),
     ]);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -118,6 +127,14 @@ export async function GET(req: Request) {
   for (const a of allAreas ?? []) {
     const id = a.world_id as string;
     areasBy.set(id, [...(areasBy.get(id) ?? []), a.name as string]);
+  }
+
+  const seenBy = new Map<string, string[]>();
+  for (const r of recent ?? []) {
+    const id = r.world_id as string;
+    const line = `- [${r.issue_date}] ${r.headline}`;
+    const have = seenBy.get(id) ?? [];
+    if (have.length < 14) seenBy.set(id, [...have, line]);
   }
 
   const queue = ((worlds ?? []) as WorldRow[]).filter(
@@ -138,6 +155,27 @@ export async function GET(req: Request) {
 
   const outOfTime = () => Date.now() - started > BUDGET_MS;
 
+  /**
+   * The same shared memory the app assembles in the browser, rebuilt here for
+   * sellers who are asleep. Kept to what matters overnight: who this world is
+   * for, and what it has already been told.
+   */
+  function memoryFor(world: WorldRow, keywords: string[]) {
+    const lines = [
+      `THE WORLD: ${world.name}`,
+      `Sub-niches the seller validated in eRank: ${keywords.join(" · ") || "none recorded"}.`,
+      `Parts of this world being watched: ${(areasBy.get(world.id) ?? []).join(" · ")}.`,
+    ];
+    const seen = seenBy.get(world.id);
+    if (seen?.length)
+      lines.push(
+        "",
+        "ALREADY REPORTED IN THE LAST 4 DAYS — do not report any of these again, and do not report a near-duplicate. Find something new, or return fewer items.",
+        ...seen,
+      );
+    return lines.join("\n");
+  }
+
   async function research(world: WorldRow, keywords: string[]) {
     const control = new AbortController();
     const bell = setTimeout(() => control.abort(), PER_WORLD_MS);
@@ -153,6 +191,7 @@ export async function GET(req: Request) {
           worldName: world.name,
           areas: areasBy.get(world.id) ?? [],
           subNiches: keywords,
+          memory: memoryFor(world, keywords),
         }),
       });
       if (!res.ok) {

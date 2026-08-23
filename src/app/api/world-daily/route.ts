@@ -47,7 +47,8 @@ HARD RULES
 2. NEVER invent a source. Only cite pages that came back in your searches. If you only found three real things worth reporting, return three items. Three real observations beat five padded ones.
 3. NEVER claim sales data, demand, or competition. You cannot see Etsy and you do not know what sells.
 4. NEVER report something generic and evergreen. "Festival season is popular in summer" is not a signal. If nothing genuinely current turned up for an area, skip that area.
-5. Do not editorialise about the seller's brand or judge fit.
+5. NEVER repeat a signal this world has already been told about. Anything listed as already reported is off limits, including a rephrasing of it. Four genuinely new items beat five where one is yesterday's news wearing a new headline.
+6. Do not editorialise about the seller's brand or judge fit.
 
 OUTPUT
 After searching, return ONLY raw JSON. No markdown fence, no preamble:
@@ -57,6 +58,8 @@ interface Body {
   worldName?: string;
   areas?: string[];
   subNiches?: string[];
+  /** Everything this world already knows — see lib/context.ts. */
+  memory?: string;
 }
 
 export async function POST(req: Request) {
@@ -96,8 +99,8 @@ export async function POST(req: Request) {
 
   const prompt = `Today is ${today}.
 
-CUSTOMER WORLD: ${body.worldName || "unnamed"}
-${body.subNiches?.length ? `Sub-niches the seller sells into: ${body.subNiches.join(" · ")}` : ""}
+${body.memory?.trim() || `CUSTOMER WORLD: ${body.worldName || "unnamed"}`}
+${!body.memory && body.subNiches?.length ? `Sub-niches the seller sells into: ${body.subNiches.join(" · ")}` : ""}
 
 AREAS TO WATCH:
 ${areas.map((a) => `- ${a}`).join("\n")}

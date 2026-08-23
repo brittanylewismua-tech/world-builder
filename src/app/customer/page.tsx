@@ -13,6 +13,7 @@ import {
   type Msg,
 } from "@/lib/memory";
 import { askAI } from "@/lib/askAI";
+import { buildWorldContext } from "@/lib/context";
 import type { World } from "@/lib/world";
 
 const PROMPTS = [
@@ -62,19 +63,16 @@ function CustomerBody({ world }: { world: World }) {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, busy]);
 
-  function context() {
-    const lines = [
-      `World: ${world.name}`,
-      `The kinds of things people in this world search for and buy: ${world.subNiches.map((s) => s.keyword).join(" · ") || "unknown"}`,
-      `Parts of this world that matter: ${world.areas.map((a) => a.name).join(" · ") || "unknown"}`,
-    ];
-    if (daily.length) {
-      lines.push(
-        `\nHAPPENING IN THIS WORLD RIGHT NOW (from today's research — you would plausibly know about these):`,
-        ...daily.map((d) => `- ${d.headline}. ${d.body}`),
-      );
-    }
-    return lines.join("\n");
+  /** Everything the world knows, assembled fresh for each message. */
+  async function context() {
+    const shared = await buildWorldContext(world, { room: "customer" });
+    if (!daily.length) return shared;
+    return [
+      shared,
+      "",
+      "IN TODAY'S PAPER — you would plausibly know about these:",
+      ...daily.map((d) => `- ${d.headline}. ${d.body}`),
+    ].join("\n");
   }
 
   async function send(text: string) {
@@ -88,7 +86,7 @@ function CustomerBody({ world }: { world: World }) {
     try {
       const j = await askAI<{ text: string }>("/api/customer", {
         messages: recent(next),
-        context: context(),
+        context: await context(),
       });
       const reply = { role: "assistant" as const, content: j.text };
       setMsgs([...next, reply]);

@@ -25,14 +25,16 @@ export default function Studio() {
 function StudioBody({ world }: { world: World }) {
   const { patch } = useWorld();
   const [drop, setDrop] = useState<Drop | null>(null);
+  const [drops, setDrops] = useState<Drop[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const drops = await syncSchedule(world);
+      const all = await syncSchedule(world);
+      setDrops(all);
       // Newest first; the open board is the one that has not been frozen.
-      setDrop(drops.find((d) => !d.frozenAt) ?? drops[0] ?? null);
+      setDrop(all.find((d) => !d.frozenAt) ?? all[0] ?? null);
       setErr("");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not load your drops.");
@@ -151,7 +153,7 @@ function StudioBody({ world }: { world: World }) {
           onBackground={onBackground}
         />
         <div className="lg:sticky lg:top-[72px] lg:h-[calc(100dvh-96px)]">
-          <CreativeRoom world={world} drop={drop} />
+          <CreativeRoom world={world} drop={drop} drops={drops} />
         </div>
       </div>
     </main>

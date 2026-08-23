@@ -2,6 +2,7 @@
 
 import { supabase } from "./supabase";
 import { askAI } from "./askAI";
+import { buildWorldContext } from "./context";
 import type { World } from "./world";
 
 export interface DailySource {
@@ -62,6 +63,9 @@ export async function generateIssue(
     worldName: world.name,
     areas: world.areas.map((a) => a.name),
     subNiches: world.subNiches.map((s) => s.keyword),
+    // Everything the world already knows, so today's paper does not repeat
+    // what it printed yesterday.
+    memory: await buildWorldContext(world, { room: "daily" }),
   });
 
   const rows = j.items.map((it, i) => ({

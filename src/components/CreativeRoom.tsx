@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
-import { formatDropDate } from "@/lib/drops";
 import { askAI } from "@/lib/askAI";
+import { buildWorldContext } from "@/lib/context";
 import {
   loadMessages,
   openThread,
@@ -21,21 +21,6 @@ const OPENERS = [
   "Give me a few directions for the remaining slots.",
   "I want to add hats to this drop.",
 ];
-
-/** Everything the Room knows, assembled fresh on every send. */
-function buildContext(world: World, drop: Drop) {
-  const lines = [
-    `World: ${world.name}`,
-    `Validated sub-niches the seller researched in eRank (${world.subNiches.length}): ${world.subNiches.map((s) => s.keyword).join(" · ") || "none yet"}`,
-    `Areas they watch: ${world.areas.map((a) => a.name).join(" · ") || "none yet"}`,
-    `Visual calibration on file: ${world.visualReferences.length} reference designs the seller said they love. Treat as style direction only — never as designs to copy, and never as evidence of demand.`,
-    `Current board: DROP ${drop.number}, publishing ${formatDropDate(drop.publishDate)}, ${drop.items.length} of ${world.slotsPerDrop} slots filled.`,
-    drop.items.length
-      ? `The images attached to this message are the ${drop.items.length} mockup${drop.items.length === 1 ? "" : "s"} currently on the board, in slot order.`
-      : `The board is still empty.`,
-  ];
-  return lines.join("\n");
-}
 
 /** Fetch signed mockup URLs and shrink them for the vision call. */
 async function boardImages(drop: Drop): Promise<string[]> {
@@ -70,9 +55,12 @@ async function boardImages(drop: Drop): Promise<string[]> {
 export default function CreativeRoom({
   world,
   drop,
+  drops = [],
 }: {
   world: World;
   drop: Drop;
+  /** Everything released so far, so the Room knows the world's history. */
+  drops?: Drop[];
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
@@ -107,7 +95,17 @@ export default function CreativeRoom({
       const images = await boardImages(drop);
       const j = await askAI<{ text: string }>("/api/creative-room", {
         messages: recent(next),
-        context: buildContext(world, drop),
+        context: [
+          await buildWorldContext(world, {
+            room: "room",
+            drops,
+            currentDrop: drop,
+          }),
+          "",
+          drop.items.length
+            ? `The images attached to this message are the ${drop.items.length} mockup${drop.items.length === 1 ? "" : "s"} on the board right now, in slot order.`
+            : "The board is still empty.",
+        ].join("\n"),
         images,
       });
       const reply = { role: "assistant" as const, content: j.text };
