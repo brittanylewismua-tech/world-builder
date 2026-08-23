@@ -15,14 +15,23 @@ import { worldActions } from "@/lib/worldActions";
 import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
 import Customiser from "@/components/Customiser";
 import SecureWorld from "@/components/SecureWorld";
+import NameYourWorld from "@/components/NameYourWorld";
 import AccountCard from "@/components/AccountCard";
 import { PRESETS } from "@/lib/theme";
 
 type ModuleKey = "demand" | "connection" | "visual" | "areas" | "look";
 
 /**
- * SPEC: "Each module can be revisited independently. Do not force the seller to
- *        redo the entire onboarding experience to change one thing."
+ * The foundation of the world, in one editable place.
+ *
+ * The letter badges are gone. They implied a mapping to the WORLD method that
+ * was never complete — there was no D, and Appearance sat outside the
+ * sequence entirely — so the page looked like it was trying to represent the
+ * framework and failing. The method is taught in the challenge; this page
+ * just holds what the software actually needs.
+ *
+ * Account settings sit at the bottom. This page is the creative foundation of
+ * a world, and opening it with a password field made it read as preferences.
  */
 export default function Profile() {
   return <Shell>{(world) => <ProfileBody world={world} />}</Shell>;
@@ -55,7 +64,7 @@ function ProfileBody({ world }: { world: World }) {
       {err && <ErrorNote>{err}</ErrorNote>}
 
       <SecureWorld />
-      <AccountCard />
+      <NameYourWorld world={world} />
 
       <div className="mb-6">
         <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
@@ -69,7 +78,6 @@ function ProfileBody({ world }: { world: World }) {
 
       <div className="space-y-3">
         <Module
-          letter="W"
           title="Demand Foundation"
           summary={`${world.subNiches.length} validated sub-niche${world.subNiches.length === 1 ? "" : "s"}`}
           warn={!hasDemandFloor(world) ? "Below the minimum of 6" : undefined}
@@ -85,7 +93,6 @@ function ProfileBody({ world }: { world: World }) {
         </Module>
 
         <Module
-          letter="O"
           title="Personal Connection"
           summary={
             answered === 0
@@ -99,8 +106,7 @@ function ProfileBody({ world }: { world: World }) {
         </Module>
 
         <Module
-          letter="R"
-          title="Visual Direction"
+          title="Visual Calibration"
           summary={`${world.visualReferences.length} reference${world.visualReferences.length === 1 ? "" : "s"}`}
           open={open === "visual"}
           onToggle={() => toggle("visual")}
@@ -128,26 +134,6 @@ function ProfileBody({ world }: { world: World }) {
         </Module>
 
         <Module
-          letter="★"
-          title="Make It Yours"
-          summary={
-            PRESETS.find((p) => p.id === world.theme.preset)?.name ??
-            "Custom look"
-          }
-          open={open === "look"}
-          onToggle={() => toggle("look")}
-          preview={
-            <span
-              className="h-6 w-6 rounded-md border-2 border-black"
-              style={{ background: world.theme.accent }}
-            />
-          }
-        >
-          <Customiser world={world} patch={patch} onError={setErr} />
-        </Module>
-
-        <Module
-          letter="L"
           title="Active World Areas"
           summary={
             world.areas.length
@@ -174,13 +160,34 @@ function ProfileBody({ world }: { world: World }) {
             onRemove={a.removeArea}
           />
         </Module>
+        <Module
+          title="Appearance"
+          summary={
+            PRESETS.find((p) => p.id === world.theme.preset)?.name ??
+            "Custom look"
+          }
+          open={open === "look"}
+          onToggle={() => toggle("look")}
+          preview={
+            <span
+              className="h-6 w-6 rounded-md border-2 border-black"
+              style={{ background: world.theme.accent }}
+            />
+          }
+        >
+          <Customiser world={world} patch={patch} onError={setErr} />
+        </Module>
+
+      </div>
+
+      <div className="mt-10 border-t-2 border-black/10 pt-6">
+        <AccountCard />
       </div>
     </Page>
   );
 }
 
 function Module({
-  letter,
   title,
   summary,
   warn,
@@ -189,7 +196,6 @@ function Module({
   children,
   preview,
 }: {
-  letter: string;
   title: string;
   summary: string;
   warn?: string;
@@ -205,12 +211,10 @@ function Module({
         className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-[#f4f2f1]"
       >
         <span
-          className={`display flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm ${
-            open ? "bg-black text-white" : "bg-accent"
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+            open ? "bg-black" : "bg-accent"
           }`}
-        >
-          {letter}
-        </span>
+        />
         <span className="min-w-0 flex-1 pr-3">
           <span className="t-h3 block whitespace-nowrap text-ink">{title}</span>
           <span className="t-small block text-ink-3">

@@ -29,8 +29,19 @@ function StudioBody({ world }: { world: World }) {
   const [drop, setDrop] = useState<Drop | null>(null);
   const [next, setNext] = useState<Drop | null>(null);
   const [drops, setDrops] = useState<Drop[]>([]);
-  /** Make this week, research next week. Both always one click apart. */
-  const [tab, setTab] = useState<"build" | "research">("build");
+  /**
+   * Make this week, research next week. Both always one click apart.
+   *
+   * Home links straight at the research half with ?tab=research, so the
+   * "researching next" card lands on the board rather than on the build
+   * screen with an extra click still to make.
+   */
+  const [tab, setTab] = useState<"build" | "research">(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("tab") === "research"
+      ? "research"
+      : "build",
+  );
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
@@ -96,14 +107,51 @@ function StudioBody({ world }: { world: World }) {
 
   async function togglePause() {
     const paused = !world.paused;
+    if (
+      paused &&
+      !window.confirm(
+        "Pause the weekly schedule?\n\nYour current drop and research board stay exactly as they are. No new publish date is assigned until you resume. Nothing is deleted or archived.",
+      )
+    )
+      return;
     patch({ paused });
     await saveWorld(world.id, { paused });
   }
 
+  /**
+   * Publishing is the one irreversible action in the product: the board
+   * freezes, the week rolls, and next week's research becomes the drop being
+   * built. It is allowed at any fill level — a seller may deliberately
+   * release six designs — but never by accident, and never without being told
+   * what happens next.
+   */
   async function publishNow() {
     if (!drop) return;
+    const filled = drop.items.length;
+
+    const consequences = [
+      `Drop ${String(drop.number).padStart(2, "0")} moves into your history and its board becomes read-only.`,
+      next
+        ? `Drop ${String(next.number).padStart(2, "0")} research becomes the drop you are building, and a fresh research board opens behind it.`
+        : "A new drop opens for next week.",
+      filled < world.slotsPerDrop
+        ? `The ${world.slotsPerDrop - filled} empty slot${world.slotsPerDrop - filled === 1 ? "" : "s"} stay empty in the archived version.`
+        : null,
+      "Your research is kept and stays attached to this drop.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const question =
+      filled === 0
+        ? `This drop has no designs in it at all.\n\nAre you sure you want to archive Drop ${String(drop.number).padStart(2, "0")} as published?\n\n${consequences}`
+        : `Publish Drop ${String(drop.number).padStart(2, "0")} with ${filled} of ${world.slotsPerDrop} slots filled?\n\n${consequences}`;
+
+    if (!window.confirm(question)) return;
+
     await freezeNow(world, drop);
     setLoading(true);
+    setTab("build");
     await load();
   }
 
@@ -177,10 +225,7 @@ function StudioBody({ world }: { world: World }) {
           >
             {world.paused ? "Resume schedule" : "Pause schedule"}
           </button>
-          <button
-            onClick={publishNow}
-            className="btn btn-primary"
-          >
+          <button onClick={publishNow} className="btn btn-primary">
             Publish &amp; freeze
           </button>
         </div>

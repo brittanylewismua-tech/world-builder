@@ -209,6 +209,35 @@ export async function openBoard(world: World, drop: Drop): Promise<Board> {
   };
 }
 
+/**
+ * A cheap glance at a board for Home — how much is on it and how many
+ * findings are waiting. Deliberately does not create the board or sign any
+ * image URLs; Home should never pay for a board nobody has opened.
+ */
+export async function boardGlance(dropId: string) {
+  const { data } = await supabase
+    .from("wb_boards")
+    .select("id")
+    .eq("drop_id", dropId)
+    .limit(1);
+  const id = data?.[0]?.id;
+  if (!id) return { items: 0, findings: 0 };
+
+  const [items, findings] = await Promise.all([
+    supabase
+      .from("wb_board_items")
+      .select("id", { count: "exact", head: true })
+      .eq("board_id", id)
+      .eq("later", false),
+    supabase
+      .from("wb_board_findings")
+      .select("id", { count: "exact", head: true })
+      .eq("board_id", id)
+      .eq("dismissed", false),
+  ]);
+  return { items: items.count ?? 0, findings: findings.count ?? 0 };
+}
+
 /** Everything parked for the future, across every week of this world. */
 export async function loadLater(worldId: string): Promise<BoardItem[]> {
   const { data } = await supabase

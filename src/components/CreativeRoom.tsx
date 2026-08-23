@@ -14,12 +14,21 @@ import {
 } from "@/lib/memory";
 import { Star } from "./ui";
 
+/**
+ * These openers decide what the room is for.
+ *
+ * The old set — "give me a few directions for the remaining slots", "I want
+ * one design that feels completely unexpected" — made this an idea generator
+ * waiting to be pointed at a board. That quietly hands creative authority to
+ * the AI. These ask it to help the seller see what is already in front of
+ * them instead.
+ */
 const OPENERS = [
-  "I'm stuck on the last three.",
-  "These are starting to feel repetitive.",
-  "I want one design that feels completely unexpected.",
-  "Give me a few directions for the remaining slots.",
-  "I want to add hats to this drop.",
+  "What patterns do you notice across these designs?",
+  "Where am I repeating the same composition?",
+  "What feels visually underrepresented here?",
+  "What have I saved for next week that might be influencing this?",
+  "Summarise the decisions I have already made about this drop.",
 ];
 
 /** Fetch signed mockup URLs and shrink them for the vision call. */
@@ -100,6 +109,9 @@ export default function CreativeRoom({
             room: "room",
             drops,
             currentDrop: drop,
+            // The board researched for this drop, so the room can answer
+            // "what have I already noticed about this week?"
+            boardFor: drop.id,
           }),
           "",
           drop.items.length

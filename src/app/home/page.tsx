@@ -19,7 +19,9 @@ import {
   STATUS_LABEL,
   type Drop,
 } from "@/lib/drops";
+import { boardGlance } from "@/lib/board";
 import SecureWorld from "@/components/SecureWorld";
+import NameYourWorld from "@/components/NameYourWorld";
 import type { World } from "@/lib/world";
 
 /**
@@ -29,9 +31,15 @@ import type { World } from "@/lib/world";
  * one question, "where am I in this world today", and then gets out of the way
  * by handing them the door they actually wanted.
  *
+ * THE RHYTHM IS THE POINT. Two things are always true at once in this method:
+ * one drop is being built, and the next one is being researched. Home used to
+ * show only the first, which quietly taught the seller that research is
+ * something you do when you remember to. The two cards sit side by side, same
+ * size, same weight, because they are the same week.
+ *
  * SPEC guards this closely: no scoring, no verdicts, no "you should make…".
- * The drop card counts slots because the seller filled them. The daily card
- * shows headlines because they were already researched. Nothing here is an
+ * The drop card counts slots because the seller filled them. The daily strip
+ * shows a headline because it was already researched. Nothing here is an
  * opinion about the work.
  */
 export default function HomePage() {
@@ -42,6 +50,11 @@ function HomeBody({ world }: { world: World }) {
   const today = todayISO();
   const [items, setItems] = useState<DailyItem[] | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
+  const [next, setNext] = useState<Drop | null>(null);
+  const [glance, setGlance] = useState<{ items: number; findings: number }>({
+    items: 0,
+    findings: 0,
+  });
   const [writing, setWriting] = useState(false);
   const started = useRef(false);
 
@@ -79,7 +92,12 @@ function HomeBody({ world }: { world: World }) {
     // Same call Drop Studio makes, so the board exists the moment the world
     // does and Home is never the only screen that thinks there is no drop.
     syncSchedule(world)
-      .then((d) => setDrop(splitDrops(d).current))
+      .then(async (all) => {
+        const { current, next } = splitDrops(all);
+        setDrop(current);
+        setNext(next);
+        if (next) setGlance(await boardGlance(next.id));
+      })
       .catch(() => setDrop(null));
   }, [world, today]);
 
@@ -90,6 +108,7 @@ function HomeBody({ world }: { world: World }) {
   return (
     <Page width="wide">
       <SecureWorld />
+      <NameYourWorld world={world} />
 
       <header className="mb-8">
         <span className="t-small text-ink-3">{formatIssueDate(today)}</span>
@@ -97,28 +116,29 @@ function HomeBody({ world }: { world: World }) {
         <span className="rule-accent mt-4" />
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        {/* ------------------------------------------------ the drop */}
-        <Card className="lg:col-span-3" pad={false} dots hover>
-          <div className="p-5 md:p-6">
-            <span className="eyebrow text-ink-3">the drop you&apos;re building</span>
+      {/* --------------------------------------------- the week's two halves */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* ---------------------------------------------------- building now */}
+        <Card pad={false} dots hover>
+          <div className="flex h-full flex-col p-5 md:p-6">
+            <span className="eyebrow text-ink-3">building now</span>
 
             {drop ? (
               <>
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                  <span className="text-[2rem] font-extrabold leading-none tracking-tight">
+                  <span className="text-[1.9rem] font-extrabold leading-none tracking-tight">
                     Drop {String(drop.number).padStart(2, "0")}
-                  </span>
-                  <span className="t-small text-ink-2">
-                    publishes {formatDropDate(drop.publishDate)}
                   </span>
                   <span className="chip chip-accent ml-auto">
                     {STATUS_LABEL[drop.status]}
                   </span>
                 </div>
+                <span className="t-small mt-1.5 text-ink-2">
+                  publishes {formatDropDate(drop.publishDate)}
+                </span>
 
                 <div className="mt-5 flex items-end gap-4">
-                  <span className="numeral text-[3.2rem]">
+                  <span className="numeral text-[2.9rem]">
                     {String(filled).padStart(2, "0")}
                   </span>
                   <div className="min-w-0 flex-1 pb-2">
@@ -160,16 +180,18 @@ function HomeBody({ world }: { world: World }) {
                   })}
                 </div>
 
-                <Link href="/studio" className="btn btn-primary mt-6">
-                  Open the board
-                </Link>
+                <div className="mt-auto pt-6">
+                  <Link href="/studio" className="btn btn-primary">
+                    Open the board
+                  </Link>
+                </div>
               </>
             ) : (
               <>
                 <p className="t-body mt-2 text-ink-2">
                   Your first board is waiting to be opened.
                 </p>
-                <Link href="/studio" className="btn btn-primary mt-5">
+                <Link href="/studio" className="btn btn-primary mt-5 self-start">
                   Open Drop Studio
                 </Link>
               </>
@@ -177,56 +199,111 @@ function HomeBody({ world }: { world: World }) {
           </div>
         </Card>
 
-        {/* ------------------------------------------------ today's daily */}
-        <Card className="lg:col-span-2" pad={false} hover>
-          <div className="p-5 md:p-6">
-            <div className="flex items-center gap-2">
-              <Star size={10} className="text-accent" />
-              <span className="eyebrow text-ink-3">in your world today</span>
-            </div>
+        {/* ------------------------------------------------ researching next */}
+        <Card pad={false} dots hover>
+          <div className="flex h-full flex-col p-5 md:p-6">
+            <span className="eyebrow text-ink-3">researching next</span>
 
-            {items === null ? (
-              <p className="t-small mt-4 text-ink-3">Checking…</p>
-            ) : writing ? (
-              <p className="pulse-soft t-small mt-4 text-ink-2">
-                Reading your world… today&apos;s issue is being written while
-                you get started.
-              </p>
-            ) : items.length === 0 ? (
+            {next ? (
               <>
-                <p className="t-body mt-3 text-ink-2">
-                  Today&apos;s issue hasn&apos;t been read yet. It gets written
-                  on your first visit to World Daily.
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                  <span className="text-[1.9rem] font-extrabold leading-none tracking-tight">
+                    Drop {String(next.number).padStart(2, "0")}
+                  </span>
+                  <span className="chip ml-auto">not started yet</span>
+                </div>
+                <span className="t-small mt-1.5 text-ink-2">
+                  publishes {formatDropDate(next.publishDate)}
+                </span>
+
+                <div className="mt-5 flex items-end gap-4">
+                  <span className="numeral text-[2.9rem]">
+                    {String(glance.items).padStart(2, "0")}
+                  </span>
+                  <div className="min-w-0 flex-1 pb-2">
+                    <p className="t-small font-semibold">
+                      {glance.items === 0
+                        ? "nothing collected yet"
+                        : `${glance.items} thing${glance.items === 1 ? "" : "s"} collected`}
+                    </p>
+                    <p className="t-small mt-0.5 text-ink-3">
+                      {glance.findings > 0
+                        ? `${glance.findings} pattern${glance.findings === 1 ? "" : "s"} waiting to be read`
+                        : "Save what you notice this week — designs, phrases, photographs, links."}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="t-small mt-5 text-ink-3">
+                  Research runs a week ahead of building. What lands here now is
+                  what you will have to work from when this drop comes round.
                 </p>
-                <Link href="/daily" className="btn btn-accent mt-5">
-                  Read today
-                </Link>
+
+                <div className="mt-auto pt-6">
+                  <Link href="/studio?tab=research" className="btn btn-accent">
+                    {glance.items === 0
+                      ? "Start collecting"
+                      : "Open the research board"}
+                  </Link>
+                </div>
               </>
             ) : (
               <>
-                <ul className="mt-4 space-y-3.5">
-                  {items.slice(0, 3).map((it, i) => (
-                    <li key={it.id} className="flex gap-3">
-                      <span className="numeral shrink-0 text-[1.15rem]">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span className="t-small font-semibold leading-snug text-ink">
-                        {it.headline}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/daily"
-                  className="t-small mt-5 inline-block font-semibold underline underline-offset-4 hover:opacity-70"
-                >
-                  All {items.length} today →
+                <p className="t-body mt-2 text-ink-2">
+                  Once your first drop is scheduled, next week&apos;s research
+                  board opens here.
+                </p>
+                <Link href="/studio" className="btn btn-accent mt-5 self-start">
+                  Open Drop Studio
                 </Link>
               </>
             )}
           </div>
         </Card>
       </div>
+
+      {/* ----------------------------------------- today's paper, compressed */}
+      <Card className="mt-4" pad={false} hover>
+        <Link href="/daily" className="block p-5 md:p-6">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="flex items-center gap-2">
+              <Star size={10} className="text-accent" />
+              <span className="eyebrow text-ink-3">in your world today</span>
+            </span>
+            {items !== null && items.length > 0 && (
+              <span className="t-small ml-auto font-semibold underline underline-offset-4">
+                Read all {items.length} →
+              </span>
+            )}
+          </div>
+
+          {items === null ? (
+            <p className="t-small mt-3 text-ink-3">Checking…</p>
+          ) : writing ? (
+            <p className="pulse-soft t-small mt-3 text-ink-2">
+              Reading your world… today&apos;s issue is being written while you
+              get started.
+            </p>
+          ) : items.length === 0 ? (
+            <p className="t-body mt-2 text-ink-2">
+              Today&apos;s issue hasn&apos;t been read yet. It gets written on
+              your first visit to World Daily.
+            </p>
+          ) : (
+            <>
+              <p className="t-h3 mt-2.5 text-ink">{items[0].headline}</p>
+              {items.length > 1 && (
+                <p className="t-small mt-1.5 text-ink-3">
+                  {items
+                    .slice(1, 4)
+                    .map((i) => i.headline)
+                    .join(" · ")}
+                </p>
+              )}
+            </>
+          )}
+        </Link>
+      </Card>
 
       {/* ------------------------------------------------ the other rooms */}
       <div className="mt-4 grid gap-4 sm:grid-cols-3">

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Shell from "@/components/Shell";
-import { Star, Dots } from "@/components/ui";
+import { Star } from "@/components/ui";
 import { loadIssue, todayISO, type DailyItem } from "@/lib/daily";
 import {
   forget,
@@ -16,18 +16,29 @@ import { askAI } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
 import type { World } from "@/lib/world";
 
+/**
+ * Six at a time, not ten. A screen of ten questions reads as a survey; six
+ * reads as the start of a conversation. The rest rotate in on each visit so
+ * the same six are not the only doors that ever open.
+ */
 const PROMPTS = [
   "What are you doing this weekend?",
-  "What are you obsessed with right now?",
-  "Where do you shop?",
-  "What are you wearing lately?",
   "What are you sick of seeing?",
   "What do you and your friends send each other?",
-  "What do you spend way too much money on?",
-  "What are you saving on Pinterest lately?",
-  "What do you buy before an event?",
+  "What are you saving lately?",
   "What are you excited about next month?",
+  "What are you wearing lately?",
+  "What are you obsessed with right now?",
+  "Where do you shop?",
+  "What do you spend way too much money on?",
+  "What do you buy before an event?",
 ];
+
+function sixOf(list: string[]) {
+  const keep = list.slice(0, 5);
+  const rest = list.slice(5);
+  return [...keep, rest[Math.floor(Math.random() * rest.length)]];
+}
 
 export default function Customer() {
   return <Shell>{(world) => <CustomerBody world={world} />}</Shell>;
@@ -40,6 +51,8 @@ function CustomerBody({ world }: { world: World }) {
   const [err, setErr] = useState("");
   const [daily, setDaily] = useState<DailyItem[]>([]);
   const [ready, setReady] = useState(false);
+  const [stuck, setStuck] = useState(false);
+  const [starters] = useState(() => sixOf(PROMPTS));
   const endRef = useRef<HTMLDivElement>(null);
 
   // She remembers. Everything said before is loaded back in and travels with
@@ -75,28 +88,42 @@ function CustomerBody({ world }: { world: World }) {
     ].join("\n");
   }
 
-  async function send(text: string) {
+  /**
+   * Sending is split from delivering so a failure can be retried without
+   * losing what was typed. On failure the message stays on screen exactly
+   * where it was and the person is offered the send again, rather than
+   * being handed an error and an empty box.
+   */
+  async function deliver(all: Msg[]) {
+    const asked = all[all.length - 1]?.content ?? "";
+    setBusy(true);
+    setErr("");
+    try {
+      const j = await askAI<{ text: string }>(
+        "/api/customer",
+        { messages: recent(all), context: await context() },
+        { timeoutMs: 90_000 },
+      );
+      const reply = { role: "assistant" as const, content: j.text };
+      setMsgs([...all, reply]);
+      setStuck(false);
+      const thread = await openThread(world.id, "customer");
+      await remember(thread, [{ role: "user", content: asked }, reply]);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "That did not go through.");
+      setStuck(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function send(text: string) {
     const content = text.trim();
     if (!content || busy) return;
     const next = [...msgs, { role: "user" as const, content }];
     setMsgs(next);
     setDraft("");
-    setBusy(true);
-    setErr("");
-    try {
-      const j = await askAI<{ text: string }>("/api/customer", {
-        messages: recent(next),
-        context: await context(),
-      });
-      const reply = { role: "assistant" as const, content: j.text };
-      setMsgs([...next, reply]);
-      const thread = await openThread(world.id, "customer");
-      await remember(thread, [{ role: "user", content }, reply]);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "That did not go through.");
-    } finally {
-      setBusy(false);
-    }
+    deliver(next);
   }
 
   return (
@@ -106,7 +133,18 @@ function CustomerBody({ world }: { world: World }) {
           <Star size={9} className="text-accent" />
           <span className="eyebrow">Talk to your customer</span>
         </div>
-        <h1 className="t-h1 mt-2 text-ink">talking to <span className="italic" style={{ color: "var(--accent)" }}>{world.name.toLowerCase()}</span></h1>
+        <h1 className="t-h1 mt-2 text-ink">
+          {world.name.trim() ? (
+            <>
+              talking to someone inside{" "}
+              <span className="italic" style={{ color: "var(--accent)" }}>
+                {world.name.toLowerCase()}
+              </span>
+            </>
+          ) : (
+            "talk to the customer"
+          )}
+        </h1>
         <span className="rule-accent mt-3" />
         <p className="t-small mt-2 text-ink-2">
           A research-informed simulation of someone who lives in this world. She
@@ -120,7 +158,7 @@ function CustomerBody({ world }: { world: World }) {
       <div className="min-h-[40vh] space-y-5 py-7">
         {ready && msgs.length === 0 && (
           <div className="grid gap-2 sm:grid-cols-2">
-            {PROMPTS.map((p) => (
+            {starters.map((p) => (
               <button
                 key={p}
                 onClick={() => send(p)}
@@ -150,11 +188,26 @@ function CustomerBody({ world }: { world: World }) {
           ),
         )}
 
-        {busy && <p className="pulse-soft t-small text-ink-3">typing…</p>}
-        {err && (
-          <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-4 py-3 text-sm text-[#8a2020]">
-            {err}
+        {busy && (
+          <p aria-live="polite" className="pulse-soft t-small text-ink-3">
+            typing…
           </p>
+        )}
+        {err && (
+          <div
+            role="alert"
+            className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-4 py-3 text-sm text-[#8a2020]"
+          >
+            <p>{err}</p>
+            {stuck && !busy && msgs.length > 0 && (
+              <button
+                onClick={() => deliver(msgs)}
+                className="mt-2 font-semibold underline underline-offset-2"
+              >
+                Send it again
+              </button>
+            )}
+          </div>
         )}
         <div ref={endRef} />
       </div>

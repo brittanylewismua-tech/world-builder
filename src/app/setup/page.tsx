@@ -9,7 +9,7 @@ import {
   AFFINITY_QUESTIONS,
   hasDemandFloor,
   MIN_SUB_NICHES,
-  type Affinity,
+  SUGGESTED_VISUAL_REFERENCES,
   type World,
 } from "@/lib/world";
 import {
@@ -46,6 +46,8 @@ interface Step {
   eyebrow: string;
   question: string;
   line: string;
+  /** Indexes into AFFINITY_QUESTIONS that this card asks. */
+  affinity?: number[];
   /** Optional — steps without one cannot be skipped. */
   optional?: boolean;
 }
@@ -58,32 +60,22 @@ const STEPS: Step[] = [
   },
   {
     eyebrow: "your connection",
-    question: AFFINITY_QUESTIONS[0].question,
-    line: "Demand on its own is not enough. Fluency comes faster when you like the person you are building for.",
+    question: "How close are you to this world?",
+    line: "Demand on its own is not enough. Fluency comes faster when you like the person you are building for — and when you would want the thing yourself.",
+    affinity: [0, 1],
     optional: true,
   },
   {
     eyebrow: "your connection",
-    question: AFFINITY_QUESTIONS[1].question,
-    line: "Wanting the thing yourself is the shortest route to understanding why someone else would.",
-    optional: true,
-  },
-  {
-    eyebrow: "your connection",
-    question: AFFINITY_QUESTIONS[2].question,
-    line: "This is a long game. Months of curiosity is the actual requirement.",
-    optional: true,
-  },
-  {
-    eyebrow: "your connection",
-    question: AFFINITY_QUESTIONS[3].question,
-    line: "Nothing here is scored, and nothing gets approved or rejected. You decide what your answers mean.",
+    question: "Could you stay curious about this for a year?",
+    line: "This is a long game. Nothing here is scored and nothing gets approved or rejected — you decide what your answers mean.",
+    affinity: [2, 3],
     optional: true,
   },
   {
     eyebrow: "your eye",
     question: "What are you picturing?",
-    line: "Around six existing designs in this world whose style you love. Not designs anything will copy — they show the AI what you see when you imagine this world.",
+    line: `Around ${SUGGESTED_VISUAL_REFERENCES} existing designs in this world whose style you love. Not designs anything will copy — they show the AI what you see when you imagine this world.`,
     optional: true,
   },
   {
@@ -92,6 +84,9 @@ const STEPS: Step[] = [
     line: "Look at your sub-niches together. What is the broader customer universe underneath them? You name it — not the AI.",
   },
 ];
+
+const CALIBRATION_STEP = 3;
+const NAME_STEP = 4;
 
 export default function Setup() {
   const router = useRouter();
@@ -164,13 +159,9 @@ function SetupBody({
   const last = step === STEPS.length - 1;
   const topRef = useRef<HTMLDivElement>(null);
 
-  /** Which affinity key this step edits, if any. */
-  const affinityKey: keyof Affinity | null =
-    step >= 1 && step <= 4 ? AFFINITY_QUESTIONS[step - 1].key : null;
-
   const canAdvance = (() => {
     if (step === 0) return hasDemandFloor(world);
-    if (step === 6) return world.name.trim().length > 0;
+    if (step === NAME_STEP) return world.name.trim().length > 0;
     return true;
   })();
 
@@ -224,7 +215,7 @@ function SetupBody({
               onClick={onDone}
               className="t-small ml-4 font-semibold underline underline-offset-4 transition hover:opacity-70"
             >
-              Done
+              Save and exit
             </button>
           )}
         </div>
@@ -260,28 +251,36 @@ function SetupBody({
               />
             )}
 
-            {affinityKey && (
-              <AffinityScale
-                bare
-                question={s.question}
-                low={AFFINITY_QUESTIONS[step - 1].low}
-                high={AFFINITY_QUESTIONS[step - 1].high}
-                value={world.affinity[affinityKey]}
-                onChange={(n) =>
-                  a.setAffinity({ ...world.affinity, [affinityKey]: n })
-                }
-              />
+            {s.affinity && (
+              <div className="space-y-4">
+                {s.affinity.map((i) => {
+                  const q = AFFINITY_QUESTIONS[i];
+                  return (
+                    <AffinityScale
+                      key={q.key}
+                      question={q.question}
+                      low={q.low}
+                      high={q.high}
+                      value={world.affinity[q.key]}
+                      onChange={(n) =>
+                        a.setAffinity({ ...world.affinity, [q.key]: n })
+                      }
+                    />
+                  );
+                })}
+              </div>
             )}
 
-            {step === 5 && (
+            {step === CALIBRATION_STEP && (
               <VisualCalibrationInput
+                hideNote
                 refs={world.visualReferences}
                 onAdd={a.addVisualReferences}
                 onRemove={a.removeVisualReference}
               />
             )}
 
-            {step === 6 && (
+            {step === NAME_STEP && (
               <div>
                 <input
                   value={world.name}
@@ -321,7 +320,7 @@ function SetupBody({
                 : "Opening your world…"
               : last
                 ? revisit
-                  ? "Save and close"
+                  ? "Save and exit"
                   : "Enter my world builder"
                 : step === 0 && !canAdvance
                   ? `${MIN_SUB_NICHES - world.subNiches.length} more to go`
@@ -334,9 +333,7 @@ function SetupBody({
             onClick={() => go(step + 1)}
             className="t-small mt-3 text-ink-3 transition hover:text-ink"
           >
-            {revisit
-              ? "Leave this one as it is"
-              : "Skip — you can answer this any time in World Profile"}
+            Skip — you can answer this any time in World Profile
           </button>
         )}
 

@@ -8,8 +8,6 @@ import {
   formatDropDate,
   STATUS_LABEL,
   daysSince,
-  GATHERING_DAYS,
-  REVIEW_DAYS,
   type Drop,
 } from "@/lib/drops";
 import type { World } from "@/lib/world";
@@ -19,16 +17,18 @@ export default function History() {
   return <Shell>{(world) => <HistoryBody world={world} />}</Shell>;
 }
 
-/** Age, stated plainly. Never a claim about how the drop performed. */
+/*
+  This used to say things like "too young to read" and "enough history to look
+  at", which promised a reading that does not exist — no Etsy data is
+  connected to this software, so there is nothing to read at any age. Age is
+  now just age. When real performance data is attached, this is where it
+  belongs.
+*/
 function ageNote(d: Drop) {
   const age = daysSince(d.publishDate);
-  if (age < 0) return "Not published yet";
-  if (age === 0) return "Published today — far too young to read";
-  if (age < GATHERING_DAYS)
-    return `${age} day${age === 1 ? "" : "s"} old — too young to read`;
-  if (age < REVIEW_DAYS)
-    return `${age} days old — ${REVIEW_DAYS - age} more until it is worth reviewing`;
-  return `${age} days old — enough history to look at`;
+  if (age < 0) return `Publishes ${formatDropDate(d.publishDate)}`;
+  if (age === 0) return "Published today";
+  return `Published ${age} day${age === 1 ? "" : "s"} ago`;
 }
 
 function HistoryBody({ world }: { world: World }) {
@@ -65,7 +65,8 @@ function HistoryBody({ world }: { world: World }) {
           onRemoveMockup={async () => {}}
         />
         <p className="t-small mt-3 text-ink-3">
-          {STATUS_LABEL[open.status]} · {ageNote(open)}
+          {STATUS_LABEL[open.status]} · {ageNote(open)} · No Etsy performance
+          data attached.
         </p>
       </main>
     );
@@ -76,7 +77,7 @@ function HistoryBody({ world }: { world: World }) {
       <PageHeader
         eyebrow="Drop History"
         title="Your creative history"
-        lede="Every published drop, frozen exactly as you released it. Statuses are lifecycle only — nothing here decides which drops worked."
+        lede="Every published drop, frozen exactly as you released it. No Etsy performance data is attached to any of these — statuses describe where a drop is in its life, never how it did."
       />
 
       {frozen.length === 0 ? (

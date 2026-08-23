@@ -55,9 +55,19 @@ export async function loadIssueDates(worldId: string): Promise<string[]> {
  * Research today's issue and store it.
  * Only ever called when today has no issue yet, or the seller asks for a rerun.
  */
+/**
+ * Writing an issue.
+ *
+ * `append` is what "Look again" does. Replacing the issue meant that asking
+ * for more quietly threw away what the seller had already read that morning,
+ * including anything they had half-decided to use. The shared memory already
+ * forbids repeating a recent headline, so a second pass genuinely adds rather
+ * than reshuffles.
+ */
 export async function generateIssue(
   world: World,
   date: string,
+  { append = false }: { append?: boolean } = {},
 ): Promise<DailyItem[]> {
   const j = await askAI<{ items: Omit<DailyItem, "id">[] }>("/api/world-daily", {
     worldName: world.name,
@@ -68,6 +78,25 @@ export async function generateIssue(
     memory: await buildWorldContext(world, { room: "daily" }),
   });
 
+  let offset = 0;
+  if (append) {
+    const { count } = await supabase
+      .from("wb_daily_items")
+      .select("id", { count: "exact", head: true })
+      .eq("world_id", world.id)
+      .eq("issue_date", date);
+    offset = count ?? 0;
+  } else {
+    // A plain rerun replaces, so it cannot double the issue. The delete only
+    // happens after the model has already answered, so a failed run never
+    // costs the seller the issue they had.
+    await supabase
+      .from("wb_daily_items")
+      .delete()
+      .eq("world_id", world.id)
+      .eq("issue_date", date);
+  }
+
   const rows = j.items.map((it, i) => ({
     world_id: world.id,
     issue_date: date,
@@ -76,15 +105,8 @@ export async function generateIssue(
     headline: it.headline,
     body: it.body,
     sources: it.sources,
-    position: i,
+    position: offset + i,
   }));
-
-  // Replace rather than append, so a rerun does not double the issue.
-  await supabase
-    .from("wb_daily_items")
-    .delete()
-    .eq("world_id", world.id)
-    .eq("issue_date", date);
 
   const { error } = await supabase.from("wb_daily_items").insert(rows);
   if (error) throw new Error(error.message);

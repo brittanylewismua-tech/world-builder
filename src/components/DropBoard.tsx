@@ -62,6 +62,11 @@ export function ShopBanner({
           <span className="px-6 text-center text-[clamp(1.25rem,3vw,2rem)] font-extrabold tracking-tight text-white/95">
             {world.name || "Your Shop"}
           </span>
+          {!world.shopBannerSrc && onUpload && (
+            <span className="absolute bottom-2.5 left-3 text-[11.5px] text-white/70">
+              Add the shop banner customers will see with this drop.
+            </span>
+          )}
         </div>
       )}
 
@@ -70,13 +75,13 @@ export function ShopBanner({
           <button
             onClick={() => input.current?.click()}
             disabled={busy}
-            className="absolute bottom-2.5 right-2.5 rounded-xl bg-black/75 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition hover:bg-black group-hover:opacity-100"
+            className="absolute bottom-2.5 right-2.5 rounded-lg border-2 border-black bg-white px-2.5 py-1 text-[11.5px] font-bold text-black shadow-[2px_2px_0_#000] transition hover:translate-x-[-1px] hover:translate-y-[-1px]"
           >
             {busy
               ? "Uploading…"
               : world.shopBannerSrc
-                ? "Replace banner"
-                : "Upload banner"}
+                ? "Change banner"
+                : "Add shop banner"}
           </button>
           <input
             ref={input}
@@ -127,15 +132,35 @@ function Tile({
         <div className="relative aspect-square overflow-hidden rounded-xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={item.src} alt="" className="h-full w-full object-cover" />
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white">
+            {String(slot).padStart(2, "0")}
+          </span>
           {!frozen && (
-            <button
-              onClick={() => onRemove(item)}
-              className="absolute inset-x-0 bottom-0 bg-black/80 py-1.5 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100"
-            >
-              Remove
-            </button>
+            <div className="absolute inset-x-0 bottom-0 flex opacity-0 transition group-hover:opacity-100">
+              <button
+                onClick={() => input.current?.click()}
+                className="flex-1 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
+                aria-label={`Replace the design in slot ${slot}`}
+              >
+                Replace
+              </button>
+              <button
+                onClick={() => onRemove(item)}
+                className="flex-1 border-l border-white/25 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
+                aria-label={`Remove the design in slot ${slot}`}
+              >
+                Remove
+              </button>
+            </div>
           )}
         </div>
+        <input
+          ref={input}
+          type="file"
+          accept="image/*"
+          onChange={(e) => pick(e.target.files)}
+          className="hidden"
+        />
         <div className={`mt-2 h-2 w-4/5 rounded-sm ${bar}`} />
         <div className={`mt-1 h-2 w-1/3 rounded-sm ${bar}`} />
       </div>
@@ -144,18 +169,37 @@ function Tile({
 
   return (
     <div>
+      {/*
+        An empty slot has to say what it wants. Ten numbered squares with an
+        invisible file input behind them look like placeholders, and clicking
+        one appeared to do nothing at all.
+      */}
       <button
         onClick={() => !frozen && input.current?.click()}
         disabled={frozen || busy}
-        className={`flex aspect-square w-full items-center justify-center rounded-xl border border-dashed transition disabled:cursor-default disabled:opacity-40 ${
+        aria-label={`Add a design to slot ${slot}`}
+        className={`flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed transition disabled:cursor-default disabled:opacity-40 ${
           dark
-            ? "border-white/25 text-white/35 hover:border-white/55 hover:bg-white/5"
-            : "border-black/18 text-black/25 hover:border-black/40 hover:bg-black/[0.03]"
+            ? "border-white/25 text-white/45 hover:border-white/60 hover:bg-white/5"
+            : "border-black/20 text-black/45 hover:border-black hover:bg-black/[0.03]"
         }`}
       >
-        <span className="text-xl font-extrabold tracking-tight">
-          {busy ? "…" : String(slot).padStart(2, "0")}
-        </span>
+        {busy ? (
+          <span className="pulse-soft text-[13px] font-semibold">Uploading…</span>
+        ) : (
+          <>
+            <span className="text-[15px] font-extrabold tracking-tight opacity-45">
+              {String(slot).padStart(2, "0")}
+            </span>
+            {!frozen && (
+              <>
+                <span className="text-[17px] leading-none">↑</span>
+                <span className="text-[12px] font-semibold">Add design</span>
+                <span className="text-[10.5px] opacity-60">PNG or JPG</span>
+              </>
+            )}
+          </>
+        )}
       </button>
       <div className={`mt-2 h-2 w-4/5 rounded-sm ${barFaint}`} />
       <div className={`mt-1 h-2 w-1/3 rounded-sm ${barFaint}`} />

@@ -24,11 +24,49 @@ const NAV = [
   { href: "/profile", label: "world profile", hint: "your foundation" },
 ];
 
+/**
+ * The app arriving, rather than the app being absent.
+ *
+ * A centred spinner on white told the seller nothing except that something
+ * had stopped. This puts the rail and the shape of a page up immediately, so
+ * the moment before the world loads looks like the same room waiting instead
+ * of a different screen.
+ */
 export function Loading() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-white">
-      <img src="/globe.png" alt="" className="globe-turn h-14 w-14 opacity-70" />
-    </main>
+    <div className="relative min-h-dvh bg-white lg:flex" role="status">
+      <span className="sr-only">Loading your world</span>
+
+      <aside className="sticky top-0 hidden h-dvh w-[248px] shrink-0 border-r-2 border-black bg-black p-4 lg:block">
+        <div className="flex items-center gap-2">
+          <img src="/globe.png" alt="" className="globe-turn h-7 w-7" />
+          <span className="text-[17px] font-extrabold leading-none tracking-tight text-white">
+            world builder
+          </span>
+        </div>
+        <div className="mt-6 space-y-2">
+          {NAV.map((n) => (
+            <div
+              key={n.href}
+              className="h-11 rounded-lg bg-white/10"
+              aria-hidden
+            />
+          ))}
+        </div>
+      </aside>
+
+      <div className="min-w-0 flex-1 px-5 py-8 md:px-8">
+        <div className="mx-auto max-w-5xl">
+          <div className="skeleton h-3 w-32" aria-hidden />
+          <div className="skeleton mt-3 h-9 w-64" aria-hidden />
+          <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            <div className="skeleton h-64" aria-hidden />
+            <div className="skeleton h-64" aria-hidden />
+          </div>
+          <div className="skeleton mt-4 h-24" aria-hidden />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -101,6 +139,7 @@ export default function Shell({
               <Link
                 key={n.href}
                 href={n.href}
+                aria-current={active ? "page" : undefined}
                 className="block rounded-lg px-3.5 py-2 transition"
                 style={
                   active
@@ -144,6 +183,12 @@ export default function Shell({
 
   return (
     <div className="relative min-h-dvh lg:flex">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-black focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white"
+      >
+        Skip to content
+      </a>
       <ThemeStyle theme={theme} />
       <Wallpaper theme={theme} />
 
@@ -155,7 +200,8 @@ export default function Shell({
           onClick={() => setNavOpen((v) => !v)}
           className="rounded-lg border-2 px-2.5 py-1 text-sm font-bold"
           style={{ borderColor: railText }}
-          aria-label="Menu"
+          aria-label={navOpen ? "Close menu" : "Open menu"}
+          aria-expanded={navOpen}
         >
           ☰
         </button>
@@ -175,7 +221,14 @@ export default function Shell({
         {aside}
       </aside>
 
-      <div className="relative z-10 min-w-0 flex-1">{children(world)}</div>
+      {/* Each page brings its own <main>; this is only the frame. */}
+      <div
+        id="main"
+        tabIndex={-1}
+        className="relative z-10 min-w-0 flex-1 outline-none"
+      >
+        {children(world)}
+      </div>
     </div>
   );
 }

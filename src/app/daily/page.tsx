@@ -8,7 +8,6 @@ import { Page, Card, Empty, ErrorNote, Dots } from "@/components/ui";
 import {
   formatIssueDate,
   generateIssue,
-  greeting,
   hostOf,
   loadIssue,
   loadIssueDates,
@@ -33,6 +32,26 @@ const KIND_LABEL: Record<string, string> = {
   aesthetic: "an aesthetic",
   moment: "a moment",
 };
+
+/** Source links, deliberately quiet — they are provenance, not content. */
+function Sources({ item, small = false }: { item: DailyItem; small?: boolean }) {
+  if (!item.sources.length) return null;
+  return (
+    <div className={`flex flex-wrap gap-1.5 ${small ? "mt-2" : "mt-4"}`}>
+      {item.sources.map((s, j) => (
+        <a
+          key={j}
+          href={s.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-md border border-black/20 px-2 py-0.5 text-[11.5px] text-ink-2 transition hover:border-black hover:text-ink"
+        >
+          {hostOf(s.url)} ↗
+        </a>
+      ))}
+    </div>
+  );
+}
 
 export default function Daily() {
   return <Shell>{(world) => <DailyBody world={world} />}</Shell>;
@@ -70,18 +89,21 @@ function DailyBody({ world }: { world: World }) {
     open(today);
   }, [world.id, today, open]);
 
-  const research = useCallback(async () => {
-    setResearching(true);
-    setErr("");
-    try {
-      setItems(await generateIssue(world, date));
-      setDates(await loadIssueDates(world.id));
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Research failed.");
-    } finally {
-      setResearching(false);
-    }
-  }, [world, date]);
+  const research = useCallback(
+    async (append = false) => {
+      setResearching(true);
+      setErr("");
+      try {
+        setItems(await generateIssue(world, date, { append }));
+        setDates(await loadIssueDates(world.id));
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Research failed.");
+      } finally {
+        setResearching(false);
+      }
+    },
+    [world, date],
+  );
 
   const noAreas = world.areas.length === 0;
 
@@ -121,12 +143,17 @@ function DailyBody({ world }: { world: World }) {
           <span className="chip chip-solid">world daily</span>
           <span className="t-small text-ink-3">{formatIssueDate(date)}</span>
         </div>
+        {/*
+          "Obsessed with" claimed more than the evidence supports — a couple
+          of articles is not proof that this customer is obsessed with
+          anything. This says what the issue actually is.
+        */}
         <h1 className="t-h1 mt-3 text-ink">
-          {greeting().toLowerCase()} — here&apos;s what your customer is{" "}
+          a few things{" "}
           <span className="italic" style={{ color: "var(--accent)" }}>
-            obsessed with
+            moving through
           </span>{" "}
-          today
+          your customer&apos;s world today
         </h1>
         <span className="rule-accent mt-4" />
       </header>
@@ -180,7 +207,7 @@ function DailyBody({ world }: { world: World }) {
           }
           action={
             date === today ? (
-              <button onClick={research} className="btn btn-accent">
+              <button onClick={() => research()} className="btn btn-accent">
                 Research today
               </button>
             ) : undefined
@@ -188,61 +215,87 @@ function DailyBody({ world }: { world: World }) {
         />
       )}
 
-      {!researching && items && items.length > 0 && (
-        <>
-          <div className="space-y-4">
-            {items.map((it, i) => (
-              <Card key={it.id} className="rise" hover pad={false}>
-                <div className="flex items-center justify-between px-5 pt-4 md:px-6">
-                  <Dots />
-                  {it.kind && (
-                    <span className="chip chip-solid">{KIND_LABEL[it.kind] ?? it.kind}</span>
-                  )}
-                </div>
-                <div className="flex gap-4 px-5 pb-5 pt-4 md:px-6">
-                  <span className="numeral shrink-0 text-[2.4rem]">
-                    {String(i + 1).padStart(2, "0")}
+      {!researching && items && items.length > 0 && (() => {
+        /*
+          Five equally large cards read as a research dump and take ten
+          minutes. A paper has a front page: one lead with room to breathe,
+          the rest short, and anything that is literally customer language
+          pulled out at the end because that is the most directly useful
+          thing on the page for someone who prints words on clothes.
+        */
+        const [lead, ...others] = items;
+        const language = others.find((i) => i.kind === "phrase");
+        const quick = others.filter((i) => i !== language);
+
+        return (
+          <>
+            <Card className="rise" hover pad={false}>
+              <div className="flex items-center justify-between px-5 pt-4 md:px-6">
+                <Dots />
+                {lead.kind && (
+                  <span className="chip chip-solid">
+                    {KIND_LABEL[lead.kind] ?? lead.kind}
                   </span>
-                  <div className="min-w-0">
-                <h2 className="t-h2 text-ink">{it.headline}</h2>
-                <p className="t-body mt-2 text-ink-2">{it.body}</p>
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {it.sources.map((s, j) => (
-                    <a
-                      key={j}
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="chip chip-solid transition hover:opacity-80"
-                    >
-                      {hostOf(s.url)} ↗
-                    </a>
+                )}
+              </div>
+              <div className="px-5 pb-5 pt-4 md:px-6">
+                <h2 className="t-h2 text-ink">{lead.headline}</h2>
+                <p className="t-body mt-2 text-ink-2">{lead.body}</p>
+                <Sources item={lead} />
+              </div>
+            </Card>
+
+            {quick.length > 0 && (
+              <section className="mt-6">
+                <p className="eyebrow mb-3 text-ink-3">Also moving</p>
+                <div className="divide-y divide-black/10 overflow-hidden rounded-xl border border-black/15 bg-white">
+                  {quick.map((it, i) => (
+                    <article key={it.id} className="flex gap-3.5 px-4 py-3.5">
+                      <span className="numeral shrink-0 text-[1.15rem]">
+                        {String(i + 2).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="t-h3 text-ink">{it.headline}</h3>
+                        <p className="t-small mt-0.5 text-ink-2">{it.body}</p>
+                        <Sources item={it} small />
+                      </div>
+                    </article>
                   ))}
                 </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          <p className="t-small mt-5 text-ink-3">
-            Signals only. Nothing here is a product instruction and none of it is
-            sales data — what any of it means for your shop is your call. Every
-            link came back from a real search; anything unverifiable was dropped.
-            {date === today && (
-              <>
-                {" "}
-                <button
-                  onClick={research}
-                  className="font-medium text-ink-2 underline underline-offset-2 transition hover:text-ink"
-                >
-                  Re-research today
-                </button>
-              </>
+              </section>
             )}
-          </p>
-        </>
-      )}
+
+            {language && (
+              <section className="mt-6">
+                <p className="eyebrow mb-3 text-ink-3">Language in the wild</p>
+                <Card className="p-5">
+                  <h3 className="t-h2 text-ink">{language.headline}</h3>
+                  <p className="t-body mt-2 text-ink-2">{language.body}</p>
+                  <Sources item={language} />
+                </Card>
+              </section>
+            )}
+
+            <p className="t-small mt-5 text-ink-3">
+              These are verified signals from the world around your customer —
+              not demand data, sales proof, or product instructions. You decide
+              what matters. Anything a search could not stand behind was
+              dropped rather than shown.
+              {date === today && (
+                <>
+                  {" "}
+                  <button
+                    onClick={() => research(true)}
+                    className="font-medium text-ink-2 underline underline-offset-2 transition hover:text-ink"
+                  >
+                    Look again — this adds to today, it does not replace it
+                  </button>
+                </>
+              )}
+            </p>
+          </>
+        );
+      })()}
 
       {dates.length > 1 && (
         <div className="mt-8 border-t border-black/12 pt-5">
