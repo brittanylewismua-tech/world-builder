@@ -51,8 +51,50 @@ HARD RULES
 6. Do not editorialise about the seller's brand or judge fit.
 
 OUTPUT
-After searching, return ONLY raw JSON. No markdown fence, no preamble:
-{"items":[{"area":"the area this belongs to","kind":"phrase|visual|object|event|humour|aesthetic|moment","headline":"...","body":"...","sources":[{"title":"page title","url":"https://..."}]}]}`;
+When you have finished searching, call the publish_issue tool with the items. Do not write the issue out as text — the tool is the only way it reaches the seller.`;
+
+/**
+ * The issue comes back through a tool rather than as text.
+ *
+ * Asking for raw JSON worked until a headline contained a quotation mark —
+ * and in this product headlines are frequently a quoted phrase, because the
+ * exact wording is the useful part. One unescaped quote and the whole issue
+ * failed to parse. A tool schema makes that structurally impossible.
+ */
+const PUBLISH_TOOL = {
+  name: "publish_issue",
+  description: "Publish today's issue of this seller's World Daily.",
+  input_schema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            area: { type: "string", description: "Which watched area this belongs to." },
+            kind: {
+              type: "string",
+              enum: ["phrase", "visual", "object", "event", "humour", "aesthetic", "moment"],
+            },
+            headline: { type: "string" },
+            body: { type: "string" },
+            sources: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { title: { type: "string" }, url: { type: "string" } },
+                required: ["url"],
+              },
+            },
+          },
+          required: ["area", "kind", "headline", "body", "sources"],
+        },
+      },
+    },
+    required: ["items"],
+  },
+} as const;
 
 interface Body {
   worldName?: string;
@@ -121,6 +163,7 @@ Then write the ${TARGET_ITEMS}-item newspaper.`;
           name: "web_search",
           max_uses: 12,
         } as unknown as Anthropic.Tool,
+        PUBLISH_TOOL as unknown as Anthropic.Tool,
       ],
       messages: [{ role: "user", content: prompt }],
     });
@@ -137,31 +180,53 @@ Then write the ${TARGET_ITEMS}-item newspaper.`;
       }
     }
 
-    const text = res.content
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("")
-      .trim();
-    const cleaned = text
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/```\s*$/, "")
-      .trim();
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start === -1 || end === -1)
+    // The issue arrives as tool input, already structured. The old
+    // text-parsing path stays as a fallback for a model that answers in prose.
+    type Item = {
+      area?: string;
+      kind?: string;
+      headline?: string;
+      body?: string;
+      sources?: { title?: string; url?: string }[];
+    };
+    let parsed: { items?: Item[] } | null = null;
+
+    for (const block of res.content) {
+      const b = block as unknown as { type: string; name?: string; input?: unknown };
+      if (b.type === "tool_use" && b.name === "publish_issue") {
+        parsed = b.input as { items?: Item[] };
+        break;
+      }
+    }
+
+    if (!parsed) {
+      const text = res.content
+        .map((b) => (b.type === "text" ? b.text : ""))
+        .join("")
+        .trim();
+      const cleaned = text
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/, "")
+        .trim();
+      const first = cleaned.indexOf("{");
+      const last = cleaned.lastIndexOf("}");
+      if (first !== -1 && last !== -1) {
+        try {
+          parsed = JSON.parse(cleaned.slice(first, last + 1));
+        } catch {
+          parsed = null;
+        }
+      }
+    }
+
+    if (!parsed)
       return NextResponse.json(
-        { error: "The research came back unreadable. Try again." },
+        {
+          error:
+            "Today's research came back in a shape I could not read. Nothing was saved — try again.",
+        },
         { status: 502 },
       );
-
-    const parsed = JSON.parse(cleaned.slice(start, end + 1)) as {
-      items?: {
-        area?: string;
-        kind?: string;
-        headline?: string;
-        body?: string;
-        sources?: { title?: string; url?: string }[];
-      }[];
-    };
 
     // Verification pass. A link that was never in a search result does not ship.
     const items = (parsed.items ?? [])

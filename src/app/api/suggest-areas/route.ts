@@ -108,9 +108,15 @@ Name the areas of this customer's world worth reading every morning.`;
         { status: 502 },
       );
 
-    const parsed = JSON.parse(text.slice(start, end + 1)) as {
-      areas?: string[];
-    };
+    let parsed: { areas?: string[] };
+    try {
+      parsed = JSON.parse(text.slice(start, end + 1));
+    } catch {
+      return NextResponse.json(
+        { error: "That came back in a shape I could not read. Try again." },
+        { status: 502 },
+      );
+    }
 
     const have = new Set(existing.map((e) => e.toLowerCase()));
     const areas = (parsed.areas ?? [])
