@@ -318,11 +318,11 @@ function SetupBody({
             {saving
               ? revisit
                 ? "Saving…"
-                : "Building your world…"
+                : "Opening your world…"
               : last
                 ? revisit
                   ? "Save and close"
-                  : "Build my world"
+                  : "Enter my world builder"
                 : step === 0 && !canAdvance
                   ? `${MIN_SUB_NICHES - world.subNiches.length} more to go`
                   : "Continue"}

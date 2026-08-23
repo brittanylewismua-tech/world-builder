@@ -21,6 +21,15 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
  */
 const SYSTEM = `You read a print-on-demand seller's validated Etsy keywords and name the parts of their customer's wider world that would be worth reading about every morning.
 
+FIRST, FIND THE ONE CUSTOMER
+Before naming anything, work out who these keywords have in common. A world is one broader customer universe that several demand pockets happen to point at — not a list of products. Everything you name has to belong to that one person's life.
+
+This is the part that goes wrong most often. Do NOT walk the keywords one by one turning each into its own area; that produces a scattered watch list that reads like several different shops. Find the person underneath, then name the parts of HER world.
+
+If a small number of keywords clearly belong to somebody else entirely, follow the majority and leave the strays out rather than inventing an area for them. Do not mention that you did this and do not comment on the seller's choices — just do not build a watch list around an outlier.
+
+Be generous about what one person contains, though. The same woman can be into raves and be somebody's mother and be getting married; those are seasons and roles in one life, not different customers. Only treat something as a stray when it implies a genuinely different person.
+
 WHAT AN AREA IS
 A living slice of culture around this customer that keeps producing new things to notice — how they dress, what they listen to, where they gather, what they joke about, what they celebrate, what they are into outside of shopping.
 
@@ -33,7 +42,8 @@ RULES
 3. Two to four words each, lowercase, plain language the customer would recognise.
 4. Between 6 and 8 of them. Cover genuinely different ground; no two near-duplicates.
 5. Each one has to be something that changes — a thing you could read news about every week. If nothing new ever happens in it, leave it out.
-6. Do not judge the seller's niche, score anything, or comment on whether it is a good world.
+6. Every area must be recognisable as the same customer's life. Read your list back and ask whether one person could plausibly care about all of it. If not, cut what does not fit.
+7. Do not judge the seller's niche, score anything, or comment on whether it is a good world.
 
 Return ONLY raw JSON, no markdown fence:
 {"areas":["festival fashion","edm culture"]}`;
