@@ -132,17 +132,15 @@ export default function CustomerChat({ world }: { world: World }) {
       <div className="min-h-[300px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {ready && msgs.length === 0 && (
           <>
-            <p className="t-small text-ink-2">
-              A research-informed simulation of someone who lives in this
-              world. Useful for thinking from inside her life, never as
-              evidence. She cannot see your board.
+            <p className="t-small text-ink-3">
+              Someone who lives in this world. She cannot see your board.
             </p>
-            <div className="space-y-2">
+            <div className="space-y-0.5">
               {starters.map((p) => (
                 <button
                   key={p}
                   onClick={() => send(p)}
-                  className="card card-hover block w-full px-3 py-2.5 text-left text-[13px] font-medium leading-snug"
+                  className="block w-full rounded-lg px-2.5 py-1.5 text-left text-[13px] leading-snug text-ink-3 transition hover:bg-black/[0.04] hover:text-ink"
                 >
                   {p}
                 </button>

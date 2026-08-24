@@ -40,7 +40,16 @@ import { Dots, Star } from "./ui";
  * filing cabinets: the AI proposes one, the seller moves it or ignores it.
  */
 
-const IMAGE_HEIGHTS = ["h-44", "h-60", "h-52", "h-72", "h-48"];
+/**
+ * The lanes across the board, left to right. Design leads because the seller
+ * is looking before she is reading; Quotes second because the words are what
+ * actually go on the shirt; Structures and Colour are the quieter reads.
+ * "Just added" sits on the end and only exists while something is in it.
+ */
+const LANES: { id: Section | "loose"; name: string }[] = [
+  ...SECTIONS.map((s) => ({ id: s.id as Section | "loose", name: s.name })),
+  { id: "loose", name: "Just added" },
+];
 
 /**
  * THE BOARD SITS BESIDE THE CONVERSATION.
@@ -424,66 +433,107 @@ export default function ResearchBoard({
             </span>
           </div>
 
-          {SECTIONS.map((s) => {
-            const items = onBoard.filter(
-              (i) => (i.section ?? i.aiSection) === s.id,
-            );
-            if (!items.length) return null;
-            return (
-              <Area
-                key={s.id}
-                title={s.name}
-                blurb={s.blurb}
-                count={items.length}
-                open={!shut[s.id]}
-                onToggle={() =>
-                  setShut((c) => ({ ...c, [s.id]: !c[s.id] }))
-                }
-              >
-                <Masonry
-                  items={items}
-                  onMove={move}
-                  onRemove={drop_}
-                  onNote={async (item, note) => {
-                    await updateItem(item.id, { note });
-                    setBoard((b) =>
-                      b
-                        ? {
-                            ...b,
-                            items: b.items.map((i) =>
-                              i.id === item.id ? { ...i, note } : i,
-                            ),
-                          }
-                        : b,
-                    );
-                  }}
-                />
-              </Area>
-            );
-          })}
+          {/*
+            ONE BOARD, FOUR LANES.
 
-          {(() => {
-            const loose = onBoard.filter((i) => !(i.section ?? i.aiSection));
-            if (!loose.length) return null;
-            return (
-              <Area
-                title="Just added"
-                blurb="Not sorted anywhere yet, which is fine."
-                count={loose.length}
-                open={!shut.loose}
-                onToggle={() => setShut((c) => ({ ...c, loose: !c.loose }))}
-              >
-                <Masonry
-                  items={loose}
-                  onMove={move}
-                  onRemove={drop_}
-                  onNote={async (item, note) => {
-                    await updateItem(item.id, { note });
-                  }}
-                />
-              </Area>
-            );
-          })()}
+            These used to be four stacked sections, each with its own masonry
+            grid, which is why the page felt like four things instead of one.
+            A collection sorted four ways should look like a collection sorted
+            four ways — connected, side by side, told apart by a half-shade of
+            warmth rather than by four black boxes competing for attention.
+
+            A lane you are not working in folds to a spine. Nothing is deleted,
+            nothing is hidden down a scroll; it is just out of the way.
+          */}
+          <div className="card overflow-hidden">
+            <div className="flex items-stretch">
+              {LANES.map((s, index) => {
+                const items =
+                  s.id === "loose"
+                    ? onBoard.filter((i) => !(i.section ?? i.aiSection))
+                    : onBoard.filter(
+                        (i) => (i.section ?? i.aiSection) === s.id,
+                      );
+                // An empty optional lane is furniture. Only "just added"
+                // earns its place while empty, and only when it has something.
+                if (!items.length && s.id === "loose") return null;
+                const open = !shut[s.id];
+
+                if (!open)
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setShut((c) => ({ ...c, [s.id]: false }))}
+                      title={`Open ${s.name}`}
+                      className={`lane lane-${index % 4} flex w-11 shrink-0 flex-col items-center gap-3 py-4 transition hover:bg-white`}
+                    >
+                      <span className="t-small tabular-nums text-ink-3">
+                        {items.length}
+                      </span>
+                      <span
+                        className="text-[12px] font-semibold tracking-tight text-ink-2"
+                        style={{ writingMode: "vertical-rl" }}
+                      >
+                        {s.name}
+                      </span>
+                    </button>
+                  );
+
+                return (
+                  <div
+                    key={s.id}
+                    className={`lane lane-${index % 4} min-w-0 flex-1`}
+                  >
+                    <button
+                      onClick={() => setShut((c) => ({ ...c, [s.id]: true }))}
+                      title={`Fold ${s.name} away`}
+                      className="group flex w-full items-center gap-2 px-3 py-2.5 text-left"
+                    >
+                      <span className="text-[13px] font-semibold tracking-tight text-ink">
+                        {s.name}
+                      </span>
+                      <span className="t-small tabular-nums text-ink-3">
+                        {items.length}
+                      </span>
+                      <span className="ml-auto text-[11px] leading-none text-transparent transition group-hover:text-ink-3">
+                        fold
+                      </span>
+                    </button>
+
+                    <div className="space-y-2 px-2 pb-3">
+                      {items.length === 0 ? (
+                        <p className="t-small px-1 py-2 text-ink-3">
+                          Nothing here yet.
+                        </p>
+                      ) : (
+                        items.map((item) => (
+                          <Piece
+                            key={item.id}
+                            item={item}
+                            onMove={move}
+                            onRemove={drop_}
+                            onNote={async (it, note) => {
+                              await updateItem(it.id, { note });
+                              setBoard((b) =>
+                                b
+                                  ? {
+                                      ...b,
+                                      items: b.items.map((i) =>
+                                        i.id === it.id ? { ...i, note } : i,
+                                      ),
+                                    }
+                                  : b,
+                              );
+                            }}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -516,13 +566,24 @@ export default function ResearchBoard({
                 for this drop.
               </p>
             ) : (
-              <Masonry
-                items={later}
-                onMove={async (item) => pullBack(item)}
-                onRemove={drop_}
-                pullLabel="Bring into this board"
-                onNote={async (item, note) => updateItem(item.id, { note })}
-              />
+              <div className="grid grid-cols-3 gap-3 md:grid-cols-5 lg:grid-cols-6">
+                {later.map((item) => (
+                  <div key={item.id} className="space-y-1">
+                    <Piece
+                      item={item}
+                      onMove={async (it) => pullBack(it)}
+                      onRemove={drop_}
+                      onNote={async (it, note) => updateItem(it.id, { note })}
+                    />
+                    <button
+                      onClick={() => pullBack(item)}
+                      className="t-small text-ink-3 underline underline-offset-2 transition hover:text-ink"
+                    >
+                      Bring in
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -585,7 +646,7 @@ function AddBar({
           Link
         </button>
         <span className="t-small ml-auto hidden text-ink-3 sm:block">
-          Throw it in — sorting it out is not your job.
+          Sorting it out is not your job.
         </span>
       </div>
 
@@ -649,59 +710,150 @@ function AddBar({
  * and the state is remembered per drop — someone who works mostly in Language
  * should not have to close Colour every time they come back.
  */
-function Area({
-  title,
-  blurb,
-  count,
-  open,
-  onToggle,
-  children,
+/**
+ * A PIECE ON THE BOARD.
+ *
+ * The old card wore the house style: 2px black border, hard offset shadow,
+ * hover lift. Correct for a button, ruinous for thirty images — every piece
+ * shouted at exactly the volume of every other piece, so nothing receded and
+ * the board read as noise.
+ *
+ * Here the image is the object and everything else waits to be asked for. No
+ * border on the picture, a four-word caption, and the controls only appear
+ * under the cursor.
+ */
+function Piece({
+  item,
+  onMove,
+  onRemove,
+  onNote,
 }: {
-  title: string;
-  blurb: string;
-  count: number;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
+  item: BoardItem;
+  onMove: (item: BoardItem, to: Section | null | "later") => Promise<void>;
+  onRemove: (item: BoardItem) => Promise<void>;
+  onNote: (item: BoardItem, note: string) => Promise<void>;
 }) {
+  const [menu, setMenu] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [note, setNote] = useState(item.note);
+
   return (
-    <section className="border-t border-black/12 pt-3.5">
-      <button
-        onClick={onToggle}
-        aria-expanded={open}
-        className="group flex w-full items-baseline gap-x-2.5 text-left"
-      >
-        <span className="t-h3 text-ink">{title}</span>
-        <span className="t-small tabular-nums text-ink-3">{count}</span>
-        <span className="ml-auto shrink-0 text-lg leading-none text-ink-3 transition group-hover:text-ink">
-          {open ? "−" : "+"}
-        </span>
-      </button>
-      {/*
-        The description used to sit on the header line beside the title and the
-        count, so every closed section was three competing pieces of text. It
-        only means anything once you are looking inside, so that is when it
-        appears.
-      */}
-      {open && (
-        <>
-          <p className="t-small mt-0.5 text-ink-3">{blurb}</p>
-          <div className="mt-3">{children}</div>
-        </>
+    <div className="group/piece relative">
+      {item.kind === "image" && item.src && (
+        <img
+          src={item.src}
+          alt=""
+          loading="lazy"
+          className="w-full rounded-lg border border-black/8 object-cover"
+        />
       )}
-    </section>
+
+      {item.kind === "text" && (
+        <p className="rounded-lg border-l-2 border-black/25 bg-white/70 py-1.5 pl-2.5 pr-2 text-[13px] font-medium leading-snug text-ink">
+          {item.body}
+        </p>
+      )}
+
+      {item.kind === "link" && (
+        <a
+          href={item.sourceUrl ?? "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="t-small block font-semibold text-ink underline decoration-black/20 underline-offset-2 hover:decoration-black"
+        >
+          {item.sourceLabel} ↗
+        </a>
+      )}
+
+      {item.note && !editing && <Caption text={item.note} />}
+
+      {editing && (
+        <input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={() => {
+            onNote(item, note);
+            setEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            onNote(item, note);
+            setEditing(false);
+          }}
+          autoFocus
+          placeholder="A note to yourself"
+          className="mt-1 w-full rounded-md border border-black/15 bg-white px-2 py-1 text-[12px] outline-none focus:border-black"
+        />
+      )}
+
+      {/*
+        One control, and it stays invisible until you are actually pointing at
+        the piece. A ••• on every card is thirty pieces of chrome asking to be
+        read before you have looked at a single image.
+      */}
+      <button
+        onClick={() => setMenu((v) => !v)}
+        aria-label="Move, note or remove"
+        className={`absolute right-1 top-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[12px] leading-none text-ink-2 shadow-sm transition ${
+          menu ? "" : "opacity-0 group-hover/piece:opacity-100"
+        }`}
+      >
+        •••
+      </button>
+
+      {menu && (
+        <div className="rise absolute right-1 top-7 z-10 w-40 rounded-lg border border-black/15 bg-white p-1.5 shadow-lg">
+          <p className="eyebrow px-1.5 pb-1 text-ink-3">Move to</p>
+          {SECTIONS.filter((sec) => sec.id !== (item.section ?? item.aiSection)).map(
+            (sec) => (
+              <button
+                key={sec.id}
+                onClick={() => {
+                  onMove(item, sec.id);
+                  setMenu(false);
+                }}
+                className="block w-full rounded px-1.5 py-1 text-left text-[13px] hover:bg-black/5"
+              >
+                {sec.name}
+              </button>
+            ),
+          )}
+          <span className="my-1 block h-px bg-black/10" />
+          <button
+            onClick={() => {
+              onMove(item, "later");
+              setMenu(false);
+            }}
+            className="block w-full rounded px-1.5 py-1 text-left text-[13px] hover:bg-black/5"
+          >
+            Keep for later
+          </button>
+          {item.kind !== "text" && (
+            <button
+              onClick={() => {
+                setEditing(true);
+                setMenu(false);
+              }}
+              className="block w-full rounded px-1.5 py-1 text-left text-[13px] hover:bg-black/5"
+            >
+              {item.note ? "Edit note" : "Add a note"}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              onRemove(item);
+              setMenu(false);
+            }}
+            className="block w-full rounded px-1.5 py-1 text-left text-[13px] text-ink-3 hover:bg-black/5 hover:text-ink"
+          >
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
-/**
- * FOUR WORDS, THEN GET OUT OF THE WAY.
- *
- * Pinterest hands over a title, a description and alt text, and we were
- * printing all three under every image. On a board of thirty pins that is
- * thirty paragraphs of somebody else's SEO copy competing with the images —
- * and the images are the entire point. The words are still there; you just
- * have to ask for them.
- */
 function Caption({ text }: { text: string }) {
   const [full, setFull] = useState(false);
   const words = text.trim().split(/\s+/);
@@ -712,213 +864,12 @@ function Caption({ text }: { text: string }) {
     <button
       onClick={() => long && setFull((v) => !v)}
       title={long && !full ? text : undefined}
-      className={`t-small block w-full text-left text-ink-2 ${
-        long ? "cursor-pointer hover:text-ink" : "cursor-default"
+      className={`mt-1 block w-full text-left text-[11.5px] leading-snug text-ink-3 ${
+        long ? "cursor-pointer hover:text-ink-2" : "cursor-default"
       }`}
     >
       {full || !long ? text : `${words.slice(0, 4).join(" ")}…`}
     </button>
-  );
-}
-
-function Masonry({
-  items,
-  onMove,
-  onRemove,
-  onNote,
-  pullLabel,
-}: {
-  items: BoardItem[];
-  onMove: (item: BoardItem, to: Section | null | "later") => Promise<void>;
-  onRemove: (item: BoardItem) => Promise<void>;
-  onNote: (item: BoardItem, note: string) => Promise<void>;
-  pullLabel?: string;
-}) {
-  return (
-    <div className="columns-2 gap-3 md:columns-3 xl:columns-4 2xl:columns-5 [&>*]:mb-3">
-      {items.map((item, i) => (
-        <Card
-          key={item.id}
-          item={item}
-          height={IMAGE_HEIGHTS[i % IMAGE_HEIGHTS.length]}
-          onMove={onMove}
-          onRemove={onRemove}
-          onNote={onNote}
-          pullLabel={pullLabel}
-        />
-      ))}
-    </div>
-  );
-}
-
-function Card({
-  item,
-  height,
-  onMove,
-  onRemove,
-  onNote,
-  pullLabel,
-}: {
-  item: BoardItem;
-  height: string;
-  onMove: (item: BoardItem, to: Section | null | "later") => Promise<void>;
-  onRemove: (item: BoardItem) => Promise<void>;
-  onNote: (item: BoardItem, note: string) => Promise<void>;
-  pullLabel?: string;
-}) {
-  const [menu, setMenu] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [note, setNote] = useState(item.note);
-
-  const when = new Date(item.createdAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-
-  return (
-    <div className="card card-hover group/card break-inside-avoid overflow-hidden">
-      {item.kind === "image" && item.src && (
-        <img
-          src={item.src}
-          alt=""
-          loading="lazy"
-          className={`w-full ${height} border-b-2 border-black object-cover`}
-        />
-      )}
-
-      <div className="px-2.5 pb-2 pt-2">
-        {item.kind === "text" && (
-          <p className="t-body line-clamp-4 font-semibold leading-snug text-ink">
-            {item.body}
-          </p>
-        )}
-
-        {item.kind === "link" && (
-          <>
-            <a
-              href={item.sourceUrl ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="t-small font-bold underline underline-offset-2"
-            >
-              {item.sourceLabel} ↗
-            </a>
-            {item.note && <Caption text={item.note} />}
-          </>
-        )}
-
-        {item.kind === "image" && item.note && !editing && (
-          <Caption text={item.note} />
-        )}
-
-        {editing && (
-          <div className="mt-1 flex gap-1.5">
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                onNote(item, note);
-                setEditing(false);
-              }}
-              autoFocus
-              placeholder="A note to yourself"
-              className="field !py-1.5 text-[13px]"
-            />
-            <button
-              onClick={() => {
-                onNote(item, note);
-                setEditing(false);
-              }}
-              className="btn btn-ghost !px-2 !py-1 text-[12px]"
-            >
-              Save
-            </button>
-          </div>
-        )}
-
-        {/*
-          The date was printing on every single card, which on a wall of images
-          is thirty pieces of chrome nobody asked for. It appears on hover with
-          the menu — still there when you want it, invisible when you do not.
-        */}
-        <div className="mt-1.5 flex h-4 items-center justify-between">
-          <span className="text-[11px] text-ink-3 opacity-0 transition group-hover/card:opacity-100">
-            {when}
-          </span>
-          <button
-            onClick={() => setMenu((v) => !v)}
-            className={`text-[13px] leading-none text-ink-3 transition hover:text-ink ${
-              menu ? "" : "opacity-0 group-hover/card:opacity-100"
-            }`}
-            aria-label="Move or remove"
-          >
-            •••
-          </button>
-        </div>
-
-        {menu && (
-          <div className="rise mt-2 border-t border-black/10 pt-2">
-            {pullLabel ? (
-              <button
-                onClick={() => {
-                  onMove(item, null);
-                  setMenu(false);
-                }}
-                className="block w-full py-1 text-left text-[13px] font-semibold hover:opacity-70"
-              >
-                {pullLabel}
-              </button>
-            ) : (
-              <>
-                <p className="eyebrow mb-1 text-ink-3">Move to</p>
-                {SECTIONS.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      onMove(item, s.id);
-                      setMenu(false);
-                    }}
-                    className="block w-full py-1 text-left text-[13px] hover:opacity-70"
-                  >
-                    {SECTION_NAME[s.id]}
-                  </button>
-                ))}
-                <button
-                  onClick={() => {
-                    onMove(item, "later");
-                    setMenu(false);
-                  }}
-                  className="block w-full py-1 text-left text-[13px] font-semibold hover:opacity-70"
-                >
-                  Later
-                </button>
-              </>
-            )}
-            {item.kind !== "text" && (
-              <button
-                onClick={() => {
-                  setEditing(true);
-                  setMenu(false);
-                }}
-                className="block w-full py-1 text-left text-[13px] hover:opacity-70"
-              >
-                {item.note ? "Edit note" : "Add a note"}
-              </button>
-            )}
-            <button
-              onClick={() => {
-                onRemove(item);
-                setMenu(false);
-              }}
-              className="block w-full py-1 text-left text-[13px] text-ink-3 hover:text-ink"
-            >
-              Remove
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
   );
 }
 

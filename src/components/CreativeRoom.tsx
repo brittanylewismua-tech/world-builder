@@ -208,16 +208,21 @@ export default function CreativeRoom({
       <div className="min-h-[300px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {ready && msgs.length === 0 && (
           <div>
-            <p className="t-small text-ink-2">
-              I can see the board and everything in your World Profile. Talk to
-              me while you look at it.
+            {/*
+              Openers are offers, not calls to action. As bordered boxes with
+              drop shadows they read as five buttons demanding a decision
+              before you have looked at anything. Grey suggestions you can
+              ignore is what they actually are.
+            */}
+            <p className="t-small text-ink-3">
+              I can see your board. Talk to me while you look at it.
             </p>
-            <div className="mt-4 space-y-2">
+            <div className="mt-3 space-y-0.5">
               {OPENERS.map((o) => (
                 <button
                   key={o}
                   onClick={() => send(o)}
-                  className="block w-full rounded-lg border-2 border-black bg-white px-3 py-2 text-left text-[13px] font-medium leading-snug shadow-[2px_2px_0_rgba(0,0,0,0.15)] transition hover:shadow-[3px_3px_0_var(--accent)]"
+                  className="block w-full rounded-lg px-2.5 py-1.5 text-left text-[13px] leading-snug text-ink-3 transition hover:bg-black/[0.04] hover:text-ink"
                 >
                   {o}
                 </button>

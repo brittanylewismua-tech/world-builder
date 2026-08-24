@@ -373,3 +373,21 @@ body {
   background: #b8b3af;
   background-clip: content-box;
 }
+
+/* --------------------------------------------------- the research lanes
+
+   One board, four lanes. They are not four separate cards — separate cards
+   was the whole problem: four black-bordered boxes stacked down a page reads
+   as four competing objects, and the seller has to work out for herself that
+   they are the same collection sorted four ways.
+
+   So: a single container, and the lanes told apart by a barely-there step in
+   warmth rather than by borders. The eye picks up the boundary without
+   anything having to shout it. */
+.lane + .lane {
+  border-left: 1px solid #00000010;
+}
+.lane-0 { background: #ffffff; }
+.lane-1 { background: #fcfbfa; }
+.lane-2 { background: #f9f7f6; }
+.lane-3 { background: #f5f3f1; }

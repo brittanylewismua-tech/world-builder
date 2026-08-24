@@ -24,6 +24,16 @@ export type ItemKind = "image" | "text" | "link";
 
 export const SECTIONS: { id: Section; name: string; blurb: string }[] = [
   {
+    id: "visual",
+    name: "Design",
+    blurb: "Imagery and styling that keeps turning up.",
+  },
+  {
+    id: "language",
+    name: "Quotes",
+    blurb: "Phrases, jokes, the way she talks.",
+  },
+  {
     id: "structure",
     name: "Structures",
     blurb: "Compositions and layouts you keep noticing.",
@@ -33,23 +43,13 @@ export const SECTIONS: { id: Section; name: string; blurb: string }[] = [
     name: "Colour",
     blurb: "Combinations you keep responding to.",
   },
-  {
-    id: "language",
-    name: "Language",
-    blurb: "Phrases, quotes, jokes, the way she talks.",
-  },
-  {
-    id: "visual",
-    name: "Design inspiration",
-    blurb: "Imagery and styling that keeps turning up.",
-  },
 ];
 
 export const SECTION_NAME: Record<Section, string> = {
+  visual: "Design",
+  language: "Quotes",
   structure: "Structures",
   color: "Colour",
-  language: "Language",
-  visual: "Visual threads",
 };
 
 export interface BoardItem {

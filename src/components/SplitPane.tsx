@@ -203,16 +203,33 @@ export default function SplitPane({
             dragging ? "" : "transition"
           }`}
         >
-          {/* A hairline that thickens when you go near it — a 16px hit area
-              wearing a 2px coat, which is the only way this feels precise
-              without being impossible to grab. */}
+          {/*
+            A grip, not a hairline. The first version was a 2px line at 12%
+            black, which over a patterned wallpaper is invisible — the seller
+            looked for a divider, did not find one, and reasonably concluded
+            there was not one. If a control cannot be found it does not exist.
+          */}
           <span
-            className={`absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 rounded-full transition ${
-              dragging
-                ? "bg-black"
-                : "bg-black/12 group-hover:bg-black/40 group-focus-visible:bg-black"
+            className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 ${
+              dragging ? "bg-black/30" : "bg-black/12"
             }`}
           />
+          <span
+            className={`absolute left-1/2 top-1/2 flex h-9 w-[7px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-[3px] rounded-full border transition ${
+              dragging
+                ? "border-black bg-black"
+                : "border-black/25 bg-white group-hover:border-black group-focus-visible:border-black"
+            }`}
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className={`h-[3px] w-[3px] rounded-full ${
+                  dragging ? "bg-white" : "bg-black/40"
+                }`}
+              />
+            ))}
+          </span>
         </div>
       </div>
 
