@@ -341,7 +341,15 @@ export default function ResearchBoard({
         right={
           <div className="pb-8">
 
-      {/* ------------------------------------------------------ add */}
+      {/*
+        ONE LINE OF CONTROLS.
+
+        Adding, reading the patterns and folding the lanes were three separate
+        rows, two of them inside black-bordered cards. Three rows of furniture
+        before you reach a single image is the reason the page felt like work
+        rather than like a place to think.
+      */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
       <AddBar
         busy={busy}
         onImages={() => fileInput.current?.click()}
@@ -368,6 +376,40 @@ export default function ResearchBoard({
         className="hidden"
       />
 
+        {onBoard.length >= 4 && (
+          <span className="flex items-center gap-3">
+            <button
+              onClick={look}
+              disabled={thinking}
+              className="t-small font-semibold text-accent-ink underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
+            >
+              {thinking ? "Looking across the board…" : "Show me the patterns"}
+            </button>
+            {board.findings.length > 0 && !thinking && (
+              <button
+                onClick={() => setShowFindings((v) => !v)}
+                className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
+              >
+                {showFindings ? "Back to the board" : `${board.findings.length} found`}
+              </button>
+            )}
+          </span>
+        )}
+
+        <button
+          onClick={() =>
+            setShut((c) =>
+              Object.values(c).some(Boolean)
+                ? {}
+                : Object.fromEntries(SECTIONS.map((x) => [x.id, true])),
+            )
+          }
+          className="t-small ml-auto text-ink-3 underline underline-offset-2 transition hover:text-ink"
+        >
+          {Object.values(shut).some(Boolean) ? "Open all" : "Fold all"}
+        </button>
+      </div>
+
 
       {showFindings && board.findings.length > 0 && (
         <Findings
@@ -393,45 +435,6 @@ export default function ResearchBoard({
             open/close pair pushed to the right where they belong with the
             sections they operate on. These were three separate rows.
           */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-black/12 pb-3">
-            {onBoard.length >= 4 && (
-              <>
-                <button
-                  onClick={look}
-                  disabled={thinking}
-                  className="btn btn-primary"
-                >
-                  {thinking ? "Looking…" : "Show me the patterns"}
-                </button>
-                {board.findings.length > 0 && !thinking && (
-                  <button
-                    onClick={() => setShowFindings((v) => !v)}
-                    className="t-small underline underline-offset-4 hover:opacity-70"
-                  >
-                    {showFindings
-                      ? "Back to the board"
-                      : `${board.findings.length} found`}
-                  </button>
-                )}
-              </>
-            )}
-            <span className="ml-auto flex items-center gap-3">
-              <button
-                onClick={() => setShut({})}
-                className="t-small text-ink-3 underline underline-offset-2 transition hover:text-ink"
-              >
-                Open all
-              </button>
-              <button
-                onClick={() =>
-                  setShut(Object.fromEntries(SECTIONS.map((s) => [s.id, true])))
-                }
-                className="t-small text-ink-3 underline underline-offset-2 transition hover:text-ink"
-              >
-                Close all
-              </button>
-            </span>
-          </div>
 
           {/*
             ONE BOARD, FOUR LANES.
@@ -457,7 +460,13 @@ export default function ResearchBoard({
                 // An empty optional lane is furniture. Only "just added"
                 // earns its place while empty, and only when it has something.
                 if (!items.length && s.id === "loose") return null;
-                const open = !shut[s.id];
+                /*
+                  An empty lane folds itself. A quarter of the board saying
+                  "Nothing here yet" is a quarter of the board spent telling
+                  the seller about an absence she can already see. It reopens
+                  the moment something lands in it.
+                */
+                const open = !shut[s.id] && items.length > 0;
 
                 if (!open)
                   return (
@@ -501,12 +510,7 @@ export default function ResearchBoard({
                     </button>
 
                     <div className="space-y-2 px-2 pb-3">
-                      {items.length === 0 ? (
-                        <p className="t-small px-1 py-2 text-ink-3">
-                          Nothing here yet.
-                        </p>
-                      ) : (
-                        items.map((item) => (
+                      {items.map((item) => (
                           <Piece
                             key={item.id}
                             item={item}
@@ -526,8 +530,7 @@ export default function ResearchBoard({
                               );
                             }}
                           />
-                        ))
-                      )}
+                      ))}
                     </div>
                   </div>
                 );
@@ -626,28 +629,34 @@ function AddBar({
     setMode("none");
   }
 
+  /*
+    This was a black-bordered card holding a pink button, sitting directly
+    above a black-bordered board holding a black button — the two loudest
+    things on the page were the furniture, not the work. Adding to a board is
+    a small, frequent, unremarkable act. It gets a quiet strip.
+  */
+  const chip =
+    "rounded-lg border border-black/15 bg-white px-2.5 py-1.5 text-[13px] font-medium text-ink-2 transition hover:border-black hover:text-ink";
+
   return (
-    <div className="card p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="eyebrow mr-1 text-ink-3">Add to board</span>
-        <button onClick={onImages} className="btn btn-accent" disabled={!!busy}>
+    <div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="t-small mr-1 text-ink-3">Add</span>
+        <button onClick={onImages} className={chip} disabled={!!busy}>
           {busy || "Image"}
         </button>
         <button
           onClick={() => setMode(mode === "text" ? "none" : "text")}
-          className={`btn ${mode === "text" ? "btn-primary" : "btn-ghost"}`}
+          className={`${chip} ${mode === "text" ? "!border-black !text-ink" : ""}`}
         >
-          Write something
+          Words
         </button>
         <button
           onClick={() => setMode(mode === "link" ? "none" : "link")}
-          className={`btn ${mode === "link" ? "btn-primary" : "btn-ghost"}`}
+          className={`${chip} ${mode === "link" ? "!border-black !text-ink" : ""}`}
         >
           Link
         </button>
-        <span className="t-small ml-auto hidden text-ink-3 sm:block">
-          Sorting it out is not your job.
-        </span>
       </div>
 
       {mode !== "none" && (

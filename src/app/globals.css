@@ -387,7 +387,10 @@ body {
 .lane + .lane {
   border-left: 1px solid #00000010;
 }
+/* Not a gradient — a gradient reads as one thing fading, and these are four
+   different things. Four faint tints, each its own temperature, all light
+   enough that the images stay the loudest thing in the lane. */
 .lane-0 { background: #ffffff; }
-.lane-1 { background: #fcfbfa; }
-.lane-2 { background: #f9f7f6; }
-.lane-3 { background: #f5f3f1; }
+.lane-1 { background: #fbf8f4; }
+.lane-2 { background: #f6f8f9; }
+.lane-3 { background: #fdf5f9; }
