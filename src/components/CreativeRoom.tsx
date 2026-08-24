@@ -37,7 +37,6 @@ const OPENERS = [
   "Summarise the decisions I have already made about this drop.",
 ];
 
-/** Fetch signed mockup URLs and shrink them for the vision call. */
 /**
  * Encode the board once, not once per message.
  *
@@ -49,10 +48,22 @@ const OPENERS = [
  */
 const encoded = new Map<string, string>();
 
-async function boardImages(drop: Drop): Promise<string[]> {
-  const sorted = [...drop.items].sort((a, b) => a.slot - b.slot).slice(0, 10);
+/**
+ * The room has to be able to SEE whatever it is being asked about.
+ *
+ * On the build tab that is the mockups in their slots. On the research tab it
+ * is the pins on the board — and until now the room was handed the research
+ * drop, which has no mockups at all, so the one place meant to look at your
+ * collection was looking at ten empty squares. It read the written analysis
+ * and pretended. Now it is given whichever set is actually in front of the
+ * seller.
+ */
+async function encodeAll(
+  sources: { id: string; src: string | null }[],
+): Promise<string[]> {
   const out: string[] = [];
-  for (const item of sorted) {
+  for (const item of sources.slice(0, 12)) {
+    if (!item.src) continue;
     const hit = encoded.get(item.id);
     if (hit) {
       out.push(hit);
@@ -78,21 +89,38 @@ async function boardImages(drop: Drop): Promise<string[]> {
       encoded.set(item.id, b64);
       out.push(b64);
     } catch {
-      // A mockup that will not load is not worth failing the whole message over.
+      // One image that will not load is not worth failing the whole message.
     }
   }
   return out;
+}
+
+/** The mockups in a drop, in slot order. */
+function mockupSources(drop: Drop) {
+  return [...drop.items]
+    .sort((a, b) => a.slot - b.slot)
+    .slice(0, 10)
+    .map((i) => ({ id: i.id, src: i.src }));
 }
 
 export default function CreativeRoom({
   world,
   drop,
   drops = [],
+  looksAt,
+  subject = "mockups",
 }: {
   world: World;
   drop: Drop;
   /** Everything released so far, so the Room knows the world's history. */
   drops?: Drop[];
+  /**
+   * What the room should actually look at. Left out on the build tab, where
+   * the mockups in the drop are the subject; passed on the research tab,
+   * where the pins are.
+   */
+  looksAt?: { id: string; src: string | null }[];
+  subject?: "mockups" | "pins";
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
@@ -124,7 +152,8 @@ export default function CreativeRoom({
     setBusy(true);
     setErr("");
     try {
-      const images = await boardImages(drop);
+      const sources = looksAt ?? mockupSources(drop);
+      const images = await encodeAll(sources);
       const j = await askAI<{ text: string }>("/api/creative-room", {
         messages: recent(next),
         context: [
@@ -137,9 +166,13 @@ export default function CreativeRoom({
             boardFor: drop.id,
           }),
           "",
-          drop.items.length
-            ? `The images attached to this message are the ${drop.items.length} mockup${drop.items.length === 1 ? "" : "s"} on the board right now, in slot order.`
-            : "The board is still empty.",
+          images.length
+            ? subject === "pins"
+              ? `The ${images.length} image${images.length === 1 ? "" : "s"} attached to this message are the pieces collected on this research board. They are references and things noticed — not the seller's own designs, and not decisions.`
+              : `The images attached to this message are the ${images.length} mockup${images.length === 1 ? "" : "s"} on the board right now, in slot order.`
+            : subject === "pins"
+              ? "Nothing has been collected on this board yet."
+              : "The board is still empty.",
         ].join("\n"),
         images,
       });
@@ -161,8 +194,14 @@ export default function CreativeRoom({
         <Star size={9} className="text-accent" />
         <span className="eyebrow">creative room</span>
         <span className="ml-auto text-[11px] text-ink-3">
-          Drop {String(drop.number).padStart(2, "0")} · {drop.items.length}/
-          {world.slotsPerDrop}
+          {/*
+            On the research tab the drop has no mockups yet, so a "0/10" here
+            read as a warning about work not done rather than as information.
+            Count what is actually in front of us instead.
+          */}
+          {subject === "pins"
+            ? `Drop ${String(drop.number).padStart(2, "0")} research`
+            : `Drop ${String(drop.number).padStart(2, "0")} · ${drop.items.length}/${world.slotsPerDrop}`}
         </span>
       </div>
 

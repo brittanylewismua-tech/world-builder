@@ -57,13 +57,21 @@ const IMAGE_HEIGHTS = ["h-44", "h-60", "h-52", "h-72", "h-48"];
 export default function ResearchBoard({
   world,
   drop,
-  chat,
+  talk: Talk,
 }: {
   world: World;
   /** The drop this research is *for* — the one after the one being built. */
   drop: Drop;
-  /** The Creative Room, rendered by the page and placed beside the board. */
-  chat?: React.ReactNode;
+  /**
+   * The conversation panel. Given as a component rather than an element so
+   * the board can hand it the pieces currently on the board — the room has to
+   * be able to see what the seller is looking at.
+   */
+  talk?: React.ComponentType<{
+    world: World;
+    drop: Drop;
+    pins: { id: string; src: string | null }[];
+  }>;
 }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [later, setLater] = useState<BoardItem[]>([]);
@@ -269,19 +277,13 @@ export default function ResearchBoard({
         <span className="rule-accent mt-3" />
       </header>
 
-      {err && <p className="note t-small mb-4 px-4 py-3 text-ink-2">{err}</p>}
-
-      {/*
-        Two columns: the material on the left with its own scroll, the
-        conversation on the right holding still. On a narrow screen they
-        stack, board first, because on a phone you are collecting rather
-        than deliberating.
-      */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
-        <div className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
-
       {/* ------------------------------------------------------ intention */}
-      <div className="mb-5">
+      {/*
+        Lifted out of the left column deliberately. It used to scroll away with
+        the images, which is exactly backwards — it is the sentence everything
+        below is read through, so it stays in sight above both columns.
+      */}
+      <div className="mb-5 max-w-3xl">
         {/*
           This is not a title. Whatever is written here is handed to the AI as
           the seller's own statement of intent, so the Creative Room and the
@@ -303,6 +305,17 @@ export default function ResearchBoard({
           below gets read — leave it blank until you know.
         </p>
       </div>
+
+      {err && <p className="note t-small mb-4 px-4 py-3 text-ink-2">{err}</p>}
+
+      {/*
+        Two columns: the material on the left with its own scroll, the
+        conversation on the right holding still. On a narrow screen they
+        stack, board first, because on a phone you are collecting rather
+        than deliberating.
+      */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)] lg:items-start">
+        <div className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
 
       {/* ------------------------------------------------------ add */}
       <AddBar
@@ -497,9 +510,13 @@ export default function ResearchBoard({
           The conversation. Given its own height so it behaves like a room you
           are sitting in rather than a box at the bottom of a long page.
         */}
-        {chat && (
+        {Talk && (
           <div className="lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)]">
-            {chat}
+            <Talk
+              world={world}
+              drop={drop}
+              pins={onBoard.map((i) => ({ id: i.id, src: i.src }))}
+            />
           </div>
         )}
       </div>

@@ -19,7 +19,6 @@ const NAV = [
   { href: "/home", label: "home", hint: "where you are today" },
   { href: "/daily", label: "world daily", hint: "stay immersed" },
   { href: "/studio", label: "drop studio", hint: "build the work" },
-  { href: "/customer", label: "talk to the customer", hint: "think like her" },
   { href: "/history", label: "drop history", hint: "what you released" },
   { href: "/profile", label: "world profile", hint: "your foundation" },
 ];

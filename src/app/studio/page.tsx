@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import DropBoard from "@/components/DropBoard";
 import CreativeRoom from "@/components/CreativeRoom";
+import ResearchTalk from "@/components/ResearchTalk";
 import { useWorld } from "@/lib/useWorld";
 import { saveWorld, setShopBanner } from "@/lib/api";
 import {
@@ -288,11 +289,7 @@ function StudioBody({ world }: { world: World }) {
         being built — a different conversation about a different week.
       */}
       {tab === "research" && next && (
-        <ResearchBoard
-          world={world}
-          drop={next}
-          chat={<CreativeRoom world={world} drop={next} drops={drops} />}
-        />
+        <ResearchBoard world={world} drop={next} talk={ResearchTalk} />
       )}
 
       <div
