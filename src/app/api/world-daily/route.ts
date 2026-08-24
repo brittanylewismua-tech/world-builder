@@ -6,6 +6,50 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
+
+/**
+ * WHO DOES THE READING.
+ *
+ * A paper costs about 37 cents and roughly three quarters of that is one
+ * unglamorous job: reading ninety thousand tokens of web pages. That is not
+ * work that needs the expensive model — it needs eyes, not taste.
+ *
+ * So the reading is done by a small model whose only instruction is to write
+ * down what it sees, verbatim and generously, without deciding what matters.
+ * The judgment — what is printable, what is padding, what a seller can
+ * actually use — stays with the good model, reading a few thousand tokens of
+ * notes instead of a hundred thousand tokens of HTML.
+ *
+ * Set WB_SCOUT to a model name to change the reader, or to "off" to go back
+ * to one model doing both jobs.
+ */
+const SCOUT = process.env.WB_SCOUT || "claude-haiku-4-5-20251001";
+const TWO_STAGE = SCOUT !== "off";
+
+/**
+ * The scout captures; it never curates. Every instruction here is about
+ * writing things down faithfully, because the moment a cheap model starts
+ * deciding what is interesting, the expensive model is judging a summary of
+ * somebody else's judgment and the quality that was just fixed goes away.
+ */
+const SCOUT_SYSTEM = `You are the reader for a print-on-demand seller's research. You search, and you write down what you find. You do not decide what is important — someone else does that.
+
+WHAT TO WRITE DOWN, GENEROUSLY
+- Exact wording. Captions, sayings, in-jokes, quoted lines, comebacks, words on signs, what people call themselves and each other. Quote them EXACTLY, with the quotation marks. This is the most important thing you do.
+- What things look like. Typeface treatments, layouts, colour pairings, recurring symbols and motifs, how text is being set.
+- Objects and symbols that keep appearing.
+- Dated moments people gift around or dress for.
+- Who is saying it and where, and roughly how widely it is spreading.
+
+HOW TO WRITE IT
+Plain notes. One observation per line, starting with the source URL in square brackets. Never summarise several posts into a general statement — "people are talking about modesty" is worthless, whereas "Modesty comes with conviction" appearing as a caption is worth everything. Specifics only.
+
+Write down anything that is language or imagery, even when you are unsure it matters. Being over-inclusive costs nothing here. Leaving something out means nobody downstream can ever see it.
+
+Do not write conclusions, recommendations, or opinions about what the seller should make. Notes only.
+
+SEARCH LIKE AN INSIDER
+Start with TikTok, then Reels, Shorts and comments. Search the way the culture talks about itself, not the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which are useless here.`;
 const TARGET_ITEMS = 5;
 
 /**
@@ -180,45 +224,107 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const began = Date.now();
+
+    /* ------------------------------------------------------------ */
+    /* stage one — the reading                                        */
+    /* ------------------------------------------------------------ */
+
+    const realUrls = new Set<string>();
+    let notes = "";
+
+    if (TWO_STAGE) {
+      const scoutBegan = Date.now();
+      const scout = await client.messages.create({
+        model: SCOUT,
+        max_tokens: 8000,
+        system: SCOUT_SYSTEM,
+        tools: [
+          {
+            type: "web_search_20250305",
+            name: "web_search",
+            max_uses: 6,
+          } as unknown as Anthropic.Tool,
+        ],
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      for (const block of scout.content) {
+        const b = block as unknown as {
+          type: string;
+          content?: { url?: string }[];
+        };
+        if (b.type === "web_search_tool_result" && Array.isArray(b.content))
+          for (const r of b.content) if (r.url) realUrls.add(r.url);
+      }
+
+      notes = scout.content
+        .map((b) => (b.type === "text" ? b.text : ""))
+        .join("")
+        .trim();
+
+      meter("daily", door.caller.userId, {
+        model: SCOUT,
+        ...scout.usage,
+        web_searches:
+          (
+            scout.usage as unknown as {
+              server_tool_use?: { web_search_requests?: number };
+            }
+          )?.server_tool_use?.web_search_requests ?? 0,
+        ms: Date.now() - scoutBegan,
+      });
+    }
+
+    /* ------------------------------------------------------------ */
+    /* stage two — the judgment                                       */
+    /* ------------------------------------------------------------ */
+
+    const judgeBegan = Date.now();
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 6000,
       system: SYSTEM,
-      tools: [
+      tools: TWO_STAGE
+        ? [PUBLISH_TOOL as unknown as Anthropic.Tool]
+        : [
+            {
+              type: "web_search_20250305",
+              name: "web_search",
+              max_uses: 6,
+            } as unknown as Anthropic.Tool,
+            PUBLISH_TOOL as unknown as Anthropic.Tool,
+          ],
+      messages: [
         {
-          type: "web_search_20250305",
-          name: "web_search",
-          /*
-            Six, not twelve. Told to hunt for language rather than news, the
-            model searches harder — nine searches and 168k tokens read, which
-            was better material at two-thirds more cost. The ceiling keeps a
-            good instinct from becoming an expensive one.
-          */
-          max_uses: 6,
-        } as unknown as Anthropic.Tool,
-        PUBLISH_TOOL as unknown as Anthropic.Tool,
+          role: "user",
+          content: TWO_STAGE
+            ? `${prompt}
+
+The searching has already been done. Below are raw field notes, written down without judgement — that job is yours. Most of it will not pass the test, which is expected and is the whole reason you are reading it rather than the web. Cite only URLs that appear in these notes.
+
+--- FIELD NOTES ---
+${notes || "(nothing came back)"}`
+            : prompt,
+        },
       ],
-      messages: [{ role: "user", content: prompt }],
     });
 
-    /*
-      The most expensive call in the product: a long generation on top of up
-      to twelve live web searches, once per seller per day. If a price is
-      going to be wrong anywhere, it will be wrong here — so the searches are
-      counted alongside the tokens.
-    */
-    const searchCount =
-      (res.usage as unknown as { server_tool_use?: { web_search_requests?: number } })
-        ?.server_tool_use?.web_search_requests ?? 0;
     meter("daily", door.caller.userId, {
       model: MODEL,
       ...res.usage,
-      web_searches: searchCount,
-      ms: Date.now() - began,
+      web_searches:
+        (
+          res.usage as unknown as {
+            server_tool_use?: { web_search_requests?: number };
+          }
+        )?.server_tool_use?.web_search_requests ?? 0,
+      ms: Date.now() - judgeBegan,
     });
 
-    // Collect every URL the search tool genuinely returned.
-    const realUrls = new Set<string>();
+    // Collect every URL the search tool genuinely returned. In two-stage mode
+    // the searching happened in stage one, so this adds nothing and the set
+    // built there is what citations are checked against — the guarantee that
+    // no source is invented survives the split unchanged.
     for (const block of res.content) {
       const b = block as unknown as {
         type: string;
