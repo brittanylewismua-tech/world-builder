@@ -298,13 +298,19 @@ export default function ResearchBoard({
         below, which is three rows of furniture around a field most people
         leave blank. The placeholder says everything the paragraph did.
       */}
-      <div className="mb-5 max-w-3xl">
+      <div className="mb-5 max-w-2xl">
+        {/*
+          A full bordered field, empty, was the largest object on a page whose
+          subject is images. It is an optional sentence, so it looks like a
+          sentence — a line you write on, not a box you must fill.
+        */}
         <input
           value={intent}
           onChange={(e) => setIntent(e.target.value)}
           onBlur={() => setIntention(board.id, intent)}
-          placeholder="What are you going for? e.g. quieter than last week, less pastel, leaning funny — the AI reads the whole board through this"
-          className="field"
+          placeholder="What are you going for this week?"
+          title="Whatever you write here is how the AI reads the whole board"
+          className="w-full border-0 border-b border-black/15 bg-transparent px-0 py-1.5 text-[15px] text-ink outline-none transition placeholder:text-ink-3 focus:border-black"
         />
       </div>
 
