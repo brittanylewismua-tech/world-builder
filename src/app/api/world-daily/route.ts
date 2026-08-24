@@ -36,7 +36,7 @@ const SCOUT_SYSTEM = `You are the reader for a print-on-demand seller's research
 
 WHAT TO WRITE DOWN, GENEROUSLY
 - Exact wording. Captions, sayings, in-jokes, quoted lines, comebacks, words on signs, what people call themselves and each other. Quote them EXACTLY, with the quotation marks. This is the most important thing you do.
-- What things look like. Typeface treatments, layouts, colour pairings, recurring symbols and motifs, how text is being set.
+- What things look like. How the lettering is drawn, how it is laid out, which colours are paired, what imagery keeps appearing, how the text sits on the page.
 - Objects and symbols that keep appearing.
 - Dated moments people gift around or dress for.
 - Who is saying it and where, and roughly how widely it is spreading.
@@ -82,7 +82,7 @@ Hunt for language most of all. The exact words people use about themselves, the 
 
 WHAT PASSES
 - phrase — exact wording being repeated: a caption, a saying, an in-joke, a quoted line used as a self-description, a comeback, words on a sign. Quote them exactly. This is by far the most valuable kind, and an issue that is mostly phrases is a good issue.
-- visual — a graphic move you can see and reproduce: a typeface treatment, a layout convention, a colour pairing, a recurring motif or symbol, a way text is being set.
+- visual — something you could look at and redraw: how the lettering is styled, how a design is laid out, a colour pairing, imagery or a symbol that keeps appearing. Describe it plainly, the way a designer talks — never "motif", "treatment" or "visual language".
 - object — a specific thing this world keeps depicting or naming, that could be drawn: a prop, a symbol, an animal, a plant, a tool, a food.
 - humour — a joke format or running bit, quoted.
 - aesthetic — a nameable micro-aesthetic with visual rules you can actually describe.

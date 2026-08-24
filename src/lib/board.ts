@@ -40,8 +40,8 @@ export const SECTIONS: { id: Section; name: string; blurb: string }[] = [
   },
   {
     id: "visual",
-    name: "Visual threads",
-    blurb: "Motifs and treatments that recur.",
+    name: "Design inspiration",
+    blurb: "Imagery and styling that keeps turning up.",
   },
 ];
 

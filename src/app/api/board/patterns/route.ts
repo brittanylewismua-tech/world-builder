@@ -34,7 +34,7 @@ They saved each piece one at a time, over days, without tracking what any of it 
 
 TWO KINDS OF OBSERVATION
 
-PATTERN — something repeated across separate items. A composition saved three times. A colour pairing that keeps reappearing. Several phrases sharing an emotional register or a joke structure. A motif turning up in unrelated images. Name the specific thing, not the category: "small centred statement surrounded by empty space" rather than "typography".
+PATTERN — something repeated across separate items. A composition saved three times. A colour pairing that keeps reappearing. Several phrases sharing an emotional register or a joke structure. The same imagery turning up in unrelated pictures. Name the specific thing, not the category: "small centred statement surrounded by empty space" rather than "typography". Write it the way a designer would say it out loud to a friend. Never "motif", "treatment", "visual language" or "design elements" — that is the vocabulary of a report, not of somebody making things.
 
 COLLISION — two or three threads from different parts of the board that could interestingly sit together. Name the ingredients and stop. "Pre-event exhaustion + romantic rose imagery + serious setup with an insider punchline" is a finished collision. Do not describe a product, a garment, a colourway or any wording. The seller decides what it becomes.
 

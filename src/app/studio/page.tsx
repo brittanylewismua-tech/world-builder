@@ -281,8 +281,18 @@ function StudioBody({ world }: { world: World }) {
         )}
       </div>
 
+      {/*
+        The Creative Room is handed to the board rather than rendered
+        separately, so the seller looks at their material and talks about it in
+        the same place. It is pointed at the drop being researched, not the one
+        being built — a different conversation about a different week.
+      */}
       {tab === "research" && next && (
-        <ResearchBoard world={world} drop={next} />
+        <ResearchBoard
+          world={world}
+          drop={next}
+          chat={<CreativeRoom world={world} drop={next} drops={drops} />}
+        />
       )}
 
       <div

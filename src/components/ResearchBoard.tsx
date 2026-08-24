@@ -41,19 +41,58 @@ import { Dots, Star } from "./ui";
 
 const IMAGE_HEIGHTS = ["h-44", "h-60", "h-52", "h-72", "h-48"];
 
+/**
+ * THE BOARD SITS BESIDE THE CONVERSATION.
+ *
+ * Everything used to be stacked down one page: intention, then the add bar,
+ * then findings, then four open sections of images, and the Creative Room
+ * somewhere else entirely. Judging a collection that way means scrolling past
+ * most of it to see any of it, and the thinking happens on a different screen
+ * from the material it is about.
+ *
+ * So the material is a panel on the left, scrolling on its own, with each
+ * category opening and closing. The conversation holds the rest of the space
+ * and never moves. You look and you talk in the same place.
+ */
 export default function ResearchBoard({
   world,
   drop,
+  chat,
 }: {
   world: World;
   /** The drop this research is *for* — the one after the one being built. */
   drop: Drop;
+  /** The Creative Room, rendered by the page and placed beside the board. */
+  chat?: React.ReactNode;
 }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [later, setLater] = useState<BoardItem[]>([]);
   const [showLater, setShowLater] = useState(false);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
+  /*
+    Which sections are shut, remembered per drop so the board opens the way
+    they left it. Kept in the browser rather than the database — it is a view
+    preference, not part of the world.
+  */
+  const [shut, setShut] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`wb-shut-${drop.id}`);
+      if (saved) setShut(JSON.parse(saved));
+    } catch {
+      /* a broken preference is not worth an error */
+    }
+  }, [drop.id]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`wb-shut-${drop.id}`, JSON.stringify(shut));
+    } catch {
+      /* private browsing, quota, and other things that do not matter here */
+    }
+  }, [shut, drop.id]);
   const [thinking, setThinking] = useState(false);
   const [showFindings, setShowFindings] = useState(false);
   const [intent, setIntent] = useState("");
@@ -232,18 +271,37 @@ export default function ResearchBoard({
 
       {err && <p className="note t-small mb-4 px-4 py-3 text-ink-2">{err}</p>}
 
+      {/*
+        Two columns: the material on the left with its own scroll, the
+        conversation on the right holding still. On a narrow screen they
+        stack, board first, because on a phone you are collecting rather
+        than deliberating.
+      */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
+        <div className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
+
       {/* ------------------------------------------------------ intention */}
       <div className="mb-5">
+        {/*
+          This is not a title. Whatever is written here is handed to the AI as
+          the seller's own statement of intent, so the Creative Room and the
+          pattern reading interpret the board through it. The label has to say
+          that, or it reads as a name field and gets left blank.
+        */}
         <label className="eyebrow mb-1.5 block text-ink-3">
-          What are you exploring next week?
+          Tell the AI what you are going for
         </label>
         <input
           value={intent}
           onChange={(e) => setIntent(e.target.value)}
           onBlur={() => setIntention(board.id, intent)}
-          placeholder="Optional — a direction, a feeling, a keyword you validated. Leave it blank if you do not know yet."
+          placeholder="Optional — e.g. quieter than last week, less pastel, leaning funny"
           className="field"
         />
+        <p className="t-small mt-1.5 text-ink-3">
+          Not a name for the drop. Whatever you put here changes how everything
+          below gets read — leave it blank until you know.
+        </p>
       </div>
 
       {/* ------------------------------------------------------ add */}
@@ -311,14 +369,40 @@ export default function ResearchBoard({
       {onBoard.length === 0 ? (
         <Empty onStart={() => fileInput.current?.click()} number={drop.number} />
       ) : (
-        <div className="mt-7 space-y-8">
+        <div className="mt-7 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShut({})}
+              className="t-small font-medium text-ink-3 underline underline-offset-2 transition hover:text-ink"
+            >
+              Open everything
+            </button>
+            <button
+              onClick={() =>
+                setShut(Object.fromEntries(SECTIONS.map((s) => [s.id, true])))
+              }
+              className="t-small font-medium text-ink-3 underline underline-offset-2 transition hover:text-ink"
+            >
+              Close everything
+            </button>
+          </div>
+
           {SECTIONS.map((s) => {
             const items = onBoard.filter(
               (i) => (i.section ?? i.aiSection) === s.id,
             );
             if (!items.length) return null;
             return (
-              <Area key={s.id} title={s.name} blurb={s.blurb}>
+              <Area
+                key={s.id}
+                title={s.name}
+                blurb={s.blurb}
+                count={items.length}
+                open={!shut[s.id]}
+                onToggle={() =>
+                  setShut((c) => ({ ...c, [s.id]: !c[s.id] }))
+                }
+              >
                 <Masonry
                   items={items}
                   onMove={move}
@@ -348,6 +432,9 @@ export default function ResearchBoard({
               <Area
                 title="Just added"
                 blurb="Not sorted anywhere yet, which is fine."
+                count={loose.length}
+                open={!shut.loose}
+                onToggle={() => setShut((c) => ({ ...c, loose: !c.loose }))}
               >
                 <Masonry
                   items={loose}
@@ -400,6 +487,19 @@ export default function ResearchBoard({
                 onNote={async (item, note) => updateItem(item.id, { note })}
               />
             )}
+          </div>
+        )}
+      </div>
+
+        </div>
+
+        {/*
+          The conversation. Given its own height so it behaves like a room you
+          are sitting in rather than a box at the bottom of a long page.
+        */}
+        {chat && (
+          <div className="lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)]">
+            {chat}
           </div>
         )}
       </div>
@@ -512,22 +612,45 @@ function AddBar({
   );
 }
 
+/**
+ * A section you can shut.
+ *
+ * Everything was stacked open, so a board with any weight to it became a long
+ * scroll and you could never see the shape of the whole thing at once. The
+ * count sits in the header so a closed section still tells you what is inside,
+ * and the state is remembered per drop — someone who works mostly in Language
+ * should not have to close Colour every time they come back.
+ */
 function Area({
   title,
   blurb,
+  count,
+  open,
+  onToggle,
   children,
 }: {
   title: string;
   blurb: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-baseline gap-x-3">
-        <h3 className="t-h3">{title}</h3>
-        <span className="t-small text-ink-3">{blurb}</span>
-      </div>
-      {children}
+    <section className="border-t border-black/12 pt-4">
+      <button
+        onClick={onToggle}
+        aria-expanded={open}
+        className="group flex w-full items-baseline gap-x-3 text-left"
+      >
+        <span className="t-h3 text-ink">{title}</span>
+        <span className="t-small tabular-nums text-ink-3">{count}</span>
+        <span className="t-small hidden text-ink-3 sm:inline">{blurb}</span>
+        <span className="ml-auto shrink-0 text-lg leading-none text-ink-3 transition group-hover:text-ink">
+          {open ? "−" : "+"}
+        </span>
+      </button>
+      {open && <div className="mt-3">{children}</div>}
     </section>
   );
 }

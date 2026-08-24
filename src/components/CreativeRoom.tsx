@@ -23,10 +23,15 @@ import { Star } from "./ui";
  * waiting to be pointed at a board. That quietly hands creative authority to
  * the AI. These ask it to help the seller see what is already in front of
  * them instead.
+ *
+ * One of these used to ask where they were repeating themselves. That is the
+ * wrong instinct for this business: on Etsy, variations of something that
+ * works are how a shop grows, and a drop that hangs together is a collection
+ * rather than a mistake. Repetition is a strategy here, not a smell.
  */
 const OPENERS = [
   "What patterns do you notice across these designs?",
-  "Where am I repeating the same composition?",
+  "What is the strongest thing on this board, and why?",
   "What feels visually underrepresented here?",
   "What have I saved for next week that might be influencing this?",
   "Summarise the decisions I have already made about this drop.",
