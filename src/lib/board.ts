@@ -62,7 +62,17 @@ export interface BoardItem {
   sourceUrl: string | null;
   sourceLabel: string | null;
   note: string;
-  section: Section | null;
+  /**
+   * Every lane this piece sits in. A tee saved for its quote and its layout
+   * belongs in both, and asking the seller which one "really" counts is a
+   * question with no honest answer.
+   */
+  sections: Section[];
+  /**
+   * What the AI would have guessed. A suggestion shown during sorting and
+   * nothing more — it never files anything, because it can see what a pin is
+   * but not why this seller saved it.
+   */
   aiSection: Section | null;
   later: boolean;
   ai: Record<string, unknown>;
@@ -102,7 +112,7 @@ interface ItemRow {
   source_url: string | null;
   source_label: string | null;
   note: string;
-  section: Section | null;
+  sections: Section[] | null;
   ai_section: Section | null;
   later: boolean;
   ai: Record<string, unknown>;
@@ -130,7 +140,7 @@ async function signAll(rows: ItemRow[]): Promise<BoardItem[]> {
     sourceUrl: r.source_url,
     sourceLabel: r.source_label,
     note: r.note,
-    section: r.section,
+    sections: r.sections ?? [],
     aiSection: r.ai_section,
     later: r.later,
     ai: r.ai ?? {},
@@ -140,7 +150,7 @@ async function signAll(rows: ItemRow[]): Promise<BoardItem[]> {
 }
 
 const COLUMNS =
-  "id, kind, storage_path, original_name, body, source_url, source_label, note, section, ai_section, later, ai, analyzed_at, created_at";
+  "id, kind, storage_path, original_name, body, source_url, source_label, note, sections, ai_section, later, ai, analyzed_at, created_at";
 
 /** The board for a given drop, creating it the first time it is opened. */
 export async function openBoard(world: World, drop: Drop): Promise<Board> {
@@ -361,7 +371,7 @@ export async function addLink(
 /* ------------------------------------------------------------------ */
 
 export async function updateItem(id: string, patch: Partial<{
-  section: Section | null;
+  sections: Section[];
   later: boolean;
   note: string;
   body: string;
@@ -369,7 +379,7 @@ export async function updateItem(id: string, patch: Partial<{
   sourceLabel: string;
 }>) {
   const row: Record<string, unknown> = {};
-  if (patch.section !== undefined) row.section = patch.section;
+  if (patch.sections !== undefined) row.sections = patch.sections;
   if (patch.later !== undefined) row.later = patch.later;
   if (patch.note !== undefined) row.note = patch.note;
   if (patch.body !== undefined) row.body = patch.body;
@@ -380,6 +390,36 @@ export async function updateItem(id: string, patch: Partial<{
     .update(row)
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Add or remove one lane, leaving the others alone. */
+export async function setLane(
+  item: BoardItem,
+  lane: Section,
+  member: boolean,
+): Promise<Section[]> {
+  const next = member
+    ? Array.from(new Set([...item.sections, lane]))
+    : item.sections.filter((s) => s !== lane);
+  await updateItem(item.id, { sections: next });
+  return next;
+}
+
+/**
+ * Dragging a piece from one lane to another. This moves rather than copies:
+ * the drag started inside a lane, so the seller is saying "not here, there".
+ * Dropping onto a lane from the unsorted tray only adds, since there is
+ * nothing to take it out of.
+ */
+export async function dragLane(
+  item: BoardItem,
+  from: Section | null,
+  to: Section,
+): Promise<Section[]> {
+  const kept = from ? item.sections.filter((s) => s !== from) : item.sections;
+  const next = Array.from(new Set([...kept, to]));
+  await updateItem(item.id, { sections: next });
+  return next;
 }
 
 export async function removeItem(item: BoardItem) {
@@ -449,6 +489,14 @@ export async function analyzeItem(item: BoardItem): Promise<BoardItem> {
     image,
   });
 
+  /*
+    Note what is written here and what is not: `ai` and `ai_section` yes,
+    `sections` never. The reading is genuinely useful — it is what the pattern
+    pass thinks with — but the filing is the seller's call. The model can tell
+    you that an image contains hand-lettered type on a pink tee; it cannot
+    tell you whether she pinned it for the words, the layout or the colour,
+    and guessing wrong quietly is worse than not guessing at all.
+  */
   await supabase
     .from("wb_board_items")
     .update({

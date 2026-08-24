@@ -101,7 +101,7 @@ async function boardNotes(dropId: string) {
   const [{ data: items }, { data: findings }] = await Promise.all([
     supabase
       .from("wb_board_items")
-      .select("kind, note, section, ai_section, ai, body, source_label")
+      .select("kind, note, sections, ai_section, ai, body, source_label")
       .eq("board_id", board.id)
       .eq("later", false)
       .order("created_at", { ascending: false })
@@ -117,7 +117,7 @@ async function boardNotes(dropId: string) {
   const rows = (items ?? []) as {
     kind: string;
     note: string;
-    section: string | null;
+    sections: string[] | null;
     ai_section: string | null;
     ai: Record<string, unknown>;
     body: string | null;
@@ -142,7 +142,7 @@ async function boardNotes(dropId: string) {
       .slice(0, 240);
     if (said)
       lines.push(
-        `- [research_board_item] (${r.section ?? r.ai_section ?? r.kind}) ${said}`,
+        `- [research_board_item] (${(r.sections ?? []).join(", ") || r.kind}) ${said}`,
       );
   }
 

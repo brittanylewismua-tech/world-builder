@@ -23,6 +23,18 @@ import type { World } from "@/lib/world";
  */
 
 type Destination = "calibration" | "research" | "reference";
+type Lane = "visual" | "language" | "structure" | "color";
+
+/* Asked once per board rather than once per pin. Most Pinterest boards are
+   already about one thing, so this files forty pins with one click — and if
+   a board really is a jumble, "let me sort them" leaves them unfiled. */
+const LANES: { id: Lane | ""; name: string }[] = [
+  { id: "visual", name: "the look" },
+  { id: "language", name: "the words" },
+  { id: "structure", name: "the layouts" },
+  { id: "color", name: "the colours" },
+  { id: "", name: "let me sort them" },
+];
 
 const WHERE: { id: Destination; name: string; blurb: string }[] = [
   {
@@ -76,6 +88,7 @@ export default function PinterestBoards({ world }: { world: World }) {
   const [nextDrop, setNextDrop] = useState<Drop | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [choosing, setChoosing] = useState<string | null>(null);
+  const [lane, setLane] = useState<Lane | "">("");
   const [err, setErr] = useState("");
   const [done, setDone] = useState<Record<string, string>>({});
   /*
@@ -144,6 +157,7 @@ export default function PinterestBoards({ world }: { world: World }) {
           boardId: board.id,
           boardName: board.name,
           destination,
+          lane: destination === "research" ? lane || null : null,
           dropId: destination === "calibration" ? null : nextDrop?.id ?? null,
         },
       );
@@ -264,6 +278,29 @@ export default function PinterestBoards({ world }: { world: World }) {
 
             {choosing === b.id && (
               <div className="rise space-y-1.5 border-t border-black/12 bg-[#faf9f8] p-3">
+                {/* Only the seller's own research needs a lane. Calibration
+                    is not a board, and reference is other people's shops. */}
+                <div className="mb-2 rounded-lg border border-black/12 bg-white p-2.5">
+                  <p className="eyebrow mb-1.5 text-ink-3">
+                    If this is for your next drop, you saved it for…
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {LANES.map((l) => (
+                      <button
+                        key={l.id || "none"}
+                        onClick={() => setLane(l.id)}
+                        className={`rounded-md border px-2 py-1 text-[12.5px] transition ${
+                          lane === l.id
+                            ? "border-black bg-black text-white"
+                            : "border-black/15 text-ink-2 hover:border-black"
+                        }`}
+                      >
+                        {l.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {WHERE.map((w) => {
                   const needsDrop = w.id !== "calibration" && !nextDrop;
                   return (

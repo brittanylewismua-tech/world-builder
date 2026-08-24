@@ -14,6 +14,8 @@ import {
   removeItem,
   setIntention,
   updateItem,
+  setLane,
+  dragLane,
   SECTIONS,
   SECTION_NAME,
   type Board,
@@ -25,6 +27,7 @@ import { formatDropDate, type Drop } from "@/lib/drops";
 import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
 import SplitPane from "./SplitPane";
+import SortPass from "./SortPass";
 import { Dots, Star } from "./ui";
 
 /**
@@ -86,6 +89,13 @@ export default function ResearchBoard({
   const [board, setBoard] = useState<Board | null>(null);
   const [later, setLater] = useState<BoardItem[]>([]);
   const [showLater, setShowLater] = useState(false);
+  /* What is currently in the seller's hand, and which lane it came out of. */
+  const [held, setHeld] = useState<{
+    item: BoardItem;
+    from: Section | null;
+  } | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const [sorting, setSorting] = useState(false);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   /*
@@ -207,29 +217,44 @@ export default function ResearchBoard({
     }
   }
 
-  async function move(item: BoardItem, to: Section | null | "later") {
-    const patch =
-      to === "later"
-        ? { later: true }
-        : { section: to, later: false };
-    await updateItem(item.id, patch);
-    if (to === "later") {
-      setBoard((b) =>
-        b ? { ...b, items: b.items.filter((i) => i.id !== item.id) } : b,
-      );
-      setLater((l) => [{ ...item, later: true }, ...l]);
-    } else {
-      setBoard((b) =>
-        b
-          ? {
-              ...b,
-              items: b.items.map((i) =>
-                i.id === item.id ? { ...i, section: to, later: false } : i,
-              ),
-            }
-          : b,
-      );
-    }
+  /** Put a piece aside, or bring it back onto the board. */
+  async function shelve(item: BoardItem) {
+    await updateItem(item.id, { later: true });
+    setBoard((b) =>
+      b ? { ...b, items: b.items.filter((i) => i.id !== item.id) } : b,
+    );
+    setLater((l) => [{ ...item, later: true }, ...l]);
+  }
+
+  /** Add or remove one lane without disturbing the others. */
+  async function lane(item: BoardItem, which: Section, member: boolean) {
+    const next = await setLane(item, which, member);
+    setBoard((b) =>
+      b
+        ? {
+            ...b,
+            items: b.items.map((i) =>
+              i.id === item.id ? { ...i, sections: next } : i,
+            ),
+          }
+        : b,
+    );
+  }
+
+  /** Dragged out of one lane and into another. */
+  async function drag(item: BoardItem, from: Section | null, to: Section) {
+    if (from === to) return;
+    const next = await dragLane(item, from, to);
+    setBoard((b) =>
+      b
+        ? {
+            ...b,
+            items: b.items.map((i) =>
+              i.id === item.id ? { ...i, sections: next } : i,
+            ),
+          }
+        : b,
+    );
   }
 
   async function pullBack(item: BoardItem) {
@@ -316,6 +341,25 @@ export default function ResearchBoard({
 
       {err && <p className="note t-small mb-4 px-4 py-3 text-ink-2">{err}</p>}
 
+      {sorting && (
+        <SortPass
+          items={onBoard.filter((i) => i.sections.length === 0)}
+          onDone={() => setSorting(false)}
+          onSorted={(id, sections) =>
+            setBoard((b) =>
+              b
+                ? {
+                    ...b,
+                    items: b.items.map((i) =>
+                      i.id === id ? { ...i, sections } : i,
+                    ),
+                  }
+                : b,
+            )
+          }
+        />
+      )}
+
       {/*
         CHAT LEFT, MATERIAL RIGHT.
         
@@ -381,6 +425,15 @@ export default function ResearchBoard({
         onChange={(e) => pickImages(e.target.files)}
         className="hidden"
       />
+
+        {onBoard.some((i) => i.sections.length === 0) && (
+          <button
+            onClick={() => setSorting(true)}
+            className="t-small font-semibold text-ink underline underline-offset-4 transition hover:text-accent-ink"
+          >
+            Sort {onBoard.filter((i) => i.sections.length === 0).length} unfiled
+          </button>
+        )}
 
         {onBoard.length >= 4 && (
           <span className="flex items-center gap-3">
@@ -454,33 +507,50 @@ export default function ResearchBoard({
             A lane you are not working in folds to a spine. Nothing is deleted,
             nothing is hidden down a scroll; it is just out of the way.
           */}
-          <div className="card overflow-hidden">
+          <div
+            className="card overflow-hidden"
+            onDragEnd={() => {
+              setHeld(null);
+              setOver(null);
+            }}
+          >
             <div className="flex items-stretch">
               {LANES.map((s, index) => {
                 const items =
                   s.id === "loose"
-                    ? onBoard.filter((i) => !(i.section ?? i.aiSection))
-                    : onBoard.filter(
-                        (i) => (i.section ?? i.aiSection) === s.id,
+                    ? onBoard.filter((i) => i.sections.length === 0)
+                    : onBoard.filter((i) =>
+                        i.sections.includes(s.id as Section),
                       );
-                // An empty optional lane is furniture. Only "just added"
-                // earns its place while empty, and only when it has something.
                 if (!items.length && s.id === "loose") return null;
-                /*
-                  An empty lane folds itself. A quarter of the board saying
-                  "Nothing here yet" is a quarter of the board spent telling
-                  the seller about an absence she can already see. It reopens
-                  the moment something lands in it.
-                */
                 const open = !shut[s.id] && items.length > 0;
+                const droppable = s.id !== "loose";
+                const target = over === s.id;
 
                 if (!open)
                   return (
                     <button
                       key={s.id}
                       onClick={() => setShut((c) => ({ ...c, [s.id]: false }))}
+                      onDragOver={(e) => {
+                        if (!droppable || !held) return;
+                        e.preventDefault();
+                        setOver(s.id);
+                      }}
+                      onDragLeave={() => setOver((o) => (o === s.id ? null : o))}
+                      onDrop={() => {
+                        if (!droppable || !held) return;
+                        // Dropping onto a folded lane opens it, so you can see
+                        // where the thing you just moved actually went.
+                        drag(held.item, held.from, s.id as Section);
+                        setShut((c) => ({ ...c, [s.id]: false }));
+                        setHeld(null);
+                        setOver(null);
+                      }}
                       title={`Open ${s.name}`}
-                      className={`lane lane-${index % 4} flex w-11 shrink-0 flex-col items-center gap-3 py-4 transition hover:bg-white`}
+                      className={`lane lane-${index % 4} flex w-11 shrink-0 flex-col items-center gap-3 py-4 transition ${
+                        target ? "bg-accent-soft" : "hover:bg-white"
+                      }`}
                     >
                       <span className="t-small tabular-nums text-ink-3">
                         {items.length}
@@ -497,7 +567,21 @@ export default function ResearchBoard({
                 return (
                   <div
                     key={s.id}
-                    className={`lane lane-${index % 4} min-w-0 flex-1`}
+                    onDragOver={(e) => {
+                      if (!droppable || !held) return;
+                      e.preventDefault();
+                      setOver(s.id);
+                    }}
+                    onDragLeave={() => setOver((o) => (o === s.id ? null : o))}
+                    onDrop={() => {
+                      if (!droppable || !held) return;
+                      drag(held.item, held.from, s.id as Section);
+                      setHeld(null);
+                      setOver(null);
+                    }}
+                    className={`lane lane-${index % 4} min-w-0 flex-1 transition ${
+                      target ? "!bg-accent-soft" : ""
+                    }`}
                   >
                     <button
                       onClick={() => setShut((c) => ({ ...c, [s.id]: true }))}
@@ -515,27 +599,44 @@ export default function ResearchBoard({
                       </span>
                     </button>
 
+                    {s.id === "loose" && (
+                      <p className="px-3 pb-2 text-[11.5px] leading-snug text-ink-3">
+                        Nothing is filed until you say so. Drag these across,
+                        or{" "}
+                        <button
+                          onClick={() => setSorting(true)}
+                          className="font-semibold text-ink underline underline-offset-2"
+                        >
+                          sort them one by one
+                        </button>
+                        .
+                      </p>
+                    )}
+
                     <div className="space-y-2 px-2 pb-3">
                       {items.map((item) => (
-                          <Piece
-                            key={item.id}
-                            item={item}
-                            onMove={move}
-                            onRemove={drop_}
-                            onNote={async (it, note) => {
-                              await updateItem(it.id, { note });
-                              setBoard((b) =>
-                                b
-                                  ? {
-                                      ...b,
-                                      items: b.items.map((i) =>
-                                        i.id === it.id ? { ...i, note } : i,
-                                      ),
-                                    }
-                                  : b,
-                              );
-                            }}
-                          />
+                        <Piece
+                          key={item.id}
+                          item={item}
+                          lane={s.id === "loose" ? null : (s.id as Section)}
+                          onLane={lane}
+                          onShelve={shelve}
+                          onRemove={drop_}
+                          onGrab={(it, from) => setHeld({ item: it, from })}
+                          onNote={async (it, note) => {
+                            await updateItem(it.id, { note });
+                            setBoard((b) =>
+                              b
+                                ? {
+                                    ...b,
+                                    items: b.items.map((i) =>
+                                      i.id === it.id ? { ...i, note } : i,
+                                    ),
+                                  }
+                                : b,
+                            );
+                          }}
+                        />
                       ))}
                     </div>
                   </div>
@@ -580,8 +681,11 @@ export default function ResearchBoard({
                   <div key={item.id} className="space-y-1">
                     <Piece
                       item={item}
-                      onMove={async (it) => pullBack(it)}
+                      lane={null}
+                      onLane={async () => {}}
+                      onShelve={async () => pullBack(item)}
                       onRemove={drop_}
+                      onGrab={() => {}}
                       onNote={async (it, note) => updateItem(it.id, { note })}
                     />
                     <button
@@ -739,26 +843,43 @@ function AddBar({
  */
 function Piece({
   item,
-  onMove,
+  lane,
+  onLane,
+  onShelve,
   onRemove,
   onNote,
+  onGrab,
 }: {
   item: BoardItem;
-  onMove: (item: BoardItem, to: Section | null | "later") => Promise<void>;
+  /** The lane this copy of the piece is sitting in; null in the unsorted tray. */
+  lane: Section | null;
+  onLane: (item: BoardItem, which: Section, member: boolean) => Promise<void>;
+  onShelve: (item: BoardItem) => Promise<void>;
   onRemove: (item: BoardItem) => Promise<void>;
   onNote: (item: BoardItem, note: string) => Promise<void>;
+  onGrab: (item: BoardItem, from: Section | null) => void;
 }) {
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(item.note);
 
   return (
-    <div className="group/piece relative">
+    <div
+      draggable
+      onDragStart={(e) => {
+        onGrab(item, lane);
+        e.dataTransfer.effectAllowed = "move";
+        // Firefox refuses to start a drag without payload on the event.
+        e.dataTransfer.setData("text/plain", item.id);
+      }}
+      className="group/piece relative cursor-grab active:cursor-grabbing"
+    >
       {item.kind === "image" && item.src && (
         <img
           src={item.src}
           alt=""
           loading="lazy"
+          draggable={false}
           className="w-full rounded-lg border border-black/8 object-cover"
         />
       )}
@@ -774,6 +895,7 @@ function Piece({
           href={item.sourceUrl ?? "#"}
           target="_blank"
           rel="noopener noreferrer"
+          draggable={false}
           className="t-small block font-semibold text-ink underline decoration-black/20 underline-offset-2 hover:decoration-black"
         >
           {item.sourceLabel} ↗
@@ -781,6 +903,21 @@ function Piece({
       )}
 
       {item.note && !editing && <Caption text={item.note} />}
+
+      {/*
+        A piece in more than one lane says so, quietly, and only in the lanes
+        it is not currently sitting in. Otherwise every card carries a label
+        repeating the column heading directly above it.
+      */}
+      {item.sections.length > 1 && (
+        <p className="mt-0.5 text-[10.5px] text-ink-3">
+          also in{" "}
+          {item.sections
+            .filter((x) => x !== lane)
+            .map((x) => SECTION_NAME[x].toLowerCase())
+            .join(", ")}
+        </p>
+      )}
 
       {editing && (
         <input
@@ -801,14 +938,9 @@ function Piece({
         />
       )}
 
-      {/*
-        One control, and it stays invisible until you are actually pointing at
-        the piece. A ••• on every card is thirty pieces of chrome asking to be
-        read before you have looked at a single image.
-      */}
       <button
         onClick={() => setMenu((v) => !v)}
-        aria-label="Move, note or remove"
+        aria-label="Lanes, note or remove"
         className={`absolute right-1 top-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[12px] leading-none text-ink-2 shadow-sm transition ${
           menu ? "" : "opacity-0 group-hover/piece:opacity-100"
         }`}
@@ -817,26 +949,44 @@ function Piece({
       </button>
 
       {menu && (
-        <div className="rise absolute right-1 top-7 z-10 w-40 rounded-lg border border-black/15 bg-white p-1.5 shadow-lg">
-          <p className="eyebrow px-1.5 pb-1 text-ink-3">Move to</p>
-          {SECTIONS.filter((sec) => sec.id !== (item.section ?? item.aiSection)).map(
-            (sec) => (
+        <div className="rise absolute right-1 top-7 z-20 w-44 rounded-lg border border-black/15 bg-white p-1.5 shadow-lg">
+          {/*
+            Checkboxes, not a destination list. The old menu said "move to",
+            which forced the seller to name the one reason that counted for a
+            pin she may well have saved for three.
+          */}
+          <p className="eyebrow px-1.5 pb-1 text-ink-3">Saved for</p>
+          {SECTIONS.map((sec) => {
+            const on = item.sections.includes(sec.id);
+            return (
               <button
                 key={sec.id}
-                onClick={() => {
-                  onMove(item, sec.id);
-                  setMenu(false);
-                }}
-                className="block w-full rounded px-1.5 py-1 text-left text-[13px] hover:bg-black/5"
+                onClick={() => onLane(item, sec.id, !on)}
+                className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-[13px] hover:bg-black/5"
               >
+                <span
+                  className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border text-[10px] leading-none ${
+                    on
+                      ? "border-black bg-black text-white"
+                      : "border-black/25 text-transparent"
+                  }`}
+                >
+                  ✓
+                </span>
                 {sec.name}
+                {!on && item.aiSection === sec.id && (
+                  <span
+                    title="What the AI would have guessed"
+                    className="ml-auto h-1.5 w-1.5 rounded-full bg-accent"
+                  />
+                )}
               </button>
-            ),
-          )}
+            );
+          })}
           <span className="my-1 block h-px bg-black/10" />
           <button
             onClick={() => {
-              onMove(item, "later");
+              onShelve(item);
               setMenu(false);
             }}
             className="block w-full rounded px-1.5 py-1 text-left text-[13px] hover:bg-black/5"
@@ -868,7 +1018,6 @@ function Piece({
     </div>
   );
 }
-
 function Caption({ text }: { text: string }) {
   const [full, setFull] = useState(false);
   const words = text.trim().split(/\s+/);

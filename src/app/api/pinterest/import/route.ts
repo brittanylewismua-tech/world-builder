@@ -35,6 +35,13 @@ export async function POST(req: Request) {
     boardName?: string;
     destination?: "calibration" | "research" | "reference";
     dropId?: string | null;
+    /*
+      Which lane the whole board lands in. Sellers already keep thematic
+      boards — "quotes I love", "layouts", "colour" — so the honest place to
+      ask why something was saved is at the board, once, rather than at every
+      pin afterwards. Omitted means unfiled, and she sorts on the page.
+    */
+    lane?: string | null;
   };
   try {
     body = await req.json();
@@ -134,6 +141,11 @@ export async function POST(req: Request) {
         } else {
           // The seller's own words about the pin are worth more than the
           // title Pinterest scraped off the source page.
+          const lane =
+            typeof body.lane === "string" &&
+            ["structure", "color", "language", "visual"].includes(body.lane)
+              ? [body.lane]
+              : [];
           const note = [pin.title, pin.description, pin.altText]
             .map((t) => t.trim())
             .filter(Boolean)
@@ -147,6 +159,7 @@ export async function POST(req: Request) {
             original_name: pin.title?.slice(0, 120) || "Pin",
             source_url: pin.link,
             source_label: destination === "reference" ? "reference" : "pinterest",
+            sections: lane,
             note,
           });
           if (error) throw new Error(error.message);
