@@ -39,10 +39,14 @@ const KIND_LABEL: Record<string, string> = {
 /**
  * KEEPING A SIGNAL.
  *
- * The paper is read a week before the drop it will feed, so anything worth
- * keeping goes onto next week's research board rather than into a note the
- * seller has to remember. One press, no dialog, and it says where it went so
- * the rhythm is visible rather than magic.
+ * "Keep this for next week" read like a commitment — as though pressing it
+ * set the direction of the next drop. It never did. It files the signal on
+ * the research board, which is a collection of things worth looking at and
+ * nothing more; the seller decides what any of it means when they get there,
+ * and can throw it away.
+ *
+ * So the words say filing, not deciding. "Save" rather than "keep for",
+ * "your board" rather than a drop number.
  */
 function KeepIt({
   item,
@@ -59,7 +63,7 @@ function KeepIt({
   if (state === "kept")
     return (
       <span className="t-small font-medium text-ink-2">
-        Kept for Drop {String(drop.number).padStart(2, "0")}
+        Saved to your board
       </span>
     );
   return (
@@ -69,10 +73,10 @@ function KeepIt({
       className="t-small font-medium text-ink-2 underline underline-offset-2 transition hover:text-ink disabled:opacity-50"
     >
       {state === "saving"
-        ? "Keeping…"
+        ? "Saving…"
         : state === "failed"
           ? "That did not save — try again"
-          : "Keep this for next week"}
+          : "Save to my board"}
     </button>
   );
 }

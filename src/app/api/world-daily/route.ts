@@ -188,7 +188,13 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
         {
           type: "web_search_20250305",
           name: "web_search",
-          max_uses: 12,
+          /*
+            Six, not twelve. Told to hunt for language rather than news, the
+            model searches harder — nine searches and 168k tokens read, which
+            was better material at two-thirds more cost. The ceiling keeps a
+            good instinct from becoming an expensive one.
+          */
+          max_uses: 6,
         } as unknown as Anthropic.Tool,
         PUBLISH_TOOL as unknown as Anthropic.Tool,
       ],
