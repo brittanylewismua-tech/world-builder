@@ -24,6 +24,7 @@ import {
 import { formatDropDate, type Drop } from "@/lib/drops";
 import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
+import SplitPane from "./SplitPane";
 import { Dots, Star } from "./ui";
 
 /**
@@ -283,39 +284,53 @@ export default function ResearchBoard({
         the images, which is exactly backwards — it is the sentence everything
         below is read through, so it stays in sight above both columns.
       */}
+      {/*
+        One line. It used to carry a label above and two lines of explanation
+        below, which is three rows of furniture around a field most people
+        leave blank. The placeholder says everything the paragraph did.
+      */}
       <div className="mb-5 max-w-3xl">
-        {/*
-          This is not a title. Whatever is written here is handed to the AI as
-          the seller's own statement of intent, so the Creative Room and the
-          pattern reading interpret the board through it. The label has to say
-          that, or it reads as a name field and gets left blank.
-        */}
-        <label className="eyebrow mb-1.5 block text-ink-3">
-          Tell the AI what you are going for
-        </label>
         <input
           value={intent}
           onChange={(e) => setIntent(e.target.value)}
           onBlur={() => setIntention(board.id, intent)}
-          placeholder="Optional — e.g. quieter than last week, less pastel, leaning funny"
+          placeholder="What are you going for? e.g. quieter than last week, less pastel, leaning funny — the AI reads the whole board through this"
           className="field"
         />
-        <p className="t-small mt-1.5 text-ink-3">
-          Not a name for the drop. Whatever you put here changes how everything
-          below gets read — leave it blank until you know.
-        </p>
       </div>
 
       {err && <p className="note t-small mb-4 px-4 py-3 text-ink-2">{err}</p>}
 
       {/*
-        Two columns: the material on the left with its own scroll, the
-        conversation on the right holding still. On a narrow screen they
-        stack, board first, because on a phone you are collecting rather
-        than deliberating.
+        CHAT LEFT, MATERIAL RIGHT.
+        
+        This is the layout ChatGPT Canvas and Lovable landed on, and the reason
+        is the reading order: a left-hand conversation is the first thing the
+        eye hits on the F-shaped scan, which frames the AI as a partner you are
+        working *with* rather than a helper bolted onto the side. The material
+        then gets the whole rest of the page, which is what it needs — images
+        judged four-across in a 520px rail were being judged as thumbnails.
+
+        The divider is draggable and the size is remembered, because how much
+        room a conversation deserves depends on whether you are talking or
+        looking, and that changes hour to hour.
       */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)] lg:items-start">
-        <div className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pr-1">
+      <SplitPane
+        storageKey="wb-research-split"
+        collapsedLabel="conversation"
+        left={
+          Talk ? (
+            <div className="sticky top-4 h-[calc(100dvh-2rem)]">
+              <Talk
+                world={world}
+                drop={drop}
+                pins={onBoard.map((i) => ({ id: i.id, src: i.src }))}
+              />
+            </div>
+          ) : null
+        }
+        right={
+          <div className="pb-8">
 
       {/* ------------------------------------------------------ add */}
       <AddBar
@@ -344,26 +359,6 @@ export default function ResearchBoard({
         className="hidden"
       />
 
-      {/* ------------------------------------------------------ patterns */}
-      {onBoard.length >= 4 && (
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            onClick={look}
-            disabled={thinking}
-            className="btn btn-primary"
-          >
-            {thinking ? "Looking across the board…" : "Show me the patterns"}
-          </button>
-          {board.findings.length > 0 && !thinking && (
-            <button
-              onClick={() => setShowFindings((v) => !v)}
-              className="t-small underline underline-offset-4 hover:opacity-70"
-            >
-              {showFindings ? "Back to the board" : `${board.findings.length} found`}
-            </button>
-          )}
-        </div>
-      )}
 
       {showFindings && board.findings.length > 0 && (
         <Findings
@@ -382,22 +377,51 @@ export default function ResearchBoard({
       {onBoard.length === 0 ? (
         <Empty onStart={() => fileInput.current?.click()} number={drop.number} />
       ) : (
-        <div className="mt-7 space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setShut({})}
-              className="t-small font-medium text-ink-3 underline underline-offset-2 transition hover:text-ink"
-            >
-              Open everything
-            </button>
-            <button
-              onClick={() =>
-                setShut(Object.fromEntries(SECTIONS.map((s) => [s.id, true])))
-              }
-              className="t-small font-medium text-ink-3 underline underline-offset-2 transition hover:text-ink"
-            >
-              Close everything
-            </button>
+        <div className="mt-6 space-y-3">
+          {/*
+            Everything that acts on the whole board lives on one line: the
+            pattern read on the left where it reads as the main move, the
+            open/close pair pushed to the right where they belong with the
+            sections they operate on. These were three separate rows.
+          */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-black/12 pb-3">
+            {onBoard.length >= 4 && (
+              <>
+                <button
+                  onClick={look}
+                  disabled={thinking}
+                  className="btn btn-primary"
+                >
+                  {thinking ? "Looking…" : "Show me the patterns"}
+                </button>
+                {board.findings.length > 0 && !thinking && (
+                  <button
+                    onClick={() => setShowFindings((v) => !v)}
+                    className="t-small underline underline-offset-4 hover:opacity-70"
+                  >
+                    {showFindings
+                      ? "Back to the board"
+                      : `${board.findings.length} found`}
+                  </button>
+                )}
+              </>
+            )}
+            <span className="ml-auto flex items-center gap-3">
+              <button
+                onClick={() => setShut({})}
+                className="t-small text-ink-3 underline underline-offset-2 transition hover:text-ink"
+              >
+                Open all
+              </button>
+              <button
+                onClick={() =>
+                  setShut(Object.fromEntries(SECTIONS.map((s) => [s.id, true])))
+                }
+                className="t-small text-ink-3 underline underline-offset-2 transition hover:text-ink"
+              >
+                Close all
+              </button>
+            </span>
           </div>
 
           {SECTIONS.map((s) => {
@@ -504,22 +528,9 @@ export default function ResearchBoard({
         )}
       </div>
 
-        </div>
-
-        {/*
-          The conversation. Given its own height so it behaves like a room you
-          are sitting in rather than a box at the bottom of a long page.
-        */}
-        {Talk && (
-          <div className="lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)]">
-            <Talk
-              world={world}
-              drop={drop}
-              pins={onBoard.map((i) => ({ id: i.id, src: i.src }))}
-            />
           </div>
-        )}
-      </div>
+        }
+      />
     </div>
   );
 }
@@ -654,21 +665,59 @@ function Area({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-t border-black/12 pt-4">
+    <section className="border-t border-black/12 pt-3.5">
       <button
         onClick={onToggle}
         aria-expanded={open}
-        className="group flex w-full items-baseline gap-x-3 text-left"
+        className="group flex w-full items-baseline gap-x-2.5 text-left"
       >
         <span className="t-h3 text-ink">{title}</span>
         <span className="t-small tabular-nums text-ink-3">{count}</span>
-        <span className="t-small hidden text-ink-3 sm:inline">{blurb}</span>
         <span className="ml-auto shrink-0 text-lg leading-none text-ink-3 transition group-hover:text-ink">
           {open ? "−" : "+"}
         </span>
       </button>
-      {open && <div className="mt-3">{children}</div>}
+      {/*
+        The description used to sit on the header line beside the title and the
+        count, so every closed section was three competing pieces of text. It
+        only means anything once you are looking inside, so that is when it
+        appears.
+      */}
+      {open && (
+        <>
+          <p className="t-small mt-0.5 text-ink-3">{blurb}</p>
+          <div className="mt-3">{children}</div>
+        </>
+      )}
     </section>
+  );
+}
+
+/**
+ * FOUR WORDS, THEN GET OUT OF THE WAY.
+ *
+ * Pinterest hands over a title, a description and alt text, and we were
+ * printing all three under every image. On a board of thirty pins that is
+ * thirty paragraphs of somebody else's SEO copy competing with the images —
+ * and the images are the entire point. The words are still there; you just
+ * have to ask for them.
+ */
+function Caption({ text }: { text: string }) {
+  const [full, setFull] = useState(false);
+  const words = text.trim().split(/\s+/);
+  const long = words.length > 4;
+  if (!text.trim()) return null;
+
+  return (
+    <button
+      onClick={() => long && setFull((v) => !v)}
+      title={long && !full ? text : undefined}
+      className={`t-small block w-full text-left text-ink-2 ${
+        long ? "cursor-pointer hover:text-ink" : "cursor-default"
+      }`}
+    >
+      {full || !long ? text : `${words.slice(0, 4).join(" ")}…`}
+    </button>
   );
 }
 
@@ -686,7 +735,7 @@ function Masonry({
   pullLabel?: string;
 }) {
   return (
-    <div className="columns-2 gap-3 md:columns-3 lg:columns-4 [&>*]:mb-3">
+    <div className="columns-2 gap-3 md:columns-3 xl:columns-4 2xl:columns-5 [&>*]:mb-3">
       {items.map((item, i) => (
         <Card
           key={item.id}
@@ -727,7 +776,7 @@ function Card({
   });
 
   return (
-    <div className="card card-hover break-inside-avoid overflow-hidden">
+    <div className="card card-hover group/card break-inside-avoid overflow-hidden">
       {item.kind === "image" && item.src && (
         <img
           src={item.src}
@@ -737,9 +786,9 @@ function Card({
         />
       )}
 
-      <div className="p-3">
+      <div className="px-2.5 pb-2 pt-2">
         {item.kind === "text" && (
-          <p className="t-body font-semibold leading-snug text-ink">
+          <p className="t-body line-clamp-4 font-semibold leading-snug text-ink">
             {item.body}
           </p>
         )}
@@ -754,14 +803,12 @@ function Card({
             >
               {item.sourceLabel} ↗
             </a>
-            {item.note && (
-              <p className="t-small mt-1 text-ink-2">{item.note}</p>
-            )}
+            {item.note && <Caption text={item.note} />}
           </>
         )}
 
         {item.kind === "image" && item.note && !editing && (
-          <p className="t-small text-ink-2">{item.note}</p>
+          <Caption text={item.note} />
         )}
 
         {editing && (
@@ -790,11 +837,20 @@ function Card({
           </div>
         )}
 
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-[11px] text-ink-3">{when}</span>
+        {/*
+          The date was printing on every single card, which on a wall of images
+          is thirty pieces of chrome nobody asked for. It appears on hover with
+          the menu — still there when you want it, invisible when you do not.
+        */}
+        <div className="mt-1.5 flex h-4 items-center justify-between">
+          <span className="text-[11px] text-ink-3 opacity-0 transition group-hover/card:opacity-100">
+            {when}
+          </span>
           <button
             onClick={() => setMenu((v) => !v)}
-            className="text-[13px] leading-none text-ink-3 transition hover:text-ink"
+            className={`text-[13px] leading-none text-ink-3 transition hover:text-ink ${
+              menu ? "" : "opacity-0 group-hover/card:opacity-100"
+            }`}
             aria-label="Move or remove"
           >
             •••
