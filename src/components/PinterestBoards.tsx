@@ -78,6 +78,24 @@ export default function PinterestBoards({ world }: { world: World }) {
   const [choosing, setChoosing] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [done, setDone] = useState<Record<string, string>>({});
+  /*
+    The callback returns with an outcome in the URL and, until now, nothing
+    displayed it. A seller who was bounced back for any reason simply saw the
+    connect button again and no explanation, which reads as the feature being
+    broken rather than as something they can retry.
+  */
+  const [outcome, setOutcome] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const said = new URLSearchParams(window.location.search).get("pinterest");
+    if (!said) return;
+    setOutcome(said);
+    // Clear it so a refresh does not replay a stale message.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("pinterest");
+    window.history.replaceState({}, "", url);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -143,12 +161,40 @@ export default function PinterestBoards({ world }: { world: World }) {
     }
   }
 
+  const SAID: Record<string, string> = {
+    connected: "Pinterest connected.",
+    cancelled: "You cancelled on Pinterest — nothing was connected.",
+    expired:
+      "That took long enough that the secure link timed out. Press connect and approve it, and it will go through.",
+    failed:
+      "Pinterest did not complete the connection. Trying again usually sorts it.",
+  };
+
+  const notice =
+    outcome && SAID[outcome] ? (
+      <p
+        className={`t-small mb-3 rounded-lg border px-3 py-2 ${
+          outcome === "connected"
+            ? "border-black/15 bg-white text-ink-2"
+            : "border-[#f3c9c9] bg-[#fdf0f0] text-[#8a2020]"
+        }`}
+      >
+        {SAID[outcome]}
+      </p>
+    ) : null;
+
   if (connected === null)
-    return <p className="t-small text-ink-3">Checking Pinterest…</p>;
+    return (
+      <div>
+        {notice}
+        <p className="t-small text-ink-3">Checking Pinterest…</p>
+      </div>
+    );
 
   if (!connected)
     return (
       <div>
+        {notice}
         <p className="t-body max-w-xl text-ink-2">
           You already collect on Pinterest. Connect it and your boards come in
           here, where they get read — every pin analysed, patterns found across
@@ -171,6 +217,7 @@ export default function PinterestBoards({ world }: { world: World }) {
 
   return (
     <div>
+      {notice}
       <p className="t-small max-w-xl text-ink-2">
         Point a board at where it belongs. Bring it in as often as you like —
         pins already here are skipped, so you only ever get what is new.

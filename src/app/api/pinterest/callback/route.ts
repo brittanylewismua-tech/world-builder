@@ -22,9 +22,16 @@ export async function GET(req: Request) {
 
   if (!code || !payload)
     return NextResponse.redirect(`${home}?pinterest=failed`);
-  // Ten minutes is more than enough to approve a screen, and short enough
-  // that a state string found later is worthless.
-  if (!worldId || Date.now() - Number(issuedAt) > 10 * 60_000)
+  /*
+    Half an hour, not ten minutes.
+    
+    Ten was plenty for a machine and nowhere near enough for a person, who
+    reads the permission screen, maybe signs into Pinterest first, gets
+    interrupted, and comes back. The first real attempt at this failed for
+    exactly that reason. The state is signed and carries its own timestamp, so
+    a longer window costs nothing.
+  */
+  if (!worldId || Date.now() - Number(issuedAt) > 30 * 60_000)
     return NextResponse.redirect(`${home}?pinterest=expired`);
 
   try {
