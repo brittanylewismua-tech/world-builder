@@ -15,6 +15,7 @@ import { worldActions } from "@/lib/worldActions";
 import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
 import Customiser from "@/components/Customiser";
 import DropRhythm from "@/components/DropRhythm";
+import PinterestBoards from "@/components/PinterestBoards";
 import SecureWorld from "@/components/SecureWorld";
 import AccountCard from "@/components/AccountCard";
 import OwnYourWorld from "@/components/OwnYourWorld";
@@ -36,6 +37,7 @@ type ModuleKey =
   | "connection"
   | "visual"
   | "areas"
+  | "pinterest"
   | "rhythm"
   | "look";
 
@@ -193,6 +195,15 @@ function ProfileBody({ world }: { world: World }) {
             onRemove={a.removeArea}
           />
         </Module>
+        <Module
+          title="Pinterest"
+          summary="Bring your boards into this world"
+          open={open === "pinterest"}
+          onToggle={() => toggle("pinterest")}
+        >
+          <PinterestBoards world={world} />
+        </Module>
+
         <Module
           title="Drop Rhythm"
           summary={`${world.slotsPerDrop} designs, ${DAY_NAME[world.dropWeekday] ?? "weekly"}${world.paused ? " · paused" : ""}`}

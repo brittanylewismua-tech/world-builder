@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
@@ -182,4 +183,84 @@ export function meter(
       // Never let accounting break the thing being accounted for.
     }
   })();
+}
+
+/* ------------------------------------------------------------------ */
+/* ownership                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Establish that the caller is signed in AND that this world is theirs.
+ *
+ * Used by routes that act on a named world rather than on "whoever is
+ * calling" — connecting Pinterest, importing pins. Row level security would
+ * catch most mistakes, but these routes run with elevated keys to reach
+ * storage and other people's tokens, so the check has to be explicit and
+ * first.
+ */
+export async function ownerOf(
+  req: Request,
+  worldId: string,
+): Promise<{ userId: string } | { deny: NextResponse }> {
+  const header = req.headers.get("authorization") ?? "";
+  const token = header.toLowerCase().startsWith("bearer ")
+    ? header.slice(7).trim()
+    : "";
+  if (!token)
+    return {
+      deny: NextResponse.json(
+        { error: "You need to be signed in to use this." },
+        { status: 401 },
+      ),
+    };
+
+  const supabase = createClient(URL, KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user)
+    return {
+      deny: NextResponse.json(
+        { error: "Your session has expired. Reload the page and try again." },
+        { status: 401 },
+      ),
+    };
+
+  // Read as the user, so row level security is the thing answering.
+  const { data: world } = await supabase
+    .from("wb_worlds")
+    .select("id")
+    .eq("id", worldId)
+    .maybeSingle();
+
+  if (!world)
+    return {
+      deny: NextResponse.json({ error: "Not your world." }, { status: 403 }),
+    };
+
+  return { userId: data.user.id };
+}
+
+/** Signed state for the OAuth round trip, so the callback cannot be forged. */
+export function signState(payload: string): string {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const mac = createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${Buffer.from(payload).toString("base64url")}.${mac}`;
+}
+
+export function readState(state: string): string | null {
+  const [body, mac] = state.split(".");
+  if (!body || !mac) return null;
+  const payload = Buffer.from(body, "base64url").toString();
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const expected = createHmac("sha256", secret)
+    .update(payload)
+    .digest("base64url");
+  // Constant-time compare; a timing oracle on a state token is still an oracle.
+  const a = Buffer.from(mac);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  return payload;
 }

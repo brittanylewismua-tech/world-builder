@@ -1,0 +1,249 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
+import type { World } from "@/lib/world";
+
+/**
+ * PINTEREST IS WHERE THEY ALREADY COLLECT.
+ *
+ * Sellers pin all week from their phone, and then the pile sits there being a
+ * pile. Pinterest can hold a thousand images and tell you nothing about them —
+ * it cannot say that six are the same composition, or that a phrase saved in
+ * March belongs on the drop being built now.
+ *
+ * So this is not "another integration". It is the front door: they keep
+ * collecting where they already collect, and the thinking happens here.
+ *
+ * Boards are pointed at a destination rather than dumped in one place,
+ * because a board of your own taste and a board of other people's shops mean
+ * completely different things and must not be read back as if they were the
+ * same.
+ */
+
+type Destination = "calibration" | "research" | "reference";
+
+const WHERE: { id: Destination; name: string; blurb: string }[] = [
+  {
+    id: "calibration",
+    name: "This is my eye",
+    blurb:
+      "Lands in Visual Calibration. Sets the style the AI pictures when it pictures your world.",
+  },
+  {
+    id: "research",
+    name: "This is for my next drop",
+    blurb:
+      "Lands on the research board for the drop you are researching, ready when you build it.",
+  },
+  {
+    id: "reference",
+    name: "This is what shops in my world look like",
+    blurb:
+      "Lands on the same board, marked as reference — other people's work, never mistaken for your direction.",
+  },
+];
+
+interface Board {
+  id: string;
+  name: string;
+  description: string;
+  pinCount: number;
+  cover: string | null;
+}
+
+async function call<T>(path: string, payload: unknown): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("You are signed out. Reload and sign in again.");
+  const r = await fetch(path, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.error || "That did not go through.");
+  return body as T;
+}
+
+export default function PinterestBoards({ world }: { world: World }) {
+  const [connected, setConnected] = useState<boolean | null>(null);
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [nextDrop, setNextDrop] = useState<Drop | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState<Record<string, string>>({});
+
+  const load = useCallback(async () => {
+    try {
+      const r = await call<{ connected: boolean; boards: Board[] }>(
+        "/api/pinterest/boards",
+        { worldId: world.id },
+      );
+      setConnected(r.connected);
+      setBoards(r.boards ?? []);
+    } catch (e) {
+      setConnected(false);
+      setErr(e instanceof Error ? e.message : "Could not reach Pinterest.");
+    }
+  }, [world.id]);
+
+  useEffect(() => {
+    load();
+    syncSchedule(world)
+      .then((all) => setNextDrop(splitDrops(all).next))
+      .catch(() => setNextDrop(null));
+  }, [world, load]);
+
+  async function connect() {
+    setBusy("connect");
+    setErr("");
+    try {
+      const { url } = await call<{ url: string }>("/api/pinterest/start", {
+        worldId: world.id,
+      });
+      window.location.href = url;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not start that.");
+      setBusy(null);
+    }
+  }
+
+  async function bring(board: Board, destination: Destination) {
+    setBusy(board.id);
+    setErr("");
+    setChoosing(null);
+    try {
+      const r = await call<{ imported: number; skipped: number; note?: string }>(
+        "/api/pinterest/import",
+        {
+          worldId: world.id,
+          boardId: board.id,
+          boardName: board.name,
+          destination,
+          dropId: destination === "calibration" ? null : nextDrop?.id ?? null,
+        },
+      );
+      setDone((d) => ({
+        ...d,
+        [board.id]:
+          r.imported > 0
+            ? `Brought in ${r.imported} pin${r.imported === 1 ? "" : "s"}${r.skipped ? `, skipped ${r.skipped} already here` : ""}`
+            : (r.note ?? "Nothing new on that board"),
+      }));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "That import did not finish.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (connected === null)
+    return <p className="t-small text-ink-3">Checking Pinterest…</p>;
+
+  if (!connected)
+    return (
+      <div>
+        <p className="t-body max-w-xl text-ink-2">
+          You already collect on Pinterest. Connect it and your boards come in
+          here, where they get read — every pin analysed, patterns found across
+          them, and sitting on the right drop when you go to build it.
+        </p>
+        <p className="t-small mt-2 max-w-xl text-ink-3">
+          Read-only. Nothing is ever pinned, changed or deleted on your
+          Pinterest account.
+        </p>
+        <button
+          onClick={connect}
+          disabled={busy !== null}
+          className="btn btn-accent mt-4"
+        >
+          {busy ? "Opening Pinterest…" : "Connect Pinterest"}
+        </button>
+        {err && <p className="t-small mt-3 text-ink-2">{err}</p>}
+      </div>
+    );
+
+  return (
+    <div>
+      <p className="t-small max-w-xl text-ink-2">
+        Point a board at where it belongs. Bring it in as often as you like —
+        pins already here are skipped, so you only ever get what is new.
+      </p>
+
+      {boards.length === 0 && (
+        <p className="t-small mt-4 text-ink-3">
+          No boards came back. If your boards are secret, Pinterest does not
+          share them with apps.
+        </p>
+      )}
+
+      <ul className="mt-4 space-y-2">
+        {boards.map((b) => (
+          <li key={b.id} className="card overflow-hidden">
+            <div className="flex items-center gap-3 p-3">
+              {b.cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={b.cover}
+                  alt=""
+                  className="h-11 w-11 shrink-0 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="h-11 w-11 shrink-0 rounded-lg bg-black/8" />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="t-h3 block truncate text-ink">{b.name}</span>
+                <span className="t-small block text-ink-3">
+                  {b.pinCount} pin{b.pinCount === 1 ? "" : "s"}
+                  {done[b.id] && ` · ${done[b.id]}`}
+                </span>
+              </span>
+              <button
+                onClick={() =>
+                  setChoosing(choosing === b.id ? null : b.id)
+                }
+                disabled={busy !== null}
+                className="btn btn-ghost shrink-0"
+              >
+                {busy === b.id ? "Bringing it in…" : "Bring it in"}
+              </button>
+            </div>
+
+            {choosing === b.id && (
+              <div className="rise space-y-1.5 border-t border-black/12 bg-[#faf9f8] p-3">
+                {WHERE.map((w) => {
+                  const needsDrop = w.id !== "calibration" && !nextDrop;
+                  return (
+                    <button
+                      key={w.id}
+                      onClick={() => bring(b, w.id)}
+                      disabled={needsDrop}
+                      className="block w-full rounded-lg border border-black/12 bg-white p-3 text-left transition hover:border-black disabled:opacity-40"
+                    >
+                      <span className="t-small block font-semibold text-ink">
+                        {w.name}
+                      </span>
+                      <span className="t-small block text-ink-3">
+                        {needsDrop
+                          ? "Open Drop Studio once and this becomes available."
+                          : w.blurb}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {err && <p className="t-small mt-3 text-ink-2">{err}</p>}
+    </div>
+  );
+}
