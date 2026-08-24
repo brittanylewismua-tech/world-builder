@@ -23,6 +23,24 @@ export const ASSETS = "world-assets";
 
 export const PIN_SCOPES = ["boards:read", "pins:read", "user_accounts:read"];
 
+/**
+ * ONE CALLBACK, WHATEVER HOST THEY ARE ON.
+ *
+ * This app answers on several hostnames — the project domain, the team alias,
+ * preview builds, and a custom domain later. Deriving the OAuth callback from
+ * whichever one the seller happened to be browsing meant Pinterest rejected
+ * the round trip with "redirect URI does not match" unless every hostname was
+ * registered, forever, including ones that do not exist yet.
+ *
+ * So the callback is a single fixed URL that is registered once. Where the
+ * seller was when they started travels inside the signed state instead, and
+ * they are sent back there at the end — so they return to the session they
+ * already had rather than to a domain where they are a stranger.
+ */
+export const REDIRECT_URI =
+  process.env.PINTEREST_REDIRECT_URI ||
+  "https://world-builder-u8x3.vercel.app/api/pinterest/callback";
+
 export function pinterestConfigured() {
   return !!(process.env.PINTEREST_APP_ID && process.env.PINTEREST_APP_SECRET);
 }

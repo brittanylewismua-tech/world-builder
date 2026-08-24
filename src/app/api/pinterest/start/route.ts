@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { ownerOf, signState } from "@/lib/guard";
-import { authorizeUrl, pinterestConfigured } from "@/lib/pinterest";
+import {
+  REDIRECT_URI,
+  authorizeUrl,
+  pinterestConfigured,
+} from "@/lib/pinterest";
 
 export const runtime = "nodejs";
 
@@ -36,8 +40,14 @@ export async function POST(req: Request) {
   const door = await ownerOf(req, body.worldId);
   if ("deny" in door) return door.deny;
 
-  const redirectUri = `${new URL(req.url).origin}/api/pinterest/callback`;
-  const state = signState(`${body.worldId}:${Date.now()}`);
+  /*
+    The callback is fixed and registered once; where to send them afterwards
+    rides along in the signed state. Without this, someone on the team alias
+    starts a round trip Pinterest refuses, and someone on a preview build
+    never works at all.
+  */
+  const origin = new URL(req.url).origin;
+  const state = signState(`${body.worldId}|${Date.now()}|${origin}`);
 
-  return NextResponse.json({ url: authorizeUrl(redirectUri, state) });
+  return NextResponse.json({ url: authorizeUrl(REDIRECT_URI, state) });
 }
