@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import { Page, Card, Dots, Star } from "@/components/ui";
 import {
   formatIssueDate,
-  generateIssue,
   greeting,
   loadIssue,
   todayISO,
@@ -54,36 +53,19 @@ function HomeBody({ world }: { world: World }) {
     items: 0,
     findings: 0,
   });
-  const [writing, setWriting] = useState(false);
-  const started = useRef(false);
 
-  /**
-   * Start today's research the moment someone lands, not when they open the
-   * paper. Research takes about a minute; by starting it here it is usually
-   * finished — or nearly — by the time they click through, instead of them
-   * watching a spinner on the screen they came to read.
-   *
-   * A world whose issue is already written costs nothing extra: this only
-   * fires when today is genuinely empty.
-   */
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    loadIssue(world.id, today)
-      .then(async (existing) => {
-        if (existing.length || world.areas.length === 0) return;
-        setWriting(true);
-        try {
-          setItems(await generateIssue(world, today));
-        } catch {
-          // World Daily will offer to run it again; nothing to say here.
-        } finally {
-          setWriting(false);
-        }
-      })
-      .catch(() => {});
-  }, [world, today]);
+  /*
+    NOTHING IS RESEARCHED UNLESS SOMEBODY ASKS.
 
+    Landing here used to quietly start a full research run — five or six live
+    web searches and around ninety thousand tokens of reading, about thirty-
+    seven cents, every day, for every seller, whether they ever opened the
+    paper or not. Most of that was spent on people who were not going to read
+    it, which is a strange thing to buy on their behalf.
+
+    World Daily is now something you press. This page only shows what has
+    already been written.
+  */
   useEffect(() => {
     loadIssue(world.id, today)
       .then(setItems)
@@ -286,15 +268,11 @@ function HomeBody({ world }: { world: World }) {
 
           {items === null ? (
             <p className="t-small mt-3 text-ink-3">Checking…</p>
-          ) : writing ? (
-            <p className="pulse-soft t-small mt-3 text-ink-2">
-              Reading your world… today&apos;s issue is being written while you
-              get started.
-            </p>
           ) : items.length === 0 ? (
             <p className="t-body mt-2 text-ink-2">
-              Today&apos;s issue hasn&apos;t been read yet. It gets written on
-              your first visit to World Daily.
+              Nothing read yet today. Open World Daily and press the button
+              when you want to know what is moving in your customer&apos;s
+              world.
             </p>
           ) : (
             <>

@@ -138,7 +138,6 @@ function DailyBody({ world }: { world: World }) {
   /** Set when what is on screen is an older issue standing in for today's. */
   const [standIn, setStandIn] = useState<string | null>(null);
   const [kept, setKept] = useState<Record<string, "saving" | "kept" | "failed">>({});
-  const autoRan = useRef(false);
 
   // Which board a kept signal lands on: next week's, because that is the one
   // being researched while this week is being built.
@@ -234,7 +233,6 @@ function DailyBody({ world }: { world: World }) {
     );
     setDeriving(false);
     if (areas.length) {
-      autoRan.current = false;
       patch({ areas });
     } else {
       setErr(
@@ -243,15 +241,16 @@ function DailyBody({ world }: { world: World }) {
     }
   }
 
-  // SPEC: the paper should be waiting each morning, not requested.
-  useEffect(() => {
-    if (autoRan.current || noAreas || researching) return;
-    if (date !== today) return;
-    if (items === null || items.length > 0) return;
-    autoRan.current = true;
-    research();
-  }, [items, noAreas, researching, date, today, research]);
+  /*
+    Research happens when it is asked for, and only then.
 
+    This used to fire automatically on the first visit of the day. A paper
+    waiting for you is a lovely promise, but it was being bought for every
+    seller every morning — five or six live searches and ninety thousand
+    tokens of reading each — including the many who would never open it. On a
+    button, the same feature costs a fraction and nobody is charged for
+    somebody else's unread newspaper.
+  */
   return (
     <Page width="reading">
       {/* masthead */}
@@ -331,19 +330,17 @@ function DailyBody({ world }: { world: World }) {
       {!researching && items?.length === 0 && !noAreas && (
         <Empty
           title={
-            date === today
-              ? "Nothing published yet today"
-              : "No issue on that date"
+            date === today ? "Ready when you are" : "No issue on that date"
           }
           body={
             date === today
-              ? "Research runs automatically on your first visit each day. You can also run it now."
+              ? `Press this and your world gets read: live searches across ${world.areas.length} area${world.areas.length === 1 ? "" : "s"}, then everything that cannot be stood behind is thrown away. It takes about a minute, and what comes back is yours to keep.`
               : "Pick another date from the back issues below."
           }
           action={
             date === today ? (
               <button onClick={() => research()} className="btn btn-accent">
-                Research today
+                Read my world today
               </button>
             ) : undefined
           }
