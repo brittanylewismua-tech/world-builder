@@ -66,11 +66,19 @@ export default function DropWeek({ drop }: { drop: Drop }) {
         {days.map((d, i) => (
           <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1">
             <span
-              className={`text-[10px] font-semibold uppercase leading-none tracking-wide ${
+              className={`text-[10px] font-semibold uppercase leading-none tracking-tight ${
                 d.today ? "text-ink" : "text-ink-3"
               }`}
             >
-              {d.date.toLocaleDateString("en-US", { day: "numeric" })}
+              {/*
+                A bare day number is ambiguous the moment a drop crosses a
+                month — "1" after "31" reads as a mistake. M/D is unmistakable
+                and still short enough for seven of them in a row.
+              */}
+              {d.date.toLocaleDateString("en-US", {
+                month: "numeric",
+                day: "numeric",
+              })}
             </span>
             <span
               title={d.date.toLocaleDateString("en-US", {

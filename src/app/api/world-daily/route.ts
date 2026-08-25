@@ -230,6 +230,46 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
     /* ------------------------------------------------------------ */
 
     const realUrls = new Set<string>();
+    /**
+     * Two AI calls, one allowlist — and it has to survive the join.
+     *
+     * The guarantee is that a citation must be a page a search actually
+     * returned, never one a model invented. That was enforced by exact string
+     * match against the scout's search-result URLs, which quietly broke the
+     * moment the work was split in two: the scout writes a URL into its notes
+     * in whatever form it saw it, the judge copies that, and a trailing slash
+     * or a stripped tracking parameter meant every citation was thrown away.
+     * The seller saw "nothing I could verify" while both models ran and
+     * billed.
+     *
+     * So compare normalised, and also honour URLs the scout wrote down —
+     * those came out of a real search too. A model still cannot cite a page
+     * that never appeared anywhere in the run, which is the actual promise.
+     */
+    const seen = new Set<string>();
+    const normalise = (u: string) => {
+      try {
+        const url = new URL(u);
+        url.hash = "";
+        for (const junk of [
+          "utm_source",
+          "utm_medium",
+          "utm_campaign",
+          "utm_content",
+          "utm_term",
+          "fbclid",
+          "gclid",
+          "igshid",
+          "si",
+        ])
+          url.searchParams.delete(junk);
+        return `${url.hostname.replace(/^www\./, "")}${url.pathname.replace(/\/$/, "")}${url.search}`.toLowerCase();
+      } catch {
+        return u.trim().toLowerCase();
+      }
+    };
+    const allow = (u: string) => seen.add(normalise(u));
+
     let notes = "";
 
     if (TWO_STAGE) {
@@ -254,13 +294,20 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
           content?: { url?: string }[];
         };
         if (b.type === "web_search_tool_result" && Array.isArray(b.content))
-          for (const r of b.content) if (r.url) realUrls.add(r.url);
+          for (const r of b.content)
+            if (r.url) {
+              realUrls.add(r.url);
+              allow(r.url);
+            }
       }
 
       notes = scout.content
         .map((b) => (b.type === "text" ? b.text : ""))
         .join("")
         .trim();
+
+      // Anything the scout wrote down, it saw. Add those too.
+      for (const m of notes.matchAll(/https?:\/\/[^\s\])>"']+/g)) allow(m[0]);
 
       meter("daily", door.caller.userId, {
         model: SCOUT,
@@ -331,7 +378,11 @@ ${notes || "(nothing came back)"}`
         content?: { url?: string }[];
       };
       if (b.type === "web_search_tool_result" && Array.isArray(b.content)) {
-        for (const r of b.content) if (r.url) realUrls.add(r.url);
+        for (const r of b.content)
+          if (r.url) {
+            realUrls.add(r.url);
+            allow(r.url);
+          }
       }
     }
 
@@ -391,19 +442,27 @@ ${notes || "(nothing came back)"}`
         headline: (it.headline || "").trim(),
         body: (it.body || "").trim(),
         sources: (it.sources ?? [])
-          .filter((s) => s.url && realUrls.has(s.url))
+          .filter((s) => s.url && seen.has(normalise(s.url)))
           .map((s) => ({ title: (s.title || s.url || "").trim(), url: s.url! })),
       }))
       .filter((it) => it.headline && it.body && it.sources.length > 0);
 
-    if (!items.length)
+    if (!items.length) {
+      /*
+        Two different failures wore the same message, which made this
+        undiagnosable from the outside: nothing was FOUND, versus things were
+        found and every citation was rejected. Say which.
+      */
+      const searched = seen.size;
       return NextResponse.json(
         {
-          error:
-            "Nothing came back with a source I could verify. Rather than show you links that might not exist, I am showing you nothing. Try again in a moment.",
+          error: searched
+            ? `Today's search across your areas found ${searched} pages, but nothing in them passed the bar for a real signal. That happens on quiet days. Try again later, or widen your Active World Areas.`
+            : "The search came back empty for your areas today. If this keeps happening, your Active World Areas may be too narrow to have daily chatter.",
         },
         { status: 502 },
       );
+    }
 
     return NextResponse.json({ items: items.slice(0, TARGET_ITEMS) });
   } catch (e) {

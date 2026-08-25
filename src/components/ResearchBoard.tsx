@@ -26,6 +26,7 @@ import {
 import { formatDropDate, type Drop } from "@/lib/drops";
 import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
+import Link from "next/link";
 import SplitPane from "./SplitPane";
 import SortPass from "./SortPass";
 import Capture from "./Capture";
@@ -505,7 +506,7 @@ export default function ResearchBoard({
       )}
 
       {onBoard.length === 0 ? (
-        <Empty onStart={() => setSorting(false)} number={drop.number} />
+        <Empty number={drop.number} />
       ) : (
         <div className="mt-4 columns-2 gap-3 sm:columns-3 xl:columns-4 2xl:columns-5 [&>*]:mb-3">
           {shown.map((item) => (
@@ -1038,21 +1039,28 @@ function Findings({
   );
 }
 
-function Empty({ onStart, number }: { onStart: () => void; number: number }) {
+function Empty({ number }: { number: number }) {
+  /*
+    An empty board used to be a dashed box with a button, which looked exactly
+    like the old design and gave a seller no way to tell a fresh world from a
+    broken one. It now says where things come from, because on an empty board
+    the answer to "what do I do" is on the Pinterest screen, not here.
+  */
   return (
-    <div className="mt-7 rounded-xl border-2 border-dashed border-black/25 px-6 py-14 text-center">
+    <div className="mt-5 rounded-xl border border-black/12 bg-white/70 px-6 py-12 text-center">
       <p className="t-h2">Drop {String(number).padStart(2, "0")} starts here.</p>
       <p className="t-body mx-auto mt-3 max-w-md text-ink-2">
-        Anything that catches your attention this week goes here. A layout you
-        liked. A colour pairing. Something she said. Half an idea you would
-        otherwise lose in your camera roll.
+        Paste a link or a phrase in the field above, drop an image on it, or
+        bring in a Pinterest board and everything lands here at once.
       </p>
-      <p className="t-small mx-auto mt-3 max-w-md text-ink-3">
-        No pressure to organise it. The patterns show up as the week builds.
+      <p className="t-small mx-auto mt-4 max-w-md text-ink-3">
+        Two lanes: <b className="text-ink-2">Design inspo</b> for anything you
+        saved because you liked it, <b className="text-ink-2">Etsy bestsellers</b>{" "}
+        for what is already selling.
       </p>
-      <button onClick={onStart} className="btn btn-accent mt-6">
-        Add your first piece
-      </button>
+      <Link href="/profile" className="btn btn-ghost mt-6">
+        Connect Pinterest
+      </Link>
     </div>
   );
 }

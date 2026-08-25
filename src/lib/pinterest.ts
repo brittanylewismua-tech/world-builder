@@ -180,7 +180,13 @@ export async function listBoards(token: string): Promise<PinBoard[]> {
   let bookmark = "";
   // A few pages is plenty; nobody is choosing from four hundred boards.
   for (let page = 0; page < 4; page++) {
-    const q = new URLSearchParams({ page_size: "50" });
+    /*
+      privacy=ALL so secret boards come back too. Sellers keep competitor
+      research secret as a matter of course — a "what is selling" board is not
+      something you want public on your own profile — and defaulting to public
+      only would have hidden exactly the board this product most wants.
+    */
+    const q = new URLSearchParams({ page_size: "50", privacy: "ALL" });
     if (bookmark) q.set("bookmark", bookmark);
     const data = await get(`/boards?${q}`, token);
     for (const b of data.items ?? [])

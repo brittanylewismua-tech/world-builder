@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
+import SlotCount from "./SlotCount";
 import { formatDropDate, type Drop, type DropItem } from "@/lib/drops";
 
 /**
@@ -28,9 +29,11 @@ function bannerColor(name: string) {
 
 export function ShopBanner({
   world,
+  drop,
   onUpload,
 }: {
   world: World;
+  drop: Drop;
   onUpload?: (file: File) => Promise<void>;
 }) {
   const input = useRef<HTMLInputElement>(null);
@@ -46,27 +49,39 @@ export function ShopBanner({
   }
 
   return (
-    <div className="group relative">
+    /*
+      ETSY'S OWN PROPORTIONS.
+      
+      A seller already has a shop banner sized for Etsy, and asking her to crop
+      a second one for us is a chore with no payoff. Etsy's big banner is
+      1600×400 — 4:1 — so the slot is 4:1 and her existing file drops straight
+      in without a letterbox or a crop.
+    */
+    <div className="group relative aspect-[4/1] w-full overflow-hidden">
       {world.shopBannerSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={world.shopBannerSrc}
           alt=""
-          className="h-24 w-full object-cover sm:h-32"
+          className="h-full w-full object-cover"
         />
       ) : (
+        /*
+          The empty banner is brand pink rather than a colour derived from the
+          world's name. A different pink for every world made the product look
+          like it could not decide what colour it was, and this is the first
+          thing on the page.
+        */
         <div
-          className="flex h-24 w-full items-center justify-center sm:h-32"
-          style={{ background: bannerColor(world.name || "world") }}
+          className="flex h-full w-full items-center justify-center"
+          style={{ background: "var(--accent)" }}
         >
-          <span className="px-6 text-center text-[clamp(1.25rem,3vw,2rem)] font-extrabold tracking-tight text-white/95">
-            {world.name || "Your Shop"}
+          <span
+            className="px-6 text-center text-[clamp(1.5rem,4vw,2.6rem)] font-extrabold tracking-tight"
+            style={{ color: "var(--accent-on)" }}
+          >
+            Drop {String(drop.number).padStart(2, "0")}
           </span>
-          {!world.shopBannerSrc && onUpload && (
-            <span className="absolute bottom-2.5 left-3 text-[11.5px] text-white/70">
-              Add the shop banner customers will see with this drop.
-            </span>
-          )}
         </div>
       )}
 
@@ -321,6 +336,7 @@ export default function DropBoard({
   onMoveMockup,
   onUploadBanner,
   onBackground,
+  onSlots,
 }: {
   world: World;
   drop: Drop;
@@ -331,6 +347,8 @@ export default function DropBoard({
   onMoveMockup?: (from: number, to: number) => Promise<void>;
   onUploadBanner?: (file: File) => Promise<void>;
   onBackground?: (hex: string) => void;
+  /** Change how many designs a drop holds. Absent on frozen boards. */
+  onSlots?: (n: number) => Promise<void>;
 }) {
   const [dragging, setDragging] = useState<number | null>(null);
   const slots = Array.from({ length: world.slotsPerDrop }, (_, i) => i + 1);
@@ -344,6 +362,7 @@ export default function DropBoard({
       <div className="card overflow-hidden p-0">
         <ShopBanner
           world={world}
+          drop={drop}
           onUpload={frozen ? undefined : onUploadBanner}
         />
 
@@ -356,16 +375,27 @@ export default function DropBoard({
               dark ? "text-white" : "text-ink"
             }`}
           >
-            <span className="text-xl font-extrabold tracking-tight">
-              Drop {String(drop.number).padStart(2, "0")}
-            </span>
+            {/*
+              The drop number moved up into the banner, so repeating it here
+              was the same words twice, eight pixels apart.
+            */}
             <span
               className={`t-small ${dark ? "text-white/60" : "text-black/50"}`}
             >
               {formatDropDate(drop.publishDate)}
             </span>
-            <span className="ml-auto text-sm font-semibold tabular-nums">
-              {done} / {world.slotsPerDrop}
+            <span className="ml-auto">
+              {onSlots && !frozen ? (
+                <SlotCount
+                  done={done}
+                  slots={world.slotsPerDrop}
+                  onChange={onSlots}
+                />
+              ) : (
+                <span className="text-sm font-semibold tabular-nums">
+                  {done} / {world.slotsPerDrop}
+                </span>
+              )}
             </span>
           </div>
 

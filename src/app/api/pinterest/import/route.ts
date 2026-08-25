@@ -158,9 +158,7 @@ export async function POST(req: Request) {
             destination === "reference"
               ? ["market"]
               : typeof body.lane === "string" &&
-                  ["visual", "language", "structure", "market"].includes(
-                    body.lane,
-                  )
+                  ["visual", "market"].includes(body.lane)
                 ? [body.lane]
                 : [];
           const note = [pin.title, pin.description, pin.altText]

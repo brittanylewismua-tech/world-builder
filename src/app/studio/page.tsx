@@ -6,6 +6,7 @@ import Shell from "@/components/Shell";
 import DropBoard from "@/components/DropBoard";
 import ResearchTalk from "@/components/ResearchTalk";
 import DropWeek from "@/components/DropWeek";
+import Explain from "@/components/Explain";
 import { useWorld } from "@/lib/useWorld";
 import { saveWorld, setShopBanner } from "@/lib/api";
 import {
@@ -175,7 +176,7 @@ function StudioBody({ world }: { world: World }) {
     const filled = drop.items.length;
 
     const consequences = [
-      `Drop ${String(drop.number).padStart(2, "0")} moves into your history and its board becomes read-only.`,
+      `Drop ${String(drop.number).padStart(2, "0")} moves into Drop History and its board becomes read-only.`,
       next
         ? `Drop ${String(next.number).padStart(2, "0")} research becomes the drop you are building, and a fresh research board opens behind it.`
         : "A new drop opens for next week.",
@@ -189,8 +190,8 @@ function StudioBody({ world }: { world: World }) {
 
     const question =
       filled === 0
-        ? `This drop has no designs in it at all.\n\nAre you sure you want to archive Drop ${String(drop.number).padStart(2, "0")} as published?\n\n${consequences}`
-        : `Publish Drop ${String(drop.number).padStart(2, "0")} with ${filled} of ${world.slotsPerDrop} slots filled?\n\n${consequences}`;
+        ? `This drop has no designs in it at all.\n\nFinish Drop ${String(drop.number).padStart(2, "0")} anyway and move on to the next one?\n\n${consequences}`
+        : `Finish Drop ${String(drop.number).padStart(2, "0")} now, with ${filled} of ${world.slotsPerDrop} designs in?\n\nNothing is sent anywhere — this only moves your schedule forward.\n\n${consequences}`;
 
     if (!window.confirm(question)) return;
 
@@ -299,16 +300,38 @@ function StudioBody({ world }: { world: World }) {
         {world.paused && (
           <span className="chip chip-accent">Schedule paused</span>
         )}
-        <div className="ml-auto flex gap-2">
-          <button
-            onClick={togglePause}
-            className="btn btn-ghost"
-          >
-            {world.paused ? "Resume schedule" : "Pause schedule"}
-          </button>
-          <button onClick={publishNow} className="btn btn-primary">
-            Publish &amp; freeze
-          </button>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="flex items-center gap-1.5">
+            <button onClick={togglePause} className="btn btn-ghost">
+              {world.paused
+                ? "Restart the weekly rhythm"
+                : "Pause the weekly rhythm"}
+            </button>
+            <Explain label="What does pausing do?">
+              {world.paused
+                ? "Drops start moving again on their dates. This one keeps the date it has."
+                : "Drops stop rolling over on their dates and wait for you. Nothing is lost — you pick up where you left off."}
+            </Explain>
+          </span>
+          {/*
+            This never said what it did. The tool does not publish anything
+            anywhere — a seller reads "Publish" as "push to Etsy", presses it
+            once to find out, and archives a drop she was still working on.
+
+            What it actually does is roll the week forward early: this drop
+            goes to Drop History read-only and next week's research becomes
+            the drop being built. So it says that.
+          */}
+          <span className="flex items-center gap-1.5">
+            <button onClick={publishNow} className="btn btn-ghost">
+              Finish this drop early
+            </button>
+            <Explain label="What does finishing early do?">
+              Moves this drop into Drop History read-only and starts the next
+              one now, instead of waiting for its date. Nothing is sent
+              anywhere — this tool never publishes.
+            </Explain>
+          </span>
         </div>
       </div>
 
@@ -331,6 +354,9 @@ function StudioBody({ world }: { world: World }) {
           onMoveMockup={onMoveMockup}
           onUploadBanner={onUploadBanner}
           onBackground={onBackground}
+          onSlots={async (n) => {
+            await patch({ slotsPerDrop: n });
+          }}
         />
         {/*
           The customer belongs on both tabs. She was only reachable while

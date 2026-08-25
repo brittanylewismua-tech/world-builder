@@ -24,7 +24,7 @@ import type { World } from "@/lib/world";
  */
 
 type Destination = "calibration" | "research" | "reference";
-type Lane = "visual" | "language" | "structure" | "market";
+type Lane = "visual" | "market";
 
 /*
   Asked once per board rather than once per pin — but only as a fallback. The
@@ -33,10 +33,8 @@ type Lane = "visual" | "language" | "structure" | "market";
   touched. See laneFromBoardName.
 */
 const LANES: { id: Lane | ""; name: string }[] = [
-  { id: "visual", name: "Design" },
-  { id: "language", name: "Quotes" },
-  { id: "structure", name: "Structures" },
-  { id: "market", name: "Bestsellers" },
+  { id: "visual", name: "Design inspo" },
+  { id: "market", name: "Etsy bestsellers" },
   { id: "", name: "let me sort them" },
 ];
 
@@ -244,14 +242,12 @@ export default function PinterestBoards({ world }: { world: World }) {
       */}
       <div className="note mb-4 max-w-2xl px-4 py-3">
         <p className="t-small font-semibold text-ink">
-          Keep four boards on Pinterest and this does itself
+          Keep two boards on Pinterest and this does itself
         </p>
         <p className="t-small mt-1 text-ink-2">
-          <b>Design</b> — the look. <b>Quotes</b> — the words.{" "}
-          <b>Structures</b> — how it sits on the garment.{" "}
+          <b>Design inspo</b> — anything you saved because you liked it.{" "}
           <b>Etsy bestsellers</b> — what is already selling. Pin to them all
-          week, bring them in when you sit down, and everything lands in the
-          right lane on its own.
+          week, bring them in when you sit down, and each one files itself.
         </p>
       </div>
 
@@ -262,8 +258,8 @@ export default function PinterestBoards({ world }: { world: World }) {
 
       {boards.length === 0 && (
         <p className="t-small mt-4 text-ink-3">
-          No boards came back. If your boards are secret, Pinterest does not
-          share them with apps.
+          No boards came back. Secret boards are included, so if you have
+          boards and none appear here, try disconnecting and connecting again.
         </p>
       )}
 

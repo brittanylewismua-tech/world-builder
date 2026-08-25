@@ -19,77 +19,61 @@ import type { Drop } from "./drops";
  * it never rules anything in or out of the world.
  */
 
-export type Section = "visual" | "language" | "structure" | "market";
+export type Section = "visual" | "market";
 export type ItemKind = "image" | "text" | "link";
 
 /**
- * THE FOUR BOARDS.
+ * TWO BOARDS.
  *
- * These are not analytical categories invented here — they are four Pinterest
- * boards the seller is told to keep, so that sorting mostly happens where she
- * already collects rather than as homework afterwards. That constraint is why
- * there are four and why they are these four:
+ * There were four — Design, Quotes, Structures, Colour — and then Bestsellers
+ * made five. That was four different ways of slicing one pile plus one pile
+ * that is genuinely different, and it asked the seller to keep four Pinterest
+ * boards she was never going to keep.
  *
- *   Design      — what it looks like. Colour lives here; nobody keeps a
- *                 separate colour board, and that lane sat empty for weeks.
- *   Quotes      — the words. For print-on-demand this is half the product.
- *   Structures  — how it sits on the garment. Placement, scale, composition.
- *   Bestsellers — what is already selling. Other people's shops.
+ * These two answer different questions, which is the only test that matters:
  *
- * Bestsellers is a different kind of material from the other three and is
- * handled differently downstream: it is evidence about the market, not the
- * seller's taste, and must never be read back to her as her own direction.
+ *   Design inspo      — what I like. Everything I saved because it is good.
+ *   Etsy bestsellers  — what is already selling. Other people's shops.
+ *
+ * The second is not a subdivision of the first, it is a different kind of
+ * evidence, and it is handled differently downstream: it never gets read back
+ * to the seller as her own creative direction.
  */
 export const SECTIONS: { id: Section; name: string; blurb: string }[] = [
   {
     id: "visual",
-    name: "Design",
-    blurb: "The look — imagery, styling, colour.",
-  },
-  {
-    id: "language",
-    name: "Quotes",
-    blurb: "The words. Phrases, jokes, the way she talks.",
-  },
-  {
-    id: "structure",
-    name: "Structures",
-    blurb: "How it sits on the garment. Placement and scale.",
+    name: "Design inspo",
+    blurb: "Everything you saved because you liked it.",
   },
   {
     id: "market",
-    name: "Bestsellers",
+    name: "Etsy bestsellers",
     blurb: "What is already selling. Other people's shops, not yours.",
   },
 ];
 
 export const SECTION_NAME: Record<Section, string> = {
-  visual: "Design",
-  language: "Quotes",
-  structure: "Structures",
-  market: "Bestsellers",
+  visual: "Design inspo",
+  market: "Etsy bestsellers",
 };
 
-/** The Pinterest boards a seller is asked to keep, in the same order. */
+/** The two Pinterest boards a seller is asked to keep. */
 export const PINTEREST_BOARDS: { lane: Section; suggested: string }[] = [
-  { lane: "visual", suggested: "Design" },
-  { lane: "language", suggested: "Quotes" },
-  { lane: "structure", suggested: "Structures" },
+  { lane: "visual", suggested: "Design inspo" },
   { lane: "market", suggested: "Etsy bestsellers" },
 ];
 
 /**
  * Match a Pinterest board to a lane by its name, so somebody who followed the
- * workflow never has to answer the question at all. Deliberately generous —
- * "quotes", "Quotes I love", "quote ideas" all land on Quotes — and silent
- * when it is unsure, because a wrong guess here is exactly what we removed.
+ * workflow never answers the question at all. Bestsellers is checked first:
+ * "Etsy bestseller design inspo" is a bestsellers board, and the other way
+ * round would file a competitor pile as the seller's own taste.
  */
 export function laneFromBoardName(name: string): Section | null {
   const n = name.toLowerCase();
-  if (/best.?sell|etsy|competit|top.?seller/.test(n)) return "market";
-  if (/quote|word|phrase|caption|saying|text|letter/.test(n)) return "language";
-  if (/structure|layout|placement|composition|mockup/.test(n)) return "structure";
-  if (/design|look|style|inspo|inspiration|aesthetic|colou?r/.test(n))
+  if (/best.?sell|etsy|competit|top.?seller|what.?s.?selling/.test(n))
+    return "market";
+  if (/design|inspo|inspiration|look|style|aesthetic|mood|quote|word|colou?r|layout/.test(n))
     return "visual";
   return null;
 }
