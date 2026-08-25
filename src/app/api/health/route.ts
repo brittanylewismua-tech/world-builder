@@ -59,7 +59,7 @@ export async function GET() {
       ready: env.anthropicKey,
       note: env.anthropicKey
         ? "Fully configured."
-        : "Add ANTHROPIC_API_KEY in Vercel to enable World Daily, Creative Room, and Talk to the Customer.",
+        : "Add ANTHROPIC_API_KEY in Vercel to enable World News, Creative Room, and Talk to the Customer.",
     },
     { headers: { "cache-control": "no-store" } },
   );

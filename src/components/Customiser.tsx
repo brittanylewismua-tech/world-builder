@@ -465,7 +465,7 @@ export default function Customiser({
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <Dots />
-            <span className="chip chip-solid">world daily</span>
+            <span className="chip chip-solid">world news</span>
           </div>
           <div className="mt-4 flex gap-4">
             <span className="numeral text-[2.4rem]">01</span>

@@ -15,12 +15,27 @@ import { ThemeStyle, Wallpaper } from "./Wallpaper";
  *
  * SPEC: "Keep navigation minimal. Do not add more top-level areas."
  */
+/**
+ * Two groups, not one list.
+ *
+ * Five equally-weighted links with five equally-weighted taglines under them
+ * made the rail into a wall of text where nothing looked more important than
+ * anything else — and three of those taglines were saying nothing a person
+ * could not work out from the word above them ("home — where you are today").
+ *
+ * The top three are the week: read the news, make the drops, and home. The
+ * bottom two are reference you visit occasionally, so they sit at the bottom,
+ * quieter, and are not competing for the eye every time the page loads.
+ */
 const NAV = [
-  { href: "/home", label: "home", hint: "where you are today" },
-  { href: "/daily", label: "world daily", hint: "stay immersed" },
-  { href: "/studio", label: "drop studio", hint: "build the work" },
-  { href: "/history", label: "drop history", hint: "what you released" },
-  { href: "/profile", label: "world profile", hint: "your foundation" },
+  { href: "/home", label: "home" },
+  { href: "/daily", label: "world news" },
+  { href: "/studio", label: "world drops", hint: "drop studio" },
+];
+
+const NAV_FOOT = [
+  { href: "/history", label: "drop history" },
+  { href: "/profile", label: "world profile" },
 ];
 
 /**
@@ -139,7 +154,7 @@ export default function Shell({
                 key={n.href}
                 href={n.href}
                 aria-current={active ? "page" : undefined}
-                className="block rounded-lg px-3.5 py-2 transition"
+                className="block rounded-lg px-3.5 py-2.5 transition"
                 style={
                   active
                     ? {
@@ -149,13 +164,15 @@ export default function Shell({
                       }
                     : {
                         color: railDark
-                          ? "rgba(255,255,255,0.55)"
-                          : "rgba(0,0,0,0.62)",
+                          ? "rgba(255,255,255,0.62)"
+                          : "rgba(0,0,0,0.68)",
                       }
                 }
               >
-                <span className="block text-[13.5px] font-bold">{n.label}</span>
-                <span className="block text-[11px] opacity-70">{n.hint}</span>
+                <span className="block text-[14px] font-bold">{n.label}</span>
+                {n.hint && (
+                  <span className="block text-[11px] opacity-70">{n.hint}</span>
+                )}
               </Link>
             );
           })}
@@ -163,10 +180,45 @@ export default function Shell({
       </div>
 
       <div className="relative mt-auto pt-6">
-        <div
-          className="border-t pt-4"
+        {/* Reference, not the week's work. Quieter and out of the way. */}
+        <nav
+          className="space-y-0.5 border-t pt-3"
           style={{
-            borderColor: railDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.12)",
+            borderColor: railDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.1)",
+          }}
+        >
+          {NAV_FOOT.map((n) => {
+            const active = pathname === n.href;
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={active ? "page" : undefined}
+                className="block rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition"
+                style={
+                  active
+                    ? {
+                        background: rail === "accent" ? "#000" : theme.accent,
+                        color:
+                          rail === "accent" ? "#fff" : onAccent(theme.accent),
+                      }
+                    : {
+                        color: railDark
+                          ? "rgba(255,255,255,0.45)"
+                          : "rgba(0,0,0,0.5)",
+                      }
+                }
+              >
+                {n.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div
+          className="mt-3 border-t pt-3"
+          style={{
+            borderColor: railDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.1)",
           }}
         >
           <button

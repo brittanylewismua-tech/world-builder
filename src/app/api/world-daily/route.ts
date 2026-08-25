@@ -180,7 +180,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "World Daily needs an ANTHROPIC_API_KEY on this deployment. Add it in Vercel, Settings, Environment Variables, then redeploy.",
+          "World News needs an ANTHROPIC_API_KEY on this deployment. Add it in Vercel, Settings, Environment Variables, then redeploy.",
       },
       { status: 503 },
     );

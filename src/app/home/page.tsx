@@ -63,7 +63,7 @@ function HomeBody({ world }: { world: World }) {
     paper or not. Most of that was spent on people who were not going to read
     it, which is a strange thing to buy on their behalf.
 
-    World Daily is now something you press. This page only shows what has
+    World News is now something you press. This page only shows what has
     already been written.
   */
   useEffect(() => {
@@ -270,7 +270,7 @@ function HomeBody({ world }: { world: World }) {
             <p className="t-small mt-3 text-ink-3">Checking…</p>
           ) : items.length === 0 ? (
             <p className="t-body mt-2 text-ink-2">
-              Nothing read yet today. Open World Daily and press the button
+              Nothing read yet today. Open World News and press the button
               when you want to know what is moving in your customer&apos;s
               world.
             </p>

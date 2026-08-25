@@ -260,7 +260,7 @@ function DailyBody({ world }: { world: World }) {
       {/* masthead */}
       <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
-          <span className="chip chip-solid">world daily</span>
+          <span className="chip chip-solid">world news</span>
           <span className="t-small text-ink-3">{formatIssueDate(date)}</span>
         </div>
         {/*
