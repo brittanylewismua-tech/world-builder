@@ -76,15 +76,40 @@ function ProfileBody({ world }: { world: World }) {
     const key = window.location.hash.replace("#", "") as ModuleKey;
     if (!MODULE_KEYS.includes(key)) return;
     setOpen(key);
-    // After paint, so the panel has expanded and we scroll to its real place.
-    requestAnimationFrame(() =>
-      document
-        .getElementById(`module-${key}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+
+    /*
+      Scrolling once is not enough, and the first version proved it: the panel
+      opened but the page stayed at the top.
+
+      Three things move the page after this effect runs — the world finishes
+      loading, the panel expands, and the panel's own content arrives over the
+      network. A single requestAnimationFrame scrolls to an offset that is
+      stale by the time any of that lands.
+
+      So: try a few times over the first second and stop as soon as the module
+      is actually near the top of the viewport. Cheap, and it survives content
+      that settles at an unpredictable moment.
+    */
+    let cancelled = false;
+    const attempts = [0, 120, 320, 650, 1000];
+    const timers = attempts.map((ms) =>
+      setTimeout(() => {
+        if (cancelled) return;
+        const el = document.getElementById(`module-${key}`);
+        if (!el) return;
+        const top = el.getBoundingClientRect().top;
+        if (top > 8 && top < 120) {
+          cancelled = true;
+          return;
+        }
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, ms),
     );
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
   }, []);
-  const [err, setErr] = useState("");
-  const a = worldActions(world, patch, setErr);
 
   const toggle = (k: ModuleKey) => setOpen(open === k ? null : k);
   const answered = AFFINITY_QUESTIONS.filter(
