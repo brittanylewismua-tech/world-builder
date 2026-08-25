@@ -90,23 +90,34 @@ function ProfileBody({ world }: { world: World }) {
       is actually near the top of the viewport. Cheap, and it survives content
       that settles at an unpredictable moment.
     */
-    let cancelled = false;
-    const attempts = [0, 120, 320, 650, 1000];
-    const timers = attempts.map((ms) =>
+    /*
+      Three things fight this scroll and they all win against a single try:
+      the world finishing loading, the panel expanding, and Next's own scroll
+      restoration, which runs after hydration and puts the page back at the
+      top well after any one-shot attempt.
+
+      So: instant rather than smooth, because a smooth scroll is an animation
+      and the next thing to touch scrollTop cancels it halfway. Repeated out
+      past the point where the framework has stopped interfering. And it stops
+      the moment the module is where it should be, so the common case costs
+      one attempt.
+    */
+    let done = false;
+    const timers = [0, 100, 250, 500, 900, 1400, 2000, 2500].map((ms) =>
       setTimeout(() => {
-        if (cancelled) return;
-        const el = document.getElementById(`module-${key}`);
+        if (done) return;
+        const el = document.getElementById(key);
         if (!el) return;
         const top = el.getBoundingClientRect().top;
-        if (top > 8 && top < 120) {
-          cancelled = true;
+        if (top >= 0 && top < 100) {
+          done = true;
           return;
         }
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.scrollIntoView({ behavior: "auto", block: "start" });
       }, ms),
     );
     return () => {
-      cancelled = true;
+      done = true;
       timers.forEach(clearTimeout);
     };
   }, []);
@@ -321,7 +332,7 @@ function Module({
 }) {
   return (
     <section
-      id={id ? `module-${id}` : undefined}
+      id={id}
       className={`card overflow-hidden scroll-mt-6 ${open ? "ring-1 ring-accent" : ""}`}
     >
       <button
