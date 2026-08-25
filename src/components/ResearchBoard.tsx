@@ -756,6 +756,61 @@ function AddBar({
  * should not have to close Colour every time they come back.
  */
 /**
+ * A TYPED QUOTE, AS A PIECE.
+ *
+ * Words the seller wrote were rendering as a small bordered paragraph in a
+ * wall of photographs, which meant they effectively vanished — she typed a
+ * quote, looked at the board, and reported it missing. It was there; it just
+ * did not read as an object.
+ *
+ * So a quote gets a canvas: the same proportions as everything else, the
+ * words set large and centred, on a ground that changes with the piece so a
+ * column of them does not look like one long document. Close enough to a
+ * print that it sits among the mockups without pretending to be one.
+ *
+ * The ground is chosen from the id, not at random, so it never changes under
+ * her between renders.
+ */
+const GROUNDS = [
+  { bg: "#fdeef7", ink: "#7c2b57" },
+  { bg: "#f3f0ea", ink: "#4a4136" },
+  { bg: "#eaf0f4", ink: "#2f4655" },
+  { bg: "#f6efe6", ink: "#5c452e" },
+  { bg: "#efeef6", ink: "#3f3a5c" },
+];
+
+function QuoteCanvas({ text, id }: { text: string; id: string }) {
+  let n = 0;
+  for (let i = 0; i < id.length; i++) n = (n + id.charCodeAt(i)) % GROUNDS.length;
+  const g = GROUNDS[n];
+
+  // Long thoughts need to stay readable; short ones want to be a poster.
+  const len = text.trim().length;
+  const size =
+    len <= 24
+      ? "text-[19px]"
+      : len <= 60
+        ? "text-[16px]"
+        : len <= 140
+          ? "text-[14px]"
+          : "text-[12.5px]";
+
+  return (
+    <div
+      className="flex aspect-[3/4] w-full items-center justify-center rounded-lg border border-black/8 px-4 text-center"
+      style={{ background: g.bg }}
+    >
+      <p
+        className={`${size} font-semibold leading-snug tracking-tight`}
+        style={{ color: g.ink }}
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
+/**
  * A PIECE ON THE BOARD.
  *
  * The old card wore the house style: 2px black border, hard offset shadow,
@@ -843,19 +898,20 @@ function Piece({
         />
       )}
 
-      {item.kind === "text" && (
-        <p className="rounded-lg border-l-2 border-black/25 bg-white/70 py-1.5 pl-2.5 pr-2 text-[13px] font-medium leading-snug text-ink">
-          {item.body}
-        </p>
+      {item.kind === "text" && item.body && (
+        <QuoteCanvas text={item.body} id={item.id} />
       )}
 
       {item.kind === "link" && (
+        /* Same reasoning as the quote: a bare underlined word is invisible
+           beside a photograph. Shorter than a quote card, since the useful
+           part is the note underneath rather than the domain. */
         <a
           href={item.sourceUrl ?? "#"}
           target="_blank"
           rel="noopener noreferrer"
           draggable={false}
-          className="t-small block font-semibold text-ink underline decoration-black/20 underline-offset-2 hover:decoration-black"
+          className="flex aspect-[3/2] w-full items-center justify-center rounded-lg border border-black/8 bg-[#f4f2f1] px-3 text-center text-[13px] font-semibold text-ink transition hover:bg-[#ece9e7]"
         >
           {item.sourceLabel} ↗
         </a>
