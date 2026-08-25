@@ -6,6 +6,7 @@ import Shell from "@/components/Shell";
 import DropBoard from "@/components/DropBoard";
 import CreativeRoom from "@/components/CreativeRoom";
 import ResearchTalk from "@/components/ResearchTalk";
+import DropWeek from "@/components/DropWeek";
 import { useWorld } from "@/lib/useWorld";
 import { saveWorld, setShopBanner } from "@/lib/api";
 import {
@@ -312,7 +313,13 @@ function StudioBody({ world }: { world: World }) {
         </div>
       </div>
 
-      {/* SPEC: ~70% board / ~30% Creative Room */}
+      {/*
+        The week, above everything. A publish date answers "when"; seven marks
+        answer "how long have I got", which is the question that changes what
+        somebody does this afternoon.
+      */}
+      {tab === "build" && <DropWeek drop={drop} />}
+
       <div
         className={`grid gap-6 lg:grid-cols-[7fr_3fr] ${tab === "research" ? "hidden" : ""}`}
       >

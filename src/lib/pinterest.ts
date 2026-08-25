@@ -222,12 +222,19 @@ function bestImage(media: unknown): string | null {
 export async function listPins(
   token: string,
   boardId: string,
-  max = 40,
+  max = 20,
 ): Promise<Pin[]> {
   const out: Pin[] = [];
   let bookmark = "";
   while (out.length < max) {
-    const q = new URLSearchParams({ page_size: "25" });
+    /*
+      page_size matches the batch exactly, so twenty pins costs exactly one
+      request. Trial access is 1,000 requests a day for the whole app, shared
+      by every seller — at two requests a board only about a hundred people
+      can bring in four boards in a day, and at one request it is two hundred.
+      The seller who wants more presses the button and spends one more.
+    */
+    const q = new URLSearchParams({ page_size: String(Math.min(max, 50)) });
     if (bookmark) q.set("bookmark", bookmark);
     const data = await get(`/boards/${boardId}/pins?${q}`, token);
     for (const p of data.items ?? []) {

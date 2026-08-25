@@ -307,7 +307,7 @@ export async function buildWorldContext(
           m.role === "user"
             ? "Seller"
             : room === "customer"
-              ? "Creative Room"
+              ? "Drop Director"
               : "[customer_simulation] Customer";
         return `- ${who}: ${m.content.slice(0, 220)}`;
       }),

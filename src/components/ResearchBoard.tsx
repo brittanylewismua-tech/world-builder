@@ -28,6 +28,7 @@ import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
 import SplitPane from "./SplitPane";
 import SortPass from "./SortPass";
+import Capture from "./Capture";
 import { Dots, Star } from "./ui";
 
 /**
@@ -96,6 +97,8 @@ export default function ResearchBoard({
   } | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [sorting, setSorting] = useState(false);
+  /* Which lane the wall is narrowed to. null means show everything. */
+  const [only, setOnly] = useState<Section | "unfiled" | null>(null);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   /*
@@ -195,18 +198,25 @@ export default function ResearchBoard({
     );
 
   const onBoard = board.items.filter((i) => !i.later);
+  const unfiled = onBoard.filter((i) => i.sections.length === 0);
+  const shown =
+    only === null
+      ? onBoard
+      : only === "unfiled"
+        ? unfiled
+        : onBoard.filter((i) => i.sections.includes(only));
 
   function put(item: BoardItem) {
     setBoard((b) => (b ? { ...b, items: [item, ...b.items] } : b));
   }
 
-  async function pickImages(files: FileList | null) {
-    if (!files?.length || !board) return;
+  async function pickImages(files: FileList | File[] | null) {
+    if (!files || !board) return;
+    const list = Array.from(files);
+    if (!list.length) return;
     setBusy("Adding…");
     try {
-      for (const f of Array.from(files).filter((f) =>
-        f.type.startsWith("image/"),
-      ))
+      for (const f of list.filter((f) => f.type.startsWith("image/")))
         put(await addImage(world, board.id, f));
     } catch (e) {
       report("board", e, { worldId: world.id, step: "upload" });
@@ -392,85 +402,86 @@ export default function ResearchBoard({
           <div className="pb-8">
 
       {/*
-        ONE LINE OF CONTROLS.
+        ONE WALL, FILTERED.
 
-        Adding, reading the patterns and folding the lanes were three separate
-        rows, two of them inside black-bordered cards. Three rows of furniture
-        before you reach a single image is the reason the page felt like work
-        rather than like a place to think.
+        The lanes were four columns side by side, which meant four headings,
+        four counts, four fold controls and a row of board-wide buttons above
+        them — before a single image. The lanes are still real; they are just
+        a filter now rather than a layout, which is a control every person
+        alive already understands.
+
+        Everything you can do to the whole board lives on one line, and most
+        of it only appears when it applies.
       */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-      <AddBar
+      <Capture
         busy={busy}
-        onImages={() => fileInput.current?.click()}
         onText={async (text) => {
           if (!board) return;
           put(await addText(world, board.id, text));
         }}
-        onLink={async (url, note) => {
+        onLink={async (url) => {
           if (!board) return;
           try {
-            put(await addLink(world, board.id, url, note));
+            put(await addLink(world, board.id, url, ""));
           } catch (e) {
             report("board", e, { worldId: world.id, step: "link" });
-      setErr(e instanceof Error ? e.message : "That link did not work.");
+            setErr(e instanceof Error ? e.message : "That link did not work.");
           }
         }}
-      />
-      <input
-        ref={fileInput}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={(e) => pickImages(e.target.files)}
-        className="hidden"
+        onFiles={pickImages}
       />
 
-        {onBoard.some((i) => i.sections.length === 0) && (
-          <button
-            onClick={() => setSorting(true)}
-            className="t-small font-semibold text-ink underline underline-offset-4 transition hover:text-accent-ink"
-          >
-            Sort {onBoard.filter((i) => i.sections.length === 0).length} unfiled
-          </button>
-        )}
-
-        {onBoard.length >= 4 && (
-          <span className="flex items-center gap-3">
-            <button
-              onClick={look}
-              disabled={thinking}
-              className="t-small font-semibold text-accent-ink underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
-            >
-              {thinking ? "Looking across the board…" : "Show me the patterns"}
-            </button>
-            {board.findings.length > 0 && !thinking && (
-              <button
-                onClick={() => setShowFindings((v) => !v)}
-                className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
+      {onBoard.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <Pill on={only === null} onClick={() => setOnly(null)}>
+            Everything <Count n={onBoard.length} on={only === null} />
+          </Pill>
+          {SECTIONS.map((sec) => {
+            const n = onBoard.filter((i) => i.sections.includes(sec.id)).length;
+            if (!n && only !== sec.id) return null;
+            return (
+              <Pill
+                key={sec.id}
+                on={only === sec.id}
+                onClick={() => setOnly(only === sec.id ? null : sec.id)}
               >
-                {showFindings ? "Back to the board" : `${board.findings.length} found`}
+                {sec.name} <Count n={n} on={only === sec.id} />
+              </Pill>
+            );
+          })}
+          {unfiled.length > 0 && (
+            <Pill on={only === "unfiled"} onClick={() => setOnly("unfiled")}>
+              Unfiled <Count n={unfiled.length} on={only === "unfiled"} />
+            </Pill>
+          )}
+
+          <span className="ml-auto flex items-center gap-3">
+            {unfiled.length > 0 && (
+              <button
+                onClick={() => setSorting(true)}
+                className="t-small font-semibold text-ink underline underline-offset-4 transition hover:text-accent-ink"
+              >
+                Sort {unfiled.length}
+              </button>
+            )}
+            {onBoard.length >= 4 && (
+              <button
+                onClick={look}
+                disabled={thinking}
+                className="t-small font-semibold text-accent-ink underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
+              >
+                {thinking
+                  ? "Looking…"
+                  : board.findings.length
+                    ? `${board.findings.length} patterns`
+                    : "Find the patterns"}
               </button>
             )}
           </span>
-        )}
+        </div>
+      )}
 
-        <button
-          onClick={() =>
-            setShut((c) =>
-              Object.values(c).some(Boolean)
-                ? {}
-                : Object.fromEntries(SECTIONS.map((x) => [x.id, true])),
-            )
-          }
-          className="t-small ml-auto text-ink-3 underline underline-offset-2 transition hover:text-ink"
-        >
-          {Object.values(shut).some(Boolean) ? "Open all" : "Fold all"}
-        </button>
-      </div>
-
-
-      {showFindings && board.findings.length > 0 && (
+      {board.findings.length > 0 && !thinking && (
         <Findings
           findings={board.findings}
           byId={byId}
@@ -483,167 +494,38 @@ export default function ResearchBoard({
         />
       )}
 
-      {/* ------------------------------------------------------ the board */}
       {onBoard.length === 0 ? (
-        <Empty onStart={() => fileInput.current?.click()} number={drop.number} />
+        <Empty onStart={() => setSorting(false)} number={drop.number} />
       ) : (
-        <div className="mt-6 space-y-3">
-          {/*
-            Everything that acts on the whole board lives on one line: the
-            pattern read on the left where it reads as the main move, the
-            open/close pair pushed to the right where they belong with the
-            sections they operate on. These were three separate rows.
-          */}
-
-          {/*
-            ONE BOARD, FOUR LANES.
-
-            These used to be four stacked sections, each with its own masonry
-            grid, which is why the page felt like four things instead of one.
-            A collection sorted four ways should look like a collection sorted
-            four ways — connected, side by side, told apart by a half-shade of
-            warmth rather than by four black boxes competing for attention.
-
-            A lane you are not working in folds to a spine. Nothing is deleted,
-            nothing is hidden down a scroll; it is just out of the way.
-          */}
-          <div
-            className="card overflow-hidden"
-            onDragEnd={() => {
-              setHeld(null);
-              setOver(null);
-            }}
-          >
-            <div className="flex items-stretch">
-              {LANES.map((s, index) => {
-                const items =
-                  s.id === "loose"
-                    ? onBoard.filter((i) => i.sections.length === 0)
-                    : onBoard.filter((i) =>
-                        i.sections.includes(s.id as Section),
-                      );
-                if (!items.length && s.id === "loose") return null;
-                const open = !shut[s.id] && items.length > 0;
-                const droppable = s.id !== "loose";
-                const target = over === s.id;
-
-                if (!open)
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => setShut((c) => ({ ...c, [s.id]: false }))}
-                      onDragOver={(e) => {
-                        if (!droppable || !held) return;
-                        e.preventDefault();
-                        setOver(s.id);
-                      }}
-                      onDragLeave={() => setOver((o) => (o === s.id ? null : o))}
-                      onDrop={() => {
-                        if (!droppable || !held) return;
-                        // Dropping onto a folded lane opens it, so you can see
-                        // where the thing you just moved actually went.
-                        drag(held.item, held.from, s.id as Section);
-                        setShut((c) => ({ ...c, [s.id]: false }));
-                        setHeld(null);
-                        setOver(null);
-                      }}
-                      title={`Open ${s.name}`}
-                      className={`lane lane-${index % 4} flex w-11 shrink-0 flex-col items-center gap-3 py-4 transition ${
-                        target ? "bg-accent-soft" : "hover:bg-white"
-                      }`}
-                    >
-                      <span className="t-small tabular-nums text-ink-3">
-                        {items.length}
-                      </span>
-                      <span
-                        className="text-[12px] font-semibold tracking-tight text-ink-2"
-                        style={{ writingMode: "vertical-rl" }}
-                      >
-                        {s.name}
-                      </span>
-                    </button>
+        <div className="mt-4 columns-2 gap-3 sm:columns-3 xl:columns-4 2xl:columns-5 [&>*]:mb-3">
+          {shown.map((item) => (
+            <div key={item.id} className="break-inside-avoid">
+              <Piece
+                item={item}
+                lane={only === "unfiled" || only === null ? null : only}
+                onLane={lane}
+                onShelve={shelve}
+                onRemove={drop_}
+                onGrab={() => {}}
+                onNote={async (it, note) => {
+                  await updateItem(it.id, { note });
+                  setBoard((b) =>
+                    b
+                      ? {
+                          ...b,
+                          items: b.items.map((i) =>
+                            i.id === it.id ? { ...i, note } : i,
+                          ),
+                        }
+                      : b,
                   );
-
-                return (
-                  <div
-                    key={s.id}
-                    onDragOver={(e) => {
-                      if (!droppable || !held) return;
-                      e.preventDefault();
-                      setOver(s.id);
-                    }}
-                    onDragLeave={() => setOver((o) => (o === s.id ? null : o))}
-                    onDrop={() => {
-                      if (!droppable || !held) return;
-                      drag(held.item, held.from, s.id as Section);
-                      setHeld(null);
-                      setOver(null);
-                    }}
-                    className={`lane lane-${index % 4} min-w-0 flex-1 transition ${
-                      target ? "!bg-accent-soft" : ""
-                    }`}
-                  >
-                    <button
-                      onClick={() => setShut((c) => ({ ...c, [s.id]: true }))}
-                      title={`Fold ${s.name} away`}
-                      className="group flex w-full items-center gap-2 px-3 py-2.5 text-left"
-                    >
-                      <span className="text-[13px] font-semibold tracking-tight text-ink">
-                        {s.name}
-                      </span>
-                      <span className="t-small tabular-nums text-ink-3">
-                        {items.length}
-                      </span>
-                      <span className="ml-auto text-[11px] leading-none text-transparent transition group-hover:text-ink-3">
-                        fold
-                      </span>
-                    </button>
-
-                    {s.id === "loose" && (
-                      <p className="px-3 pb-2 text-[11.5px] leading-snug text-ink-3">
-                        Nothing is filed until you say so. Drag these across,
-                        or{" "}
-                        <button
-                          onClick={() => setSorting(true)}
-                          className="font-semibold text-ink underline underline-offset-2"
-                        >
-                          sort them one by one
-                        </button>
-                        .
-                      </p>
-                    )}
-
-                    <div className="space-y-2 px-2 pb-3">
-                      {items.map((item) => (
-                        <Piece
-                          key={item.id}
-                          item={item}
-                          lane={s.id === "loose" ? null : (s.id as Section)}
-                          onLane={lane}
-                          onShelve={shelve}
-                          onRemove={drop_}
-                          onGrab={(it, from) => setHeld({ item: it, from })}
-                          onNote={async (it, note) => {
-                            await updateItem(it.id, { note });
-                            setBoard((b) =>
-                              b
-                                ? {
-                                    ...b,
-                                    items: b.items.map((i) =>
-                                      i.id === it.id ? { ...i, note } : i,
-                                    ),
-                                  }
-                                : b,
-                            );
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+                }}
+              />
             </div>
-          </div>
+          ))}
+          {shown.length === 0 && (
+            <p className="t-small text-ink-3">Nothing in here yet.</p>
+          )}
         </div>
       )}
 
@@ -841,6 +723,39 @@ function AddBar({
  * border on the picture, a four-word caption, and the controls only appear
  * under the cursor.
  */
+/** A filter pill. The whole lane vocabulary reduced to one control. */
+function Pill({
+  on,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      className={`rounded-full border px-3 py-1 text-[12.5px] font-semibold transition ${
+        on
+          ? "border-black bg-black text-white"
+          : "border-black/15 bg-white text-ink-2 hover:border-black hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Count({ n, on }: { n: number; on: boolean }) {
+  return (
+    <span className={`tabular-nums ${on ? "opacity-55" : "text-ink-3"}`}>
+      {n}
+    </span>
+  );
+}
+
 function Piece({
   item,
   lane,

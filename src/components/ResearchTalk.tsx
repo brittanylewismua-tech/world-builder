@@ -49,7 +49,7 @@ export default function ResearchTalk({
             who === "room" ? "bg-black text-white" : "hover:bg-black/5"
           }`}
         >
-          Creative Room
+          Drop Director
         </button>
         <button
           onClick={() => setWho("customer")}
@@ -57,7 +57,7 @@ export default function ResearchTalk({
             who === "customer" ? "bg-black text-white" : "hover:bg-black/5"
           }`}
         >
-          Your customer
+          Your Customer
         </button>
       </div>
 

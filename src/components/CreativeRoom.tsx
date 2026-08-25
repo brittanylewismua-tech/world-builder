@@ -192,7 +192,7 @@ export default function CreativeRoom({
     <div className="card flex h-full flex-col overflow-hidden">
       <div className="flex items-center gap-2 border-b-2 border-black px-4 py-3">
         <Star size={9} className="text-accent" />
-        <span className="eyebrow">creative room</span>
+        <span className="eyebrow">drop director</span>
         <span className="ml-auto text-[11px] text-ink-3">
           {/*
             On the research tab the drop has no mockups yet, so a "0/10" here

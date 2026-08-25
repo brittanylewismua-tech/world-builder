@@ -26,7 +26,13 @@ export const maxDuration = 300;
  * quietly turn into broken images in a year is worse than no import at all.
  */
 
-const MAX_PINS = 40;
+/*
+  One page, one request. See listPins — the daily ceiling is shared across
+  every seller on the app, so the default is deliberately modest and going
+  deeper is something the seller asks for rather than something we spend on
+  her behalf.
+*/
+const MAX_PINS = 20;
 
 export async function POST(req: Request) {
   let body: {
@@ -42,6 +48,8 @@ export async function POST(req: Request) {
       pin afterwards. Omitted means unfiled, and she sorts on the page.
     */
     lane?: string | null;
+    /** How many to reach for. Raised by the "load more" button. */
+    take?: number;
   };
   try {
     body = await req.json();
@@ -59,7 +67,8 @@ export async function POST(req: Request) {
   const db = serviceDb();
 
   try {
-    const pins = await listPins(await tokenFor(worldId), boardId, MAX_PINS);
+    const want = Math.min(Number(body.take) || MAX_PINS, 60);
+    const pins = await listPins(await tokenFor(worldId), boardId, want);
 
     // Skip anything this world already took from Pinterest.
     const { data: seen } = await db
