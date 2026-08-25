@@ -448,6 +448,24 @@ export async function setShopBanner(worldId: string, file: File) {
 }
 
 
+/**
+ * Take the banner off, and delete the file with it.
+ *
+ * Clearing the column alone would leave the image sitting in storage forever,
+ * costing space and quietly keeping a picture the seller believed she had
+ * removed. The row is cleared first: if the delete then fails the banner is
+ * already gone from the app, which is the outcome she asked for — an orphaned
+ * file is a tidiness problem, a picture that will not go away is a trust one.
+ */
+export async function clearShopBanner(worldId: string, path: string | null) {
+  const { error } = await supabase
+    .from("wb_worlds")
+    .update({ shop_banner: null })
+    .eq("id", worldId);
+  if (error) throw new Error(error.message);
+  if (path) await supabase.storage.from(ASSET_BUCKET).remove([path]);
+}
+
 /** Upload a wallpaper. Wide and generous, but still downscaled and capped. */
 export async function setWallpaper(file: File) {
   const path = await uploadAsset(file, "wallpaper");

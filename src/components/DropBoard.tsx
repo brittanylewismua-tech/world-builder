@@ -31,10 +31,13 @@ export function ShopBanner({
   world,
   drop,
   onUpload,
+  onClear,
 }: {
   world: World;
   drop: Drop;
   onUpload?: (file: File) => Promise<void>;
+  /** Take the banner back off and return to the drop number. */
+  onClear?: () => Promise<void>;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -83,6 +86,28 @@ export function ShopBanner({
             Drop {String(drop.number).padStart(2, "0")}
           </span>
         </div>
+      )}
+
+      {/*
+        Only when there is something to remove, and only next to the control
+        that put it there — an X floating on an empty pink banner would be an
+        offer to delete nothing.
+      */}
+      {onClear && world.shopBannerSrc && (
+        <button
+          onClick={async () => {
+            if (!window.confirm("Remove this banner?")) return;
+            setBusy(true);
+            await onClear();
+            setBusy(false);
+          }}
+          disabled={busy}
+          aria-label="Remove this banner"
+          title="Remove this banner"
+          className="absolute right-[7.5rem] top-2.5 flex h-7 w-7 items-center justify-center rounded-lg border-2 border-black bg-white text-[13px] font-bold leading-none text-black shadow-[2px_2px_0_#000] transition hover:bg-accent-soft"
+        >
+          ×
+        </button>
       )}
 
       {onUpload && (
@@ -335,6 +360,7 @@ export default function DropBoard({
   onRenameMockup,
   onMoveMockup,
   onUploadBanner,
+  onClearBanner,
   onBackground,
   onSlots,
 }: {
@@ -346,6 +372,7 @@ export default function DropBoard({
   onRenameMockup?: (item: DropItem, title: string) => Promise<void>;
   onMoveMockup?: (from: number, to: number) => Promise<void>;
   onUploadBanner?: (file: File) => Promise<void>;
+  onClearBanner?: () => Promise<void>;
   onBackground?: (hex: string) => void;
   /** Change how many designs a drop holds. Absent on frozen boards. */
   onSlots?: (n: number) => Promise<void>;
@@ -364,6 +391,7 @@ export default function DropBoard({
           world={world}
           drop={drop}
           onUpload={frozen ? undefined : onUploadBanner}
+          onClear={frozen ? undefined : onClearBanner}
         />
 
         <div

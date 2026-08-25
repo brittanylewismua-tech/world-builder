@@ -8,7 +8,7 @@ import ResearchTalk from "@/components/ResearchTalk";
 import DropWeek from "@/components/DropWeek";
 import Explain from "@/components/Explain";
 import { useWorld } from "@/lib/useWorld";
-import { saveWorld, setShopBanner } from "@/lib/api";
+import { clearShopBanner, saveWorld, setShopBanner } from "@/lib/api";
 import {
   freezeNow,
   moveItemToSlot,
@@ -139,6 +139,15 @@ function StudioBody({ world }: { world: World }) {
       patch({ shopBannerPath: path, shopBannerSrc: src });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Banner upload failed.");
+    }
+  }
+
+  async function onClearBanner() {
+    try {
+      await clearShopBanner(world.id, world.shopBannerPath);
+      patch({ shopBannerPath: null, shopBannerSrc: null });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not remove the banner.");
     }
   }
 
@@ -353,6 +362,7 @@ function StudioBody({ world }: { world: World }) {
           onRenameMockup={onRenameMockup}
           onMoveMockup={onMoveMockup}
           onUploadBanner={onUploadBanner}
+          onClearBanner={onClearBanner}
           onBackground={onBackground}
           onSlots={async (n) => {
             await patch({ slotsPerDrop: n });
