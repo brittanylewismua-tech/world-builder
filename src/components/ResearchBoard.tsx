@@ -29,7 +29,6 @@ import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
 import Link from "next/link";
 import SplitPane from "./SplitPane";
-import SortPass from "./SortPass";
 import Capture from "./Capture";
 import Said from "./Said";
 import { Dots, Star } from "./ui";
@@ -99,7 +98,6 @@ export default function ResearchBoard({
     from: Section | null;
   } | null>(null);
   const [over, setOver] = useState<string | null>(null);
-  const [sorting, setSorting] = useState(false);
   /* Which lane the wall is narrowed to. null means show everything. */
   const [only, setOnly] = useState<Section | "unfiled" | null>(null);
   const [pulling, setPulling] = useState(false);
@@ -355,24 +353,6 @@ export default function ResearchBoard({
 
       {err && <p className="note t-small mb-4 px-4 py-3 text-ink-2">{err}</p>}
 
-      {sorting && (
-        <SortPass
-          items={onBoard.filter((i) => i.sections.length === 0)}
-          onDone={() => setSorting(false)}
-          onSorted={(id, sections) =>
-            setBoard((b) =>
-              b
-                ? {
-                    ...b,
-                    items: b.items.map((i) =>
-                      i.id === id ? { ...i, sections } : i,
-                    ),
-                  }
-                : b,
-            )
-          }
-        />
-      )}
 
       {/*
         CHAT LEFT, MATERIAL RIGHT.
@@ -439,9 +419,15 @@ export default function ResearchBoard({
 
       {onBoard.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <Pill on={only === null} onClick={() => setOnly(null)}>
-            Everything <Count n={onBoard.length} on={only === null} />
-          </Pill>
+          {/*
+            The named lanes first, then My ideas, then Everything last.
+
+            Everything used to lead, which put the least specific answer where
+            the eye starts. And what is now My ideas was called Unfiled — a
+            word that says "you have not done something yet" about a note the
+            seller just wrote. It is not a waiting room; it is where her own
+            thoughts live, and they can stay there forever.
+          */}
           {SECTIONS.map((sec) => {
             const n = onBoard.filter((i) => i.sections.includes(sec.id)).length;
             if (!n && only !== sec.id) return null;
@@ -456,10 +442,16 @@ export default function ResearchBoard({
             );
           })}
           {unfiled.length > 0 && (
-            <Pill on={only === "unfiled"} onClick={() => setOnly("unfiled")}>
-              Unfiled <Count n={unfiled.length} on={only === "unfiled"} />
+            <Pill
+              on={only === "unfiled"}
+              onClick={() => setOnly(only === "unfiled" ? null : "unfiled")}
+            >
+              My ideas <Count n={unfiled.length} on={only === "unfiled"} />
             </Pill>
           )}
+          <Pill on={only === null} onClick={() => setOnly(null)}>
+            Everything <Count n={onBoard.length} on={only === null} />
+          </Pill>
 
           <span className="ml-auto flex items-center gap-3">
             {/*
@@ -496,14 +488,6 @@ export default function ResearchBoard({
               {pulling ? "Checking Pinterest…" : "Refresh from Pinterest"}
             </button>
 
-            {unfiled.length > 0 && (
-              <button
-                onClick={() => setSorting(true)}
-                className="t-small font-semibold text-ink underline underline-offset-4 transition hover:text-accent-ink"
-              >
-                Sort {unfiled.length}
-              </button>
-            )}
             {/*
               Read once, then open and shut. Findings rendering by default put
               six paragraphs of prose above the images — on a page whose whole
@@ -913,6 +897,22 @@ function Piece({
         />
       )}
 
+      {/*
+        Putting something aside is the most frequent thing a seller does to a
+        piece she is not using, and it was buried two clicks deep behind a
+        ••• that also holds lanes, notes and delete. Its own control, bottom
+        right so it is nowhere near the menu and cannot be hit by accident,
+        and invisible until the cursor is on the piece.
+      */}
+      <button
+        onClick={() => onShelve(item)}
+        aria-label="Keep this for later"
+        title="Keep for later"
+        className="absolute bottom-1 right-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-ink-2 shadow-sm transition hover:text-ink opacity-0 group-hover/piece:opacity-100"
+      >
+        later
+      </button>
+
       <button
         onClick={() => setMenu((v) => !v)}
         aria-label="Lanes, note or remove"
@@ -931,6 +931,11 @@ function Piece({
             pin she may well have saved for three.
           */}
           <p className="eyebrow px-1.5 pb-1 text-ink-3">Saved for</p>
+          {item.sections.length === 0 && (
+            <p className="px-1.5 pb-1 text-[11.5px] leading-snug text-ink-3">
+              Sitting in My ideas. Tick a lane to file it, or leave it here.
+            </p>
+          )}
           {SECTIONS.map((sec) => {
             const on = item.sections.includes(sec.id);
             return (
@@ -959,15 +964,6 @@ function Piece({
             );
           })}
           <span className="my-1 block h-px bg-black/10" />
-          <button
-            onClick={() => {
-              onShelve(item);
-              setMenu(false);
-            }}
-            className="block w-full rounded px-1.5 py-1 text-left text-[13px] hover:bg-black/5"
-          >
-            Keep for later
-          </button>
           {item.kind !== "text" && (
             <button
               onClick={() => {
@@ -1103,9 +1099,10 @@ function Empty({ number }: { number: number }) {
         bring in a Pinterest board and everything lands here at once.
       </p>
       <p className="t-small mx-auto mt-4 max-w-md text-ink-3">
-        Two lanes: <b className="text-ink-2">Design inspo</b> for anything you
-        saved because you liked it, <b className="text-ink-2">Etsy bestsellers</b>{" "}
-        for what is already selling.
+        <b className="text-ink-2">Design inspo</b> for anything you saved
+        because you liked it, <b className="text-ink-2">Etsy bestsellers</b> for
+        what is already selling, and <b className="text-ink-2">My ideas</b> for
+        anything you write down yourself.
       </p>
       <Link href="/profile#pinterest" className="btn btn-ghost mt-6">
         Bring in a Pinterest board
