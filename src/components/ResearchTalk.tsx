@@ -66,12 +66,17 @@ export default function ResearchTalk({
         the half-typed message every time somebody glanced at the other one.
       */}
       <div className={`min-h-0 flex-1 ${who === "room" ? "" : "hidden"}`}>
+        {/*
+          On the research tab the Director looks at the pins; on the build tab
+          there are no pins and the mockups are the subject. Same person, same
+          thread — what changes is what is in front of you.
+        */}
         <CreativeRoom
           world={world}
           drop={drop}
           drops={drops}
-          looksAt={pins}
-          subject="pins"
+          looksAt={pins.length ? pins : undefined}
+          subject={pins.length ? "pins" : "mockups"}
         />
       </div>
       <div className={`min-h-0 flex-1 ${who === "customer" ? "" : "hidden"}`}>

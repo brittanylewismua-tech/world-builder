@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import DropBoard from "@/components/DropBoard";
-import CreativeRoom from "@/components/CreativeRoom";
 import ResearchTalk from "@/components/ResearchTalk";
 import DropWeek from "@/components/DropWeek";
 import { useWorld } from "@/lib/useWorld";
@@ -333,8 +332,13 @@ function StudioBody({ world }: { world: World }) {
           onUploadBanner={onUploadBanner}
           onBackground={onBackground}
         />
+        {/*
+          The customer belongs on both tabs. She was only reachable while
+          researching, which is backwards — "would she actually buy this?" is
+          a question you have hardest while looking at the thing you just made.
+        */}
         <div className="lg:sticky lg:top-[72px] lg:h-[calc(100dvh-96px)]">
-          <CreativeRoom world={world} drop={drop} drops={drops} />
+          <ResearchTalk world={world} drop={drop} drops={drops} />
         </div>
       </div>
     </main>
