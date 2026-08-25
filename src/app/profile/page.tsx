@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import WorldSwitch from "@/components/WorldSwitch";
 import Link from "next/link";
 import { useWorld } from "@/lib/useWorld";
@@ -32,14 +32,17 @@ const DAY_NAME: Record<number, string> = {
   7: "Sundays",
 };
 
-type ModuleKey =
-  | "demand"
-  | "connection"
-  | "visual"
-  | "areas"
-  | "pinterest"
-  | "rhythm"
-  | "look";
+const MODULE_KEYS = [
+  "demand",
+  "connection",
+  "visual",
+  "areas",
+  "pinterest",
+  "rhythm",
+  "look",
+] as const;
+
+type ModuleKey = (typeof MODULE_KEYS)[number];
 
 /**
  * The foundation of the world, in one editable place.
@@ -60,6 +63,26 @@ export default function Profile() {
 function ProfileBody({ world }: { world: World }) {
   const { patch } = useWorld();
   const [open, setOpen] = useState<ModuleKey | null>(null);
+
+  /*
+    ARRIVE WITH THE RIGHT PANEL ALREADY OPEN.
+
+    Sending somebody here from another page to do one specific thing and then
+    landing them on seven identical closed rows is not a link, it is a riddle.
+    A hash on the URL — /profile#pinterest — opens that module and scrolls it
+    into view, so the link finishes the errand it started.
+  */
+  useEffect(() => {
+    const key = window.location.hash.replace("#", "") as ModuleKey;
+    if (!MODULE_KEYS.includes(key)) return;
+    setOpen(key);
+    // After paint, so the panel has expanded and we scroll to its real place.
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`module-${key}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }, []);
   const [err, setErr] = useState("");
   const a = worldActions(world, patch, setErr);
 
@@ -114,6 +137,7 @@ function ProfileBody({ world }: { world: World }) {
           title="Demand Foundation"
           summary={`${world.subNiches.length} validated sub-niche${world.subNiches.length === 1 ? "" : "s"}`}
           warn={!hasDemandFloor(world) ? "Below the minimum of 6" : undefined}
+          id="demand"
           open={open === "demand"}
           onToggle={() => toggle("demand")}
         >
@@ -133,6 +157,7 @@ function ProfileBody({ world }: { world: World }) {
               ? "Not answered yet"
               : `${answered} of ${AFFINITY_QUESTIONS.length} answered`
           }
+          id="connection"
           open={open === "connection"}
           onToggle={() => toggle("connection")}
         >
@@ -142,6 +167,7 @@ function ProfileBody({ world }: { world: World }) {
         <Module
           title="Visual Calibration"
           summary={`${world.visualReferences.length} reference${world.visualReferences.length === 1 ? "" : "s"}`}
+          id="visual"
           open={open === "visual"}
           onToggle={() => toggle("visual")}
           preview={
@@ -175,6 +201,7 @@ function ProfileBody({ world }: { world: World }) {
               ? `${world.areas.length} watched daily`
               : "None yet"
           }
+          id="areas"
           open={open === "areas"}
           onToggle={() => toggle("areas")}
           preview={
@@ -198,6 +225,7 @@ function ProfileBody({ world }: { world: World }) {
         <Module
           title="Pinterest"
           summary="Bring your boards into this world"
+          id="pinterest"
           open={open === "pinterest"}
           onToggle={() => toggle("pinterest")}
         >
@@ -207,6 +235,7 @@ function ProfileBody({ world }: { world: World }) {
         <Module
           title="Drop Rhythm"
           summary={`${world.slotsPerDrop} designs, ${DAY_NAME[world.dropWeekday] ?? "weekly"}${world.paused ? " · paused" : ""}`}
+          id="rhythm"
           open={open === "rhythm"}
           onToggle={() => toggle("rhythm")}
         >
@@ -219,6 +248,7 @@ function ProfileBody({ world }: { world: World }) {
             PRESETS.find((p) => p.id === world.theme.preset)?.name ??
             "Custom look"
           }
+          id="look"
           open={open === "look"}
           onToggle={() => toggle("look")}
           preview={
@@ -242,6 +272,7 @@ function ProfileBody({ world }: { world: World }) {
 }
 
 function Module({
+  id,
   title,
   summary,
   warn,
@@ -250,6 +281,8 @@ function Module({
   children,
   preview,
 }: {
+  /** Anchor target, so /profile#pinterest can land on this one. */
+  id?: string;
   title: string;
   summary: string;
   warn?: string;
@@ -259,7 +292,10 @@ function Module({
   preview?: React.ReactNode;
 }) {
   return (
-    <section className={`card overflow-hidden ${open ? "ring-1 ring-accent" : ""}`}>
+    <section
+      id={id ? `module-${id}` : undefined}
+      className={`card overflow-hidden scroll-mt-6 ${open ? "ring-1 ring-accent" : ""}`}
+    >
       <button
         onClick={onToggle}
         className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition hover:bg-[#f4f2f1]"

@@ -1071,7 +1071,7 @@ function Empty({ number }: { number: number }) {
         saved because you liked it, <b className="text-ink-2">Etsy bestsellers</b>{" "}
         for what is already selling.
       </p>
-      <Link href="/profile" className="btn btn-ghost mt-6">
+      <Link href="/profile#pinterest" className="btn btn-ghost mt-6">
         Bring in a Pinterest board
       </Link>
     </div>
