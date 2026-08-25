@@ -22,22 +22,21 @@ const API = "https://api.pinterest.com/v5";
 export const ASSETS = "world-assets";
 
 /**
- * Secret boards need their own scopes.
+ * Only what this app is actually allowed to ask for.
  *
- * boards:read returns public and protected boards only, and no amount of
- * privacy=ALL changes that — the filter cannot hand back something the token
- * was never permitted to see. A seller keeps her competitor research secret
- * as a matter of course, so without these the one board this product most
- * wants is invisible and the failure is silent: the board simply is not in
- * the list, with nothing to say why.
+ * Secret boards do need boards:read_secret and pins:read_secret — privacy=ALL
+ * cannot hand back something the token was never permitted to see. But those
+ * scopes come with Pinterest STANDARD access, and this app is on Production
+ * Limited, which grants exactly: pins:read, boards:read, user_accounts:read,
+ * ads:read, catalogs:read.
+ *
+ * Asking for a scope the app does not hold is not a harmless no-op — it can
+ * fail the whole authorisation and cost the seller the working connection she
+ * already has. So the request stays inside what is granted, and secret boards
+ * stay invisible until standard access comes through. Add the two _secret
+ * scopes here the day it does; nothing else needs to change.
  */
-export const PIN_SCOPES = [
-  "boards:read",
-  "boards:read_secret",
-  "pins:read",
-  "pins:read_secret",
-  "user_accounts:read",
-];
+export const PIN_SCOPES = ["boards:read", "pins:read", "user_accounts:read"];
 
 /**
  * ONE CALLBACK, WHATEVER HOST THEY ARE ON.

@@ -215,8 +215,8 @@ export default function PinterestBoards({ world }: { world: World }) {
           Bring your Pinterest boards in as research for your drops.
         </p>
         <p className="t-small mt-2 max-w-md text-ink-3">
-          Read-only, secret boards included. Nothing is ever pinned, changed or
-          deleted on your account.
+          Read-only. Nothing is ever pinned, changed or deleted on your
+          account. Secret boards are not shared with this app yet.
         </p>
         <button
           onClick={connect}
@@ -254,9 +254,19 @@ export default function PinterestBoards({ world }: { world: World }) {
           disabled={busy !== null}
           className="t-small ml-auto text-ink-3 underline underline-offset-2 transition hover:text-ink"
         >
-          Missing a board? Reconnect
+          Reconnect
         </button>
       </div>
+
+      {/*
+        Said out loud rather than left as a mystery. Pinterest will not hand a
+        Production Limited app anybody's secret boards, so a seller whose
+        competitor board is secret would otherwise just keep looking for it.
+      */}
+      <p className="t-small mb-4 text-ink-3">
+        Secret boards will not appear — Pinterest only shares those with apps
+        on standard access.
+      </p>
 
       {boards.length === 0 && (
         <p className="t-small mt-4 text-ink-3">
