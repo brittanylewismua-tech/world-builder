@@ -38,25 +38,16 @@ const LANES: { id: Lane | ""; name: string }[] = [
   { id: "", name: "decide later" },
 ];
 
-const WHERE: { id: Destination; name: string; blurb: string }[] = [
-  {
-    id: "calibration",
-    name: "This is my eye",
-    blurb:
-      "Lands in Visual Calibration. Sets the style the AI pictures when it pictures your world.",
-  },
-  {
-    id: "research",
-    name: "This is for my next drop",
-    blurb:
-      "Lands on the research board for the drop you are researching, ready when you build it.",
-  },
-  {
-    id: "reference",
-    name: "This is what shops in my world look like",
-    blurb:
-      "Lands on the same board, marked as reference — other people's work, never mistaken for your direction.",
-  },
+/*
+  Three destinations, three names. The explanation under each said where the
+  pins would technically land, which is a fact about the database rather than
+  anything the seller is deciding between — she is choosing what the board IS,
+  and the name already says that.
+*/
+const WHERE: { id: Destination; name: string }[] = [
+  { id: "calibration", name: "This is my eye" },
+  { id: "research", name: "This is for my next drop" },
+  { id: "reference", name: "This is what shops in my world look like" },
 ];
 
 interface Board {
@@ -343,16 +334,14 @@ export default function PinterestBoards({ world }: { world: World }) {
                       key={w.id}
                       onClick={() => bring(b, w.id)}
                       disabled={needsDrop}
-                      className="block w-full rounded-lg border border-black/12 bg-white p-3 text-left transition hover:border-black disabled:opacity-40"
-                    >
-                      <span className="t-small block font-semibold text-ink">
-                        {w.name}
-                      </span>
-                      <span className="t-small block text-ink-3">
-                        {needsDrop
+                      title={
+                        needsDrop
                           ? "Open Drop Studio once and this becomes available."
-                          : w.blurb}
-                      </span>
+                          : undefined
+                      }
+                      className="block w-full rounded-lg border border-black/12 bg-white px-3 py-2 text-left text-[13px] font-medium text-ink transition hover:border-black disabled:opacity-40"
+                    >
+                      {w.name}
                     </button>
                   );
                 })}
