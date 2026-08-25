@@ -77,6 +77,39 @@ export default function Login() {
     router.replace("/");
   }
 
+  /**
+   * CONTINUE WITH GOLDIE.
+   *
+   * Every real account on this project so far arrived through Google, because
+   * the rest of the Suite signs in that way — and they all share this auth
+   * project. So a seller who is already signed in to Listing Factory has a
+   * valid session here and was still being asked to invent a second account
+   * with a password, for the same product.
+   *
+   * Back to the site root rather than a bespoke callback: the client is
+   * configured with detectSessionInUrl, so it completes the exchange wherever
+   * it lands, and the root page already routes on session — setup if the
+   * world is unbuilt, home if it is not. One less thing to keep in step when
+   * the Suite shell replaces this gate.
+   */
+  async function enterWithGoogle() {
+    setBusy(true);
+    setErr("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    if (error) {
+      setBusy(false);
+      setErr(
+        /provider.*not enabled/i.test(error.message)
+          ? "Google sign-in is switched off for this Supabase project."
+          : error.message,
+      );
+    }
+    // On success the browser leaves for Google; nothing to do here.
+  }
+
   const field =
     "w-full rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-accent";
 
@@ -187,6 +220,42 @@ export default function Login() {
                 : "sign in"}
           </button>
         </div>
+
+        <div className="mt-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-white/12" />
+          <span className="eyebrow text-white/35">or</span>
+          <span className="h-px flex-1 bg-white/12" />
+        </div>
+
+        <button
+          onClick={enterWithGoogle}
+          disabled={busy}
+          className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-lg border border-white/20 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white transition hover:border-accent hover:bg-white/[0.07] disabled:opacity-40"
+        >
+          <svg viewBox="0 0 18 18" className="h-4 w-4" aria-hidden="true">
+            <path
+              fill="#4285F4"
+              d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
+            />
+            <path
+              fill="#34A853"
+              d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.94v2.33A9 9 0 0 0 9 18Z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.94a9 9 0 0 0 0 8.1l3.03-2.33Z"
+            />
+            <path
+              fill="#EA4335"
+              d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .94 4.95l3.03 2.33C4.68 5.16 6.66 3.58 9 3.58Z"
+            />
+          </svg>
+          {busy ? "opening…" : "Continue with Google"}
+        </button>
+
+        <p className="mt-2.5 text-[12.5px] leading-relaxed text-white/40">
+          The same account you use for the rest of the Goldie Suite.
+        </p>
 
         {err && (
           <p className="mt-4 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-[13px] leading-relaxed text-white">
