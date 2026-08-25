@@ -386,21 +386,23 @@ export default function ResearchBoard({
         room a conversation deserves depends on whether you are talking or
         looking, and that changes hour to hour.
       */}
+      {/*
+        THE BOARD IS THE PAGE.
+
+        The conversation sat on the left at a third of the width, which put a
+        text panel where the eye lands first on a screen whose subject is
+        images — and squeezed the images into what was left. It is a rail on
+        the right now: reachable the whole time, never the main event, and it
+        folds to a spine when you want the whole width to look.
+      */}
       <SplitPane
         storageKey="wb-research-split"
-        collapsedLabel="conversation"
+        collapsedLabel="chat"
+        collapse="right"
+        initial={0.76}
+        min={0.6}
+        max={0.85}
         left={
-          Talk ? (
-            <div className="sticky top-4 h-[calc(100dvh-2rem)]">
-              <Talk
-                world={world}
-                drop={drop}
-                pins={onBoard.map((i) => ({ id: i.id, src: i.src }))}
-              />
-            </div>
-          ) : null
-        }
-        right={
           <div className="pb-8">
 
       {/*
@@ -596,6 +598,17 @@ export default function ResearchBoard({
       </div>
 
           </div>
+        }
+        right={
+          Talk ? (
+            <div className="sticky top-4 h-[calc(100dvh-2rem)]">
+              <Talk
+                world={world}
+                drop={drop}
+                pins={onBoard.map((i) => ({ id: i.id, src: i.src }))}
+              />
+            </div>
+          ) : null
         }
       />
     </div>
@@ -1059,7 +1072,7 @@ function Empty({ number }: { number: number }) {
         for what is already selling.
       </p>
       <Link href="/profile" className="btn btn-ghost mt-6">
-        Connect Pinterest
+        Bring in a Pinterest board
       </Link>
     </div>
   );

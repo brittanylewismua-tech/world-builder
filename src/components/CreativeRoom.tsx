@@ -59,7 +59,7 @@ const encoded = new Map<string, string>();
  * and pretended. Now it is given whichever set is actually in front of the
  * seller.
  */
-async function encodeAll(
+export async function encodeAll(
   sources: { id: string; src: string | null }[],
 ): Promise<string[]> {
   const out: string[] = [];
@@ -97,7 +97,7 @@ async function encodeAll(
 }
 
 /** The mockups in a drop, in slot order. */
-function mockupSources(drop: Drop) {
+export function mockupSources(drop: Drop) {
   return [...drop.items]
     .sort((a, b) => a.slot - b.slot)
     .slice(0, 10)

@@ -58,7 +58,12 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { messages?: Msg[]; context?: string };
+  let body: {
+    messages?: Msg[];
+    context?: string;
+    /** The drop's designs, base64 jpeg, no data: prefix. */
+    images?: string[];
+  };
   try {
     body = await req.json();
   } catch {
@@ -69,6 +74,49 @@ export async function POST(req: Request) {
   if (!messages.length)
     return NextResponse.json({ error: "Nothing to say." }, { status: 400 });
 
+  /*
+    SHE CAN SEE THE DESIGNS — AS A SHOPPER, NOT A REVIEWER.
+
+    Showing her the seller's designs is the most useful thing this feature
+    does: "would you actually wear this" is worth more pointed at a real
+    mockup than asked in the abstract. But it is also the fastest way to ruin
+    her, because a person handed somebody's work-in-progress starts giving
+    feedback on it, and then she is a consultant with opinions about kerning
+    instead of a customer with a life.
+
+    So the framing is a shop, not a review. She is looking at products for
+    sale. She reacts the way she would scrolling a listing — wants it, does
+    not, has seen it before, would buy it for her sister — and never as
+    somebody being consulted about a design.
+
+    Front-loaded and cached for the same reason as the Director: the images
+    do not change turn to turn, so re-sending and re-paying for them on every
+    message is waste.
+  */
+  const images = (body.images ?? []).slice(0, 10);
+  const history: Anthropic.MessageParam[] = [];
+
+  if (images.length) {
+    const blocks: Anthropic.ContentBlockParam[] = images.map((b64, i) => ({
+      type: "image",
+      source: { type: "base64" as const, media_type: "image/jpeg" as const, data: b64 },
+      ...(i === images.length - 1
+        ? { cache_control: { type: "ephemeral" as const } }
+        : {}),
+    }));
+    blocks.push({
+      type: "text",
+      text: `Imagine you are scrolling a shop and these ${images.length} item${images.length === 1 ? " is" : "s are"} for sale. React to them the way you would react to anything you came across shopping — what you would wear, what you would scroll past, what you have seen a hundred times, what you would buy for somebody else. You are not reviewing anyone's work and nobody is asking your professional opinion. Never mention design, layout, fonts, colours as choices somebody made, or how something could be improved. You are a shopper.`,
+    });
+    history.push({ role: "user", content: blocks });
+    history.push({
+      role: "assistant",
+      content: "Okay, I'm looking.",
+    });
+  }
+
+  for (const m of messages) history.push({ role: m.role, content: m.content });
+
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const began = Date.now();
@@ -76,7 +124,7 @@ export async function POST(req: Request) {
       model: MODEL,
       max_tokens: 900,
       system: `${SYSTEM}\n\n--- THE WORLD YOU LIVE IN ---\n${body.context ?? "(sparse profile — improvise carefully and stay plausible)"}`,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: history,
     });
     meter("customer", door.caller.userId, {
       model: MODEL,

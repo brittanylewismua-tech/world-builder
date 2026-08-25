@@ -16,6 +16,8 @@ import { askAI } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
+import type { Drop } from "@/lib/drops";
+import { encodeAll, mockupSources } from "./CreativeRoom";
 
 /**
  * THE CUSTOMER, BESIDE THE BOARD.
@@ -25,9 +27,12 @@ import type { World } from "@/lib/world";
  * a pin and wondering whether she would actually say that. This is the same
  * conversation, same memory, sized to sit in a panel.
  *
- * She deliberately does NOT see the research board. She is a person who lives
- * in this world, not a consultant reviewing the seller's work, and handing her
- * the board would turn her into one.
+ * She sees the DESIGNS in the drop, because "would you actually wear this" is
+ * worth far more pointed at a real mockup than asked in the abstract — but
+ * she never sees the research board. Research is the seller's thinking, and a
+ * person shown somebody's working-out starts commenting on the working-out.
+ * Finished designs are just products in a shop, which is a thing a customer
+ * has every right to an opinion about.
  */
 const PROMPTS = [
   "What are you doing this weekend?",
@@ -48,7 +53,14 @@ function fourOf(list: string[]) {
   return [...keep, rest[Math.floor(Math.random() * rest.length)]];
 }
 
-export default function CustomerChat({ world }: { world: World }) {
+export default function CustomerChat({
+  world,
+  drop,
+}: {
+  world: World;
+  /** The drop being built. She is shown its designs, nothing else. */
+  drop?: Drop;
+}) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,7 +106,11 @@ export default function CustomerChat({ world }: { world: World }) {
     try {
       const j = await askAI<{ text: string }>(
         "/api/customer",
-        { messages: recent(all), context: await context() },
+        {
+          messages: recent(all),
+          context: await context(),
+          images: drop ? await encodeAll(mockupSources(drop)) : [],
+        },
         { timeoutMs: 90_000 },
       );
       const reply = { role: "assistant" as const, content: j.text };
@@ -134,7 +150,8 @@ export default function CustomerChat({ world }: { world: World }) {
         {ready && msgs.length === 0 && (
           <>
             <p className="t-small text-ink-3">
-              Someone who lives in this world. She cannot see your board.
+              Someone who lives in this world. She can see the designs in this
+              drop, the way a shopper would.
             </p>
             <div className="space-y-0.5">
               {starters.map((p) => (

@@ -80,7 +80,7 @@ export default function ResearchTalk({
         />
       </div>
       <div className={`min-h-0 flex-1 ${who === "customer" ? "" : "hidden"}`}>
-        <CustomerChat world={world} />
+        <CustomerChat world={world} drop={drop} />
       </div>
     </div>
   );

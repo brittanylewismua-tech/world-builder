@@ -35,8 +35,10 @@ interface Props {
   initial?: number;
   min?: number;
   max?: number;
-  /** Shown on the reopen tab when the left pane is collapsed. */
+  /** Shown on the reopen tab when the collapsible pane is shut. */
   collapsedLabel?: string;
+  /** Which side folds away. The other one is the work and always stays. */
+  collapse?: "left" | "right";
 }
 
 export default function SplitPane({
@@ -47,6 +49,7 @@ export default function SplitPane({
   min = 0.22,
   max = 0.55,
   collapsedLabel = "Chat",
+  collapse = "left",
 }: Props) {
   const frame = useRef<HTMLDivElement>(null);
   const [fraction, setFraction] = useState(initial);
@@ -149,24 +152,32 @@ export default function SplitPane({
       </div>
     );
 
-  if (shut)
+  if (shut) {
+    const tab = (
+      <button
+        onClick={toggle}
+        title="Open the conversation"
+        className="card card-hover flex w-11 shrink-0 items-center justify-center self-start py-6"
+      >
+        <span
+          className="eyebrow whitespace-nowrap text-ink-2"
+          style={{ writingMode: "vertical-rl", rotate: "180deg" }}
+        >
+          {collapsedLabel} ›
+        </span>
+      </button>
+    );
     return (
       <div className="flex gap-3">
-        <button
-          onClick={toggle}
-          title="Open the conversation"
-          className="card card-hover flex w-11 shrink-0 items-center justify-center self-start py-6"
-        >
-          <span
-            className="eyebrow whitespace-nowrap text-ink-2"
-            style={{ writingMode: "vertical-rl", rotate: "180deg" }}
-          >
-            {collapsedLabel} ›
-          </span>
-        </button>
-        <div className="min-w-0 flex-1">{right}</div>
+        {collapse === "left" ? tab : <div className="min-w-0 flex-1">{left}</div>}
+        {collapse === "left" ? (
+          <div className="min-w-0 flex-1">{right}</div>
+        ) : (
+          tab
+        )}
       </div>
     );
+  }
 
   const pct = `${(fraction * 100).toFixed(2)}%`;
 
@@ -233,18 +244,7 @@ export default function SplitPane({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1">
-        <div className="mb-2 flex justify-start">
-          <button
-            onClick={toggle}
-            className="t-small text-ink-3 transition hover:text-ink"
-            title="Collapse the conversation"
-          >
-            ‹ hide chat
-          </button>
-        </div>
-        {right}
-      </div>
+      <div className="min-w-0 flex-1">{right}</div>
     </div>
   );
 }
