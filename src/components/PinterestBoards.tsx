@@ -50,12 +50,32 @@ const WHERE: { id: Destination; name: string }[] = [
   { id: "reference", name: "This is what shops in my world look like" },
 ];
 
+interface Pulled {
+  at: string;
+  count: number;
+  destination: string;
+}
+
 interface Board {
   id: string;
   name: string;
   description: string;
   pinCount: number;
   cover: string | null;
+  /** The last time this board was brought in, if it ever was. */
+  pulled: Pulled | null;
+}
+
+/** "today", "yesterday", or a short date. Precision nobody needs, removed. */
+function when(iso: string) {
+  const then = new Date(iso);
+  const days = Math.floor(
+    (Date.now() - then.getTime()) / 86_400_000,
+  );
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  return then.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 async function call<T>(path: string, payload: unknown): Promise<T> {
@@ -154,6 +174,7 @@ export default function PinterestBoards({ world }: { world: World }) {
           dropId: destination === "calibration" ? null : nextDrop?.id ?? null,
         },
       );
+      load();
       setDone((d) => ({
         ...d,
         [board.id]:
@@ -283,9 +304,33 @@ export default function PinterestBoards({ world }: { world: World }) {
                 <span className="t-h3 block truncate text-ink">{b.name}</span>
                 <span className="t-small block text-ink-3">
                   {b.pinCount} pin{b.pinCount === 1 ? "" : "s"}
-                  {done[b.id] && ` · ${done[b.id]}`}
+                  {done[b.id]
+                    ? ` · ${done[b.id]}`
+                    : b.pulled
+                      ? ` · brought in ${when(b.pulled.at)}`
+                      : ""}
                 </span>
               </span>
+
+              {/*
+                A tick, not a claim of live syncing.
+
+                Nothing keeps updating on its own — bringing a board in is a
+                one-time pull, and a permanent "connected" badge would promise
+                a sync that does not exist and quietly go stale the moment she
+                pins anything. So the tick means "this one is in", and the
+                button next to it says plainly that new pins need asking for.
+              */}
+              {(b.pulled || done[b.id]) && (
+                <span
+                  aria-hidden
+                  title="Already brought in"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold leading-none text-[color:var(--accent-on)]"
+                >
+                  ✓
+                </span>
+              )}
+
               <button
                 onClick={() => {
                   const opening = choosing !== b.id;
@@ -298,7 +343,11 @@ export default function PinterestBoards({ world }: { world: World }) {
                 disabled={busy !== null}
                 className="btn btn-ghost shrink-0"
               >
-                {busy === b.id ? "Bringing it in…" : "Bring it in"}
+                {busy === b.id
+                  ? "Bringing it in…"
+                  : b.pulled || done[b.id]
+                    ? "Get new pins"
+                    : "Bring it in"}
               </button>
             </div>
 

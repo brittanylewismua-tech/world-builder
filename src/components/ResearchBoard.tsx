@@ -16,6 +16,7 @@ import {
   updateItem,
   setLane,
   dragLane,
+  pullNewPins,
   SECTIONS,
   SECTION_NAME,
   type Board,
@@ -101,6 +102,7 @@ export default function ResearchBoard({
   const [sorting, setSorting] = useState(false);
   /* Which lane the wall is narrowed to. null means show everything. */
   const [only, setOnly] = useState<Section | "unfiled" | null>(null);
+  const [pulling, setPulling] = useState(false);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   /*

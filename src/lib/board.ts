@@ -448,6 +448,18 @@ export async function dragLane(
   return next;
 }
 
+/**
+ * Top up this drop's research from the Pinterest boards already feeding it.
+ * Twenty per board — see the route for why it is not automatic.
+ */
+export async function pullNewPins(worldId: string, dropId: string) {
+  return askAI<{ imported: number; boards: number; note?: string }>(
+    "/api/pinterest/refresh",
+    { worldId, dropId },
+    { timeoutMs: 180_000 },
+  );
+}
+
 export async function removeItem(item: BoardItem) {
   const { error } = await supabase
     .from("wb_board_items")
