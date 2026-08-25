@@ -29,6 +29,7 @@ import { report } from "@/lib/report";
 import SplitPane from "./SplitPane";
 import SortPass from "./SortPass";
 import Capture from "./Capture";
+import Said from "./Said";
 import { Dots, Star } from "./ui";
 
 /**
@@ -464,24 +465,33 @@ export default function ResearchBoard({
                 Sort {unfiled.length}
               </button>
             )}
+            {/*
+              Read once, then open and shut. Findings rendering by default put
+              six paragraphs of prose above the images — on a page whose whole
+              job is showing you what you saved.
+            */}
             {onBoard.length >= 4 && (
               <button
-                onClick={look}
+                onClick={() =>
+                  board.findings.length ? setShowFindings((v) => !v) : look()
+                }
                 disabled={thinking}
                 className="t-small font-semibold text-accent-ink underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
               >
                 {thinking
                   ? "Looking…"
-                  : board.findings.length
-                    ? `${board.findings.length} patterns`
-                    : "Find the patterns"}
+                  : !board.findings.length
+                    ? "Find the patterns"
+                    : showFindings
+                      ? "Hide patterns"
+                      : `${board.findings.length} patterns`}
               </button>
             )}
           </span>
         </div>
       )}
 
-      {board.findings.length > 0 && !thinking && (
+      {showFindings && board.findings.length > 0 && !thinking && (
         <Findings
           findings={board.findings}
           byId={byId}
@@ -986,8 +996,12 @@ function Findings({
               </button>
             </div>
 
-            <h3 className="t-h2 mt-3 text-ink">{f.title}</h3>
-            <p className="t-body mt-1.5 text-ink-2">{f.detail}</p>
+            <h3 className="t-h2 mt-3 text-ink">
+              <Said text={f.title} />
+            </h3>
+            <p className="t-body mt-1.5 text-ink-2">
+              <Said text={f.detail} />
+            </p>
 
             {/* The evidence. An observation you cannot trace is just flattery. */}
             {evidence.length > 0 && (

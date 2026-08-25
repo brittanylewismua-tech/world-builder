@@ -14,6 +14,7 @@ import {
 } from "@/lib/memory";
 import { report } from "@/lib/report";
 import { Star } from "./ui";
+import Said from "./Said";
 
 /**
  * These openers decide what the room is for.
@@ -244,7 +245,7 @@ export default function CreativeRoom({
               key={i}
               className="whitespace-pre-wrap text-sm leading-relaxed text-ink-2"
             >
-              {m.content}
+              <Said text={m.content} />
             </div>
           ),
         )}

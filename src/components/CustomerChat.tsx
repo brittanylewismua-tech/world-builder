@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Star } from "./ui";
+import Said from "./Said";
 import { loadIssue, todayISO, type DailyItem } from "@/lib/daily";
 import {
   forget,
@@ -162,7 +163,7 @@ export default function CustomerChat({ world }: { world: World }) {
               key={i}
               className="max-w-[90%] whitespace-pre-wrap rounded-2xl rounded-bl-sm border border-black/12 bg-white px-3.5 py-2.5 text-[14px] leading-relaxed text-ink"
             >
-              {m.content}
+              <Said text={m.content} />
             </p>
           ),
         )}

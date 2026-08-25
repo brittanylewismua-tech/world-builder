@@ -28,7 +28,7 @@ WHAT TO NOTICE — record only what is genuinely present
 - structure: how a design is composed. Tiny centred type. Oversized back print. Badge composition. Text wrapped around illustration. Arched headline. Large word with tiny subtext. Left chest graphic. Stacked phrase. Circular layout. Editorial minimalism. Hand-drawn lettering.
 - colors: the actual combination, in plain words a person would use. "Muted red and cream." "Chocolate and baby blue." "Monochrome pink." Two to four colours, not a swatch list.
 - language: for anything with words — the phrase itself, its rhythm, the joke structure, the emotional register, insider terminology, who it sounds like it is spoken by.
-- motifs: the imagery itself, named the way a person would. Roses. Ribbons. Stars and moons. Tattoo flash. Vintage sport. Crosses and doves. Ornamental borders. Hand-drawn illustration. Say what is actually pictured — never "motif", never "treatment", never "visual language". Those are words nobody uses about their own work.
+- imagery: the imagery itself, named the way a person would. Roses. Ribbons. Stars and moons. Tattoo flash. Vintage sport. Crosses and doves. Ornamental borders. Hand-drawn illustration. Say what is actually pictured — never "motif", never "treatment", never "visual language". Those are words nobody uses about their own work.
 - presentation: the product or format if visible. Hat embroidery. Oversized tee. Poster layout. Tote. Small front with large back.
 - summary: one plain sentence describing what this is, as a person would say it out loud.
 
@@ -60,7 +60,7 @@ const TOOL = {
       structure: { type: "array", items: { type: "string" } },
       colors: { type: "array", items: { type: "string" } },
       language: { type: "array", items: { type: "string" } },
-      motifs: { type: "array", items: { type: "string" } },
+      imagery: { type: "array", items: { type: "string" } },
       presentation: { type: "array", items: { type: "string" } },
       section: {
         type: ["string", "null"],
