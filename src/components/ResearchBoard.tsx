@@ -462,6 +462,40 @@ export default function ResearchBoard({
           )}
 
           <span className="ml-auto flex items-center gap-3">
+            {/*
+              The refresh lives here because this is where a seller notices
+              her research has gone stale. The alternative was a trip to World
+              Profile to re-import each board one at a time.
+            */}
+            <button
+              onClick={async () => {
+                setPulling(true);
+                setErr("");
+                try {
+                  const r = await pullNewPins(world.id, drop.id);
+                  if (r.imported > 0) await load();
+                  else
+                    setErr(
+                      r.note ??
+                        "Nothing new on your Pinterest boards since last time.",
+                    );
+                } catch (e) {
+                  setErr(
+                    e instanceof Error
+                      ? e.message
+                      : "That refresh did not finish.",
+                  );
+                } finally {
+                  setPulling(false);
+                }
+              }}
+              disabled={pulling}
+              title="Pull the 20 most recent pins from the boards feeding this drop"
+              className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
+            >
+              {pulling ? "Checking Pinterest…" : "Refresh from Pinterest"}
+            </button>
+
             {unfiled.length > 0 && (
               <button
                 onClick={() => setSorting(true)}
