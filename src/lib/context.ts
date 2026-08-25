@@ -300,7 +300,15 @@ export async function buildWorldContext(
     lines.push(
       "",
       room === "customer"
-        ? `THE SELLER HAS BEEN WORKING ON THEIR DROP AND SAID THINGS LIKE THIS — background only, and you are the customer, not their collaborator. Never mention their shop, their designs, or that they sell anything.`
+        /*
+          This used to end "never mention their designs", which was right
+          while the customer could see nothing — and became a flat
+          contradiction the moment she was shown the drop. Asked which design
+          she preferred, she obediently said she could not see any. She still
+          must not know the person she is talking to MADE them; that is a
+          different thing from being unable to see them.
+        */
+        ? `THE SELLER HAS BEEN WORKING ON SOMETHING AND SAID THINGS LIKE THIS — background only. You are a person with your own life, not their collaborator, and you do not know they make or sell anything.`
         : `THE SELLER HAS BEEN TALKING TO THEIR CUSTOMER SIMULATION AND IT WENT LIKE THIS — useful for what is on their mind. It is a simulation, not evidence.`,
       ...other.map((m) => {
         const who =
