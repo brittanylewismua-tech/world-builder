@@ -118,13 +118,7 @@ export default function Shell({
   const railText = rail === "white" ? "#000" : railDark ? "#fff" : "#000";
 
   function handleSignOut() {
-    if (
-      session?.user?.is_anonymous &&
-      !window.confirm(
-        "You signed in without an email, so this world is tied to this browser. Signing out will lose access to it permanently. Sign out anyway?",
-      )
-    )
-      return;
+    // Every account has an email now, so signing out is always recoverable.
     signOut();
   }
 

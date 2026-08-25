@@ -77,22 +77,6 @@ export default function Login() {
     router.replace("/");
   }
 
-  async function enterAnonymously() {
-    setBusy(true);
-    setErr("");
-    const { error } = await supabase.auth.signInAnonymously();
-    setBusy(false);
-    if (error) {
-      setErr(
-        /disabled|not enabled/i.test(error.message)
-          ? "Anonymous sign-in is switched off for this Supabase project."
-          : error.message,
-      );
-      return;
-    }
-    router.replace("/");
-  }
-
   const field =
     "w-full rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-accent";
 
@@ -210,26 +194,16 @@ export default function Login() {
           </p>
         )}
 
-        {/* ------------------------------------------------ or just look */}
-        <details className="mt-8 border-t border-white/12 pt-5">
-          <summary className="eyebrow cursor-pointer text-white/45 transition hover:text-accent">
-            Or look around without an account
-          </summary>
-          <div className="mt-4">
-            <button
-              onClick={enterAnonymously}
-              disabled={busy}
-              className="rounded-lg border border-white/20 px-4 py-2.5 text-sm font-medium text-white transition hover:border-accent hover:text-accent disabled:opacity-40"
-            >
-              {busy ? "opening…" : "Enter without signing up"}
-            </button>
-            <p className="mt-3 text-[13px] leading-relaxed text-white/50">
-              Your world saves to this browser only. Clear your history or move
-              to another device and it is gone — you can add an email and
-              password later to keep it.
-            </p>
-          </div>
-        </details>
+        {/*
+          There is no way in without an email, on purpose.
+
+          The old "look around without an account" door created a real account
+          with no address attached, and that world then belonged to a browser
+          rather than to a person. Sign in properly afterwards and it does not
+          follow you — it is simply gone, with nothing on screen to say it ever
+          existed. That is indistinguishable from the app having eaten your
+          work, and it is not worth whatever the frictionless front door buys.
+        */}
       </div>
     </main>
   );

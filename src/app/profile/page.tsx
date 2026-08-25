@@ -17,7 +17,6 @@ import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
 import Customiser from "@/components/Customiser";
 import DropRhythm from "@/components/DropRhythm";
 import PinterestBoards from "@/components/PinterestBoards";
-import SecureWorld from "@/components/SecureWorld";
 import AccountCard from "@/components/AccountCard";
 import OwnYourWorld from "@/components/OwnYourWorld";
 import { PRESETS } from "@/lib/theme";
@@ -90,8 +89,6 @@ function ProfileBody({ world }: { world: World }) {
       {err && <ErrorNote>{err}</ErrorNote>}
 
       <WorldSwitch current={world.id} />
-
-      <SecureWorld />
 
       {/*
         One quiet field, never a prompt.

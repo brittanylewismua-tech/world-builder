@@ -26,7 +26,6 @@ export default function AccountCard() {
   const [err, setErr] = useState("");
 
   const email = session?.user?.email;
-  // Anonymous sellers get the louder SecureWorld prompt instead.
   if (!email) return null;
 
   async function save() {
