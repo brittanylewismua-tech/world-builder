@@ -133,17 +133,42 @@ async function boardNotes(dropId: string) {
   if (board.intention.trim())
     lines.push(`They said this drop is about: ${board.intention.trim()}`);
 
+  /*
+    Bestsellers are split out and labelled, because they are not the same kind
+    of thing as everything else here. Design, Quotes and Structures are what
+    the seller likes. Bestsellers are other people's listings — evidence about
+    a market, not a statement of her taste. Folded into one undifferentiated
+    list, a competitor's product description gets read back to her as her own
+    creative direction, which is the single worst thing this feature could do.
+  */
+  const mine: string[] = [];
+  const theirs: string[] = [];
+
   for (const r of rows) {
     const summary =
       typeof r.ai?.summary === "string" ? (r.ai.summary as string) : "";
-    const said = [r.note?.trim(), summary, r.body?.trim(), r.source_label]
+    const said = [r.note?.trim(), summary, r.body?.trim()]
       .filter(Boolean)
       .join(" — ")
       .slice(0, 240);
-    if (said)
-      lines.push(
-        `- [research_board_item] (${(r.sections ?? []).join(", ") || r.kind}) ${said}`,
+    if (!said) continue;
+    const lanes = r.sections ?? [];
+    if (lanes.includes("market"))
+      theirs.push(`- [competitor_listing] ${said}`);
+    else
+      mine.push(
+        `- [research_board_item] (${lanes.join(", ") || r.kind}) ${said}`,
       );
+  }
+
+  lines.push(...mine);
+
+  if (theirs.length) {
+    lines.push(
+      "",
+      "WHAT IS ALREADY SELLING IN THIS WORLD — listings from other shops that the seller saved as market reference. This is NOT her taste and NOT her direction. Use it to say what the market is saturated with or missing. Never suggest she copy any of it, and never describe it back to her as something she wants to make.",
+      ...theirs,
+    );
   }
 
   for (const f of (findings ?? []) as {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
+import { laneFromBoardName } from "@/lib/board";
 import type { World } from "@/lib/world";
 
 /**
@@ -23,16 +24,19 @@ import type { World } from "@/lib/world";
  */
 
 type Destination = "calibration" | "research" | "reference";
-type Lane = "visual" | "language" | "structure" | "color";
+type Lane = "visual" | "language" | "structure" | "market";
 
-/* Asked once per board rather than once per pin. Most Pinterest boards are
-   already about one thing, so this files forty pins with one click — and if
-   a board really is a jumble, "let me sort them" leaves them unfiled. */
+/*
+  Asked once per board rather than once per pin — but only as a fallback. The
+  real answer is that the seller keeps four boards with these names, so the
+  board she picks already says which lane it is and this never has to be
+  touched. See laneFromBoardName.
+*/
 const LANES: { id: Lane | ""; name: string }[] = [
-  { id: "visual", name: "the look" },
-  { id: "language", name: "the words" },
-  { id: "structure", name: "the layouts" },
-  { id: "color", name: "the colours" },
+  { id: "visual", name: "Design" },
+  { id: "language", name: "Quotes" },
+  { id: "structure", name: "Structures" },
+  { id: "market", name: "Bestsellers" },
   { id: "", name: "let me sort them" },
 ];
 
@@ -232,9 +236,28 @@ export default function PinterestBoards({ world }: { world: World }) {
   return (
     <div>
       {notice}
+      {/*
+        The workflow, said plainly and in the one place it pays off. Four
+        boards named these four things means every import files itself, and a
+        seller who ignores this is not broken — she just sorts on the board
+        instead. Instruction, not a requirement.
+      */}
+      <div className="note mb-4 max-w-2xl px-4 py-3">
+        <p className="t-small font-semibold text-ink">
+          Keep four boards on Pinterest and this does itself
+        </p>
+        <p className="t-small mt-1 text-ink-2">
+          <b>Design</b> — the look. <b>Quotes</b> — the words.{" "}
+          <b>Structures</b> — how it sits on the garment.{" "}
+          <b>Etsy bestsellers</b> — what is already selling. Pin to them all
+          week, bring them in when you sit down, and everything lands in the
+          right lane on its own.
+        </p>
+      </div>
+
       <p className="t-small max-w-xl text-ink-2">
-        Point a board at where it belongs. Bring it in as often as you like —
-        pins already here are skipped, so you only ever get what is new.
+        Bring a board in as often as you like — pins already here are skipped,
+        so you only ever get what is new.
       </p>
 
       {boards.length === 0 && (
@@ -266,9 +289,14 @@ export default function PinterestBoards({ world }: { world: World }) {
                 </span>
               </span>
               <button
-                onClick={() =>
-                  setChoosing(choosing === b.id ? null : b.id)
-                }
+                onClick={() => {
+                  const opening = choosing !== b.id;
+                  setChoosing(opening ? b.id : null);
+                  // Somebody who followed the workflow named this board
+                  // "Quotes". Answer the question for her.
+                  if (opening)
+                    setLane((laneFromBoardName(b.name) as Lane | null) ?? "");
+                }}
                 disabled={busy !== null}
                 className="btn btn-ghost shrink-0"
               >
@@ -282,7 +310,7 @@ export default function PinterestBoards({ world }: { world: World }) {
                     is not a board, and reference is other people's shops. */}
                 <div className="mb-2 rounded-lg border border-black/12 bg-white p-2.5">
                   <p className="eyebrow mb-1.5 text-ink-3">
-                    If this is for your next drop, you saved it for…
+                    Which lane
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {LANES.map((l) => (

@@ -19,29 +19,47 @@ import type { Drop } from "./drops";
  * it never rules anything in or out of the world.
  */
 
-export type Section = "structure" | "color" | "language" | "visual";
+export type Section = "visual" | "language" | "structure" | "market";
 export type ItemKind = "image" | "text" | "link";
 
+/**
+ * THE FOUR BOARDS.
+ *
+ * These are not analytical categories invented here — they are four Pinterest
+ * boards the seller is told to keep, so that sorting mostly happens where she
+ * already collects rather than as homework afterwards. That constraint is why
+ * there are four and why they are these four:
+ *
+ *   Design      — what it looks like. Colour lives here; nobody keeps a
+ *                 separate colour board, and that lane sat empty for weeks.
+ *   Quotes      — the words. For print-on-demand this is half the product.
+ *   Structures  — how it sits on the garment. Placement, scale, composition.
+ *   Bestsellers — what is already selling. Other people's shops.
+ *
+ * Bestsellers is a different kind of material from the other three and is
+ * handled differently downstream: it is evidence about the market, not the
+ * seller's taste, and must never be read back to her as her own direction.
+ */
 export const SECTIONS: { id: Section; name: string; blurb: string }[] = [
   {
     id: "visual",
     name: "Design",
-    blurb: "Imagery and styling that keeps turning up.",
+    blurb: "The look — imagery, styling, colour.",
   },
   {
     id: "language",
     name: "Quotes",
-    blurb: "Phrases, jokes, the way she talks.",
+    blurb: "The words. Phrases, jokes, the way she talks.",
   },
   {
     id: "structure",
     name: "Structures",
-    blurb: "Compositions and layouts you keep noticing.",
+    blurb: "How it sits on the garment. Placement and scale.",
   },
   {
-    id: "color",
-    name: "Colour",
-    blurb: "Combinations you keep responding to.",
+    id: "market",
+    name: "Bestsellers",
+    blurb: "What is already selling. Other people's shops, not yours.",
   },
 ];
 
@@ -49,8 +67,32 @@ export const SECTION_NAME: Record<Section, string> = {
   visual: "Design",
   language: "Quotes",
   structure: "Structures",
-  color: "Colour",
+  market: "Bestsellers",
 };
+
+/** The Pinterest boards a seller is asked to keep, in the same order. */
+export const PINTEREST_BOARDS: { lane: Section; suggested: string }[] = [
+  { lane: "visual", suggested: "Design" },
+  { lane: "language", suggested: "Quotes" },
+  { lane: "structure", suggested: "Structures" },
+  { lane: "market", suggested: "Etsy bestsellers" },
+];
+
+/**
+ * Match a Pinterest board to a lane by its name, so somebody who followed the
+ * workflow never has to answer the question at all. Deliberately generous —
+ * "quotes", "Quotes I love", "quote ideas" all land on Quotes — and silent
+ * when it is unsure, because a wrong guess here is exactly what we removed.
+ */
+export function laneFromBoardName(name: string): Section | null {
+  const n = name.toLowerCase();
+  if (/best.?sell|etsy|competit|top.?seller/.test(n)) return "market";
+  if (/quote|word|phrase|caption|saying|text|letter/.test(n)) return "language";
+  if (/structure|layout|placement|composition|mockup/.test(n)) return "structure";
+  if (/design|look|style|inspo|inspiration|aesthetic|colou?r/.test(n))
+    return "visual";
+  return null;
+}
 
 export interface BoardItem {
   id: string;

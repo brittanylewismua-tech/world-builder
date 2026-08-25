@@ -141,11 +141,19 @@ export async function POST(req: Request) {
         } else {
           // The seller's own words about the pin are worth more than the
           // title Pinterest scraped off the source page.
+          /*
+            Something brought in as "other people's shops" is bestsellers by
+            definition — asking again would be asking the same question twice.
+          */
           const lane =
-            typeof body.lane === "string" &&
-            ["structure", "color", "language", "visual"].includes(body.lane)
-              ? [body.lane]
-              : [];
+            destination === "reference"
+              ? ["market"]
+              : typeof body.lane === "string" &&
+                  ["visual", "language", "structure", "market"].includes(
+                    body.lane,
+                  )
+                ? [body.lane]
+                : [];
           const note = [pin.title, pin.description, pin.altText]
             .map((t) => t.trim())
             .filter(Boolean)

@@ -40,7 +40,13 @@ RULES
 5. Do not suggest what to make. Ever.
 
 SECTION
-Also say which area of the board this most naturally belongs in — structure, color, language, or visual — or null if it genuinely does not lean any way. This is a suggestion the seller can override, so lean toward the most obvious reading rather than an ingenious one.
+Also say which lane this most naturally belongs in, or null if you cannot tell:
+- visual — the look: imagery, styling, colour
+- language — the words on it
+- structure — how it sits on the garment: placement, scale, composition
+- market — a listing from somebody else's shop, evidence of what sells
+
+This is only ever a hint shown beside the seller's own choice. It never files anything. You can see what a piece IS but not why she saved it — the same tee can be saved for its quote, its layout or its colour — so answer null freely rather than reaching.
 
 Return your notes by calling the record tool.`;
 
@@ -58,7 +64,7 @@ const TOOL = {
       presentation: { type: "array", items: { type: "string" } },
       section: {
         type: ["string", "null"],
-        enum: ["structure", "color", "language", "visual", null],
+        enum: ["visual", "language", "structure", "market", null],
       },
     },
     required: ["summary", "section"],
@@ -123,7 +129,7 @@ export async function POST(req: Request) {
         const { section, ...ai } = b.input;
         const clean =
           typeof section === "string" &&
-          ["structure", "color", "language", "visual"].includes(section)
+          ["visual", "language", "structure", "market"].includes(section)
             ? section
             : null;
         return NextResponse.json({ ai, section: clean });
