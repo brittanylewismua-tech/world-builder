@@ -150,8 +150,8 @@ export default function CustomerChat({
         {ready && msgs.length === 0 && (
           <>
             <p className="t-small text-ink-3">
-              Someone who lives in this world. She can see the designs in this
-              drop, the way a shopper would.
+              One person who lives in this world. They can see the designs in
+              this drop, the way a shopper would.
             </p>
             <div className="space-y-0.5">
               {starters.map((p) => (
@@ -215,7 +215,7 @@ export default function CustomerChat({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(draft)}
-            placeholder="Ask her anything…"
+            placeholder="Ask your customer anything…"
             className="w-full rounded-lg border border-black/15 bg-white px-3 py-2 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-black"
           />
           <button
@@ -231,7 +231,7 @@ export default function CustomerChat({
             onClick={async () => {
               if (
                 !window.confirm(
-                  "Clear this conversation? She will forget everything you have talked about.",
+                  "Clear this conversation? They will forget everything you have talked about.",
                 )
               )
                 return;

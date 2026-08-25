@@ -166,7 +166,7 @@ async function boardNotes(dropId: string) {
   if (theirs.length) {
     lines.push(
       "",
-      "WHAT IS ALREADY SELLING IN THIS WORLD — listings from other shops that the seller saved as market reference. This is NOT her taste and NOT her direction. Use it to say what the market is saturated with or missing. Never suggest she copy any of it, and never describe it back to her as something she wants to make.",
+      "WHAT IS ALREADY SELLING IN THIS WORLD — listings from other shops that the seller saved as market reference. This is NOT the seller's taste and NOT their direction. Use it to say what the market is saturated with or missing. Never suggest they copy any of it, and never describe it back to them as something they want to make.",
       ...theirs,
     );
   }

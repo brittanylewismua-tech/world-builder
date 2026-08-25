@@ -23,7 +23,7 @@ export default function CustomerMoved() {
 
   return (
     <p className="t-small p-8 text-ink-3">
-      Taking you to the research board, where she lives now…
+      Taking you to the research board…
     </p>
   );
 }

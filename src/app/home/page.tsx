@@ -293,7 +293,7 @@ function HomeBody({ world }: { world: World }) {
         <Door
           href="/customer"
           title="Talk to the customer"
-          line="Ask her a normal question and think from inside her week."
+          line="Ask a normal question and think from inside their week."
         />
         <Door
           href="/history"

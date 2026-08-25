@@ -690,7 +690,7 @@ export function AreasSuggest({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addOwn()}
-            placeholder="something you know about her"
+            placeholder="something you know about them"
             className="field"
           />
           <button
