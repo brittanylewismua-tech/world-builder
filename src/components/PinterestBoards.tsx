@@ -35,7 +35,7 @@ type Lane = "visual" | "market";
 const LANES: { id: Lane | ""; name: string }[] = [
   { id: "visual", name: "Design inspo" },
   { id: "market", name: "Etsy bestsellers" },
-  { id: "", name: "let me sort them" },
+  { id: "", name: "decide later" },
 ];
 
 const WHERE: { id: Destination; name: string; blurb: string }[] = [
@@ -211,14 +211,12 @@ export default function PinterestBoards({ world }: { world: World }) {
     return (
       <div>
         {notice}
-        <p className="t-body max-w-xl text-ink-2">
-          You already collect on Pinterest. Connect it and your boards come in
-          here, where they get read — every pin analysed, patterns found across
-          them, and sitting on the right drop when you go to build it.
+        <p className="t-body max-w-md text-ink-2">
+          Bring your Pinterest boards in as research for your drops.
         </p>
-        <p className="t-small mt-2 max-w-xl text-ink-3">
-          Read-only. Nothing is ever pinned, changed or deleted on your
-          Pinterest account.
+        <p className="t-small mt-2 max-w-md text-ink-3">
+          Read-only, secret boards included. Nothing is ever pinned, changed or
+          deleted on your account.
         </p>
         <button
           onClick={connect}
@@ -235,31 +233,34 @@ export default function PinterestBoards({ world }: { world: World }) {
     <div>
       {notice}
       {/*
-        The workflow, said plainly and in the one place it pays off. Four
-        boards named these four things means every import files itself, and a
-        seller who ignores this is not broken — she just sorts on the board
-        instead. Instruction, not a requirement.
+        This had three paragraphs explaining a two-column filing system, a
+        rule about skipping duplicates, and an instruction to keep particular
+        boards. None of it was needed to press a button next to a board, and
+        all of it was in the way of doing so.
       */}
-      <div className="note mb-4 max-w-2xl px-4 py-3">
-        <p className="t-small font-semibold text-ink">
-          Keep two boards on Pinterest and this does itself
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <p className="t-small text-ink-2">
+          Bring a board in and its pins land on your research board.
         </p>
-        <p className="t-small mt-1 text-ink-2">
-          <b>Design inspo</b> — anything you saved because you liked it.{" "}
-          <b>Etsy bestsellers</b> — what is already selling. Pin to them all
-          week, bring them in when you sit down, and each one files itself.
-        </p>
+        {/*
+          Scopes are granted once, at connect time, so a token issued before
+          the secret-board scopes existed will never see a secret board no
+          matter what the code asks for. Reconnecting is the only way to widen
+          an existing grant, and without a way to do it the seller is stuck
+          with an invisible ceiling.
+        */}
+        <button
+          onClick={connect}
+          disabled={busy !== null}
+          className="t-small ml-auto text-ink-3 underline underline-offset-2 transition hover:text-ink"
+        >
+          Missing a board? Reconnect
+        </button>
       </div>
-
-      <p className="t-small max-w-xl text-ink-2">
-        Bring a board in as often as you like — pins already here are skipped,
-        so you only ever get what is new.
-      </p>
 
       {boards.length === 0 && (
         <p className="t-small mt-4 text-ink-3">
-          No boards came back. Secret boards are included, so if you have
-          boards and none appear here, try disconnecting and connecting again.
+          No boards came back from Pinterest.
         </p>
       )}
 
@@ -306,7 +307,7 @@ export default function PinterestBoards({ world }: { world: World }) {
                     is not a board, and reference is other people's shops. */}
                 <div className="mb-2 rounded-lg border border-black/12 bg-white p-2.5">
                   <p className="eyebrow mb-1.5 text-ink-3">
-                    Which lane
+                    File these as
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {LANES.map((l) => (

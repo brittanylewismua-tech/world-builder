@@ -21,7 +21,23 @@ const API = "https://api.pinterest.com/v5";
  */
 export const ASSETS = "world-assets";
 
-export const PIN_SCOPES = ["boards:read", "pins:read", "user_accounts:read"];
+/**
+ * Secret boards need their own scopes.
+ *
+ * boards:read returns public and protected boards only, and no amount of
+ * privacy=ALL changes that — the filter cannot hand back something the token
+ * was never permitted to see. A seller keeps her competitor research secret
+ * as a matter of course, so without these the one board this product most
+ * wants is invisible and the failure is silent: the board simply is not in
+ * the list, with nothing to say why.
+ */
+export const PIN_SCOPES = [
+  "boards:read",
+  "boards:read_secret",
+  "pins:read",
+  "pins:read_secret",
+  "user_accounts:read",
+];
 
 /**
  * ONE CALLBACK, WHATEVER HOST THEY ARE ON.
