@@ -106,17 +106,85 @@ interface WorldRow {
   wallpaper_accent: string | null;
 }
 
+const COLUMNS =
+  "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused, theme_preset, theme_accent, theme_rail, wallpaper_kind, wallpaper_path, wallpaper_opacity, wallpaper_accent";
+
+/**
+ * WHICH WORLD.
+ *
+ * The app used to load whichever world was created first and offer no way to
+ * reach any other, which is fine right up until somebody builds a second one
+ * — and then their newer work is simply unreachable, with nothing on screen
+ * to suggest it exists.
+ *
+ * The choice lives in this browser rather than in the database on purpose: it
+ * is a view preference, not a fact about the world, and two tabs open on two
+ * worlds is a reasonable thing to want. RLS still decides what is readable,
+ * so a tampered value gets nothing rather than somebody else's world.
+ */
+const PICKED = "wb-world";
+
+export function pickWorld(id: string | null) {
+  try {
+    if (id) localStorage.setItem(PICKED, id);
+    else localStorage.removeItem(PICKED);
+  } catch {
+    // Private mode. The app still works; the choice just will not persist.
+  }
+}
+
+export function pickedWorld(): string | null {
+  try {
+    return localStorage.getItem(PICKED);
+  } catch {
+    return null;
+  }
+}
+
+/** Every world this seller owns, oldest first. For the switcher. */
+export async function listWorlds(): Promise<
+  { id: string; name: string; createdAt: string }[]
+> {
+  const { data, error } = await supabase
+    .from("wb_worlds")
+    .select("id, name, created_at")
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    name: (r.name as string) || "",
+    createdAt: r.created_at as string,
+  }));
+}
+
 /** The seller's world, or null if they have not created one yet. */
 export async function loadWorld(): Promise<World | null> {
-  const { data: rows, error } = await supabase
-    .from("wb_worlds")
-    .select(
-      "id, name, established, affinity, shop_banner, board_background, slots_per_drop, drop_weekday, paused, theme_preset, theme_accent, theme_rail, wallpaper_kind, wallpaper_path, wallpaper_opacity, wallpaper_accent",
-    )
-    .order("created_at", { ascending: true })
-    .limit(1);
-  if (error) throw new Error(error.message);
-  const row = rows?.[0] as WorldRow | undefined;
+  const chosen = pickedWorld();
+
+  let row: WorldRow | undefined;
+
+  if (chosen) {
+    const { data } = await supabase
+      .from("wb_worlds")
+      .select(COLUMNS)
+      .eq("id", chosen)
+      .maybeSingle();
+    row = (data as WorldRow | null) ?? undefined;
+    // Deleted, or belonging to somebody else. Forget it and fall back rather
+    // than leaving the seller staring at an empty app.
+    if (!row) pickWorld(null);
+  }
+
+  if (!row) {
+    const { data: rows, error } = await supabase
+      .from("wb_worlds")
+      .select(COLUMNS)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (error) throw new Error(error.message);
+    row = rows?.[0] as WorldRow | undefined;
+  }
+
   if (!row) return null;
 
   const [{ data: niches }, { data: areas }, { data: refs }] = await Promise.all([
