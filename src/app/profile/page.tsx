@@ -111,6 +111,9 @@ function ProfileBody({ world }: { world: World }) {
     };
   }, []);
 
+  const [err, setErr] = useState("");
+  const a = worldActions(world, patch, setErr);
+
   const toggle = (k: ModuleKey) => setOpen(open === k ? null : k);
   const answered = AFFINITY_QUESTIONS.filter(
     (q) => world.affinity[q.key] !== null,
