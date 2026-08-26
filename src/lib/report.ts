@@ -25,6 +25,10 @@ export type Surface =
   | "room"
   | "board"
   | "web"
+  /* Uploading an export and reading the wall fail for very different
+     reasons — a bad file against a model call — so they are counted apart. */
+  | "winners"
+  | "winners-read"
   | "studio"
   | "setup"
   | "auth";

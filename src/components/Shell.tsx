@@ -32,6 +32,7 @@ const NAV = [
   { href: "/home", label: "home" },
   { href: "/daily", label: "world news", hint: "what's happening today" },
   { href: "/web", label: "world web", hint: "trending in your world" },
+  { href: "/winners", label: "world winners", hint: "what's already selling" },
   { href: "/studio", label: "world drops", hint: "drop studio" },
 ];
 

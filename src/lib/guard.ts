@@ -49,6 +49,10 @@ export const DAILY_CAP = {
   board: 80,
   /* Reading the world is the expensive call. Twice is a grow and a retry. */
   web: 2,
+  /* Looking at thirty product photographs is the most expensive single call
+     in the app. A seller uploads a few exports and reads the wall once; three
+     covers that plus a retry. */
+  winners: 3,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -84,6 +88,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
   board:
     "You have reached today's limit. Everything you saved is safe and still there.",
   web: "The web has already grown today. There will be more tomorrow.",
+  winners:
+    "You have read the wall as many times as you can today. It resets tomorrow, and everything you uploaded is still here.",
 };
 
 export interface Caller {
