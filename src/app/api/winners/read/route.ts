@@ -45,17 +45,37 @@ Each picture comes with numbers: total sales, sales per day since it was listed,
 
 THE BRIEF HAS TWO PARTS
 
-1. PATTERNS. What these designs keep doing, and which of them are alive right now. Not the words they use — the manoeuvre underneath. "Reframes received history so the villain is the record itself" is a pattern. "Uses the word witch" is a word. Where sales per day or a young fast-selling listing tells you something, say it inside the pattern it belongs to rather than as a separate observation. Three to five, strongest first.
+1. PATTERNS. What these designs keep doing. Not the exact words they use — the thing underneath that you could do again with a different subject. Where a listing's sales per day tells you something, say it inside the pattern it belongs to. Three to five, strongest first.
 
-2. OPPORTUNITIES. Given those patterns, what this world has not been given yet. Each one names a subject and the move to apply to it. This is the part the seller is here for, so it is the part you think hardest about. Three to five.
+2. OPPORTUNITIES. Things nobody here has made yet that would fit. Three to five. This is the part the seller is here for.
 
-HOW TO WRITE IT
-Every entry is a short heading and one or two plain sentences. No preamble, no summary, no restating the brief back. Cite what you saw — "four of these are portrait line-ups", "the top one is doing seven a day at 575 days old" — because an observation with no evidence behind it is a horoscope.
+WRITE LIKE A PERSON, NOT A CRITIC
+This is the rule that matters most, and the one most easily broken.
+
+Use short, ordinary words. If a word would look strange in a text message to a friend, do not use it. Banned outright: tableau, motif, device, mechanic, iconography, canon, lineage, reclamation, juxtapose, subvert, interrogate, recontextualise, visual language, design language, semiotic, framing device, and any phrase like "a first-person text piece" or "a longer-form treatment".
+
+SAY THE ACTUAL THING
+An opportunity is only useful if the seller could go and make it this afternoon. Name the words that would be printed, or say plainly what would be drawn.
+
+Bad: "Give the subject a monologue rather than a slogan." Nobody can make that.
+Good: "Nobody has put her side of it on a shirt. Something like 'I was the one being stared at' in plain type under her face."
+
+Bad: "Extend the object-as-shorthand device to another figure."
+Good: "One shirt here sells on a lace collar alone, no face. Nobody has tried the same trick with another woman's one recognisable thing — Frida's flowers, Dolly's hair."
+
+Every opportunity: a heading that is the idea in a handful of plain words, then one or two sentences that either quote the words for the shirt or describe the picture simply. Say what you saw here that makes you think it would work.
+
+PATTERNS ARE PLAIN TOO
+Bad: "Reframes received history so the villain is the record itself."
+Good: "These flip who the bad guy was. 'They didn't burn witches, they burned women' is the whole idea — same event, blame moved."
+
+BACK IT UP
+Point at what you saw. "Four of these are rows of faces." "The top one is doing seven a day after 575 days." An observation with nothing behind it is a horoscope.
 
 NEVER
-- Never tell the seller to make a copy of a design here, or a version of one with the words changed. That is the one thing this must not do.
+- Never tell the seller to copy a design here, or make a version of one with the words swapped.
 - Never write about fabric, fit, cut, colour of the blank, or mockup quality.
-- Never say the sample was small, uneven, or that more data would help.
+- Never say the sample was small or that more data would help.
 - Never hedge with "consider", "you might want to", "it could be worth". Say the thing.`;
 
 const TOOL = {
