@@ -27,8 +27,21 @@ export const maxDuration = 300;
  * refreshed and that is all.
  */
 
-/** Etsy's cap on one batch request. */
-const MOST_PER_UPLOAD = 100;
+/**
+ * TWO CAPS, AND WHY THEY ARE HERE.
+ *
+ * Not to save money — reading a keyword's patterns costs about three cents
+ * and a seller does this while building the world, then leaves it alone until
+ * the next import. They are here because the page is a wall of photographs
+ * and a wall you cannot take in is not worth having.
+ *
+ * Ten designs is the whole top of a search: after that you are looking at
+ * listings nobody would call a winner. Ten keywords is more sub-niches than
+ * one customer world honestly has, and a world that needs fifteen is two
+ * worlds.
+ */
+const MOST_PER_KEYWORD = 10;
+const MOST_KEYWORDS = 10;
 
 const ETSY_BATCH = "https://openapi.etsy.com/v3/application/listings/batch";
 
@@ -143,9 +156,29 @@ export async function POST(req: Request) {
 
   const db = serviceDb();
 
-  const clean = rows.filter(
-    (r) => typeof r.listingId === "string" && /^\d+$/.test(r.listingId),
-  );
+  // Only the top of the search. eRank hands over a hundred rows; the ones
+  // below the tenth best seller are not what anybody means by a winner.
+  const clean = rows
+    .filter((r) => typeof r.listingId === "string" && /^\d+$/.test(r.listingId))
+    .sort((a, b) => (b.sales ?? 0) - (a.sales ?? 0))
+    .slice(0, MOST_PER_KEYWORD);
+
+  /*
+    A world holds ten keywords. Refusing the eleventh has to say which ones
+    are already in, or the seller is left guessing what to remove.
+  */
+  const { data: already } = await db
+    .from("wb_winners")
+    .select("keyword")
+    .eq("world_id", worldId);
+  const words = new Set((already ?? []).map((r) => r.keyword as string));
+  if (!words.has(keyword) && words.size >= MOST_KEYWORDS)
+    return NextResponse.json(
+      {
+        error: `This world already holds ${MOST_KEYWORDS} keywords, which is the limit. Remove one from the wall to make room for “${keyword}”.`,
+      },
+      { status: 400 },
+    );
 
   // What is already on the wall keeps its picture and its place; only the
   // numbers move.
@@ -159,9 +192,7 @@ export async function POST(req: Request) {
     );
   const known = new Set((have ?? []).map((h) => h.listing_id as string));
 
-  const fresh = clean
-    .filter((r) => !known.has(r.listingId as string))
-    .slice(0, MOST_PER_UPLOAD);
+  const fresh = clean.filter((r) => !known.has(r.listingId as string));
 
   const key = etsyKey();
   let pictures = new Map<string, { image: string | null; design: string | null }>();

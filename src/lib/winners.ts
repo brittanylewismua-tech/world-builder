@@ -119,10 +119,8 @@ export interface BriefPoint {
 }
 
 export interface Brief {
-  moves: BriefPoint[];
-  worn: BriefPoint[];
-  alive: BriefPoint[];
-  gaps: BriefPoint[];
+  patterns: BriefPoint[];
+  opportunities: BriefPoint[];
 }
 
 export interface StoredBrief {
@@ -131,26 +129,40 @@ export interface StoredBrief {
   ranAt: string;
 }
 
-export async function loadBrief(worldId: string): Promise<StoredBrief | null> {
+/**
+ * The current brief for each keyword.
+ *
+ * One read per keyword rather than one across everything, because a seller
+ * stands in front of one group and asks what is going on in it. Rows come
+ * back newest first, so the first one seen for a keyword is its current brief
+ * and the rest are its history.
+ */
+export async function loadBriefs(
+  worldId: string,
+): Promise<Record<string, StoredBrief>> {
   const { data } = await supabase
     .from("wb_winner_reads")
-    .select("brief, counted, ran_at")
+    .select("brief, counted, ran_at, keyword")
     .eq("world_id", worldId)
-    .order("ran_at", { ascending: false })
-    .limit(1);
-  const row = data?.[0];
-  if (!row) return null;
-  return {
-    brief: row.brief as Brief,
-    counted: Number(row.counted ?? 0),
-    ranAt: row.ran_at as string,
-  };
+    .order("ran_at", { ascending: false });
+
+  const out: Record<string, StoredBrief> = {};
+  for (const row of data ?? []) {
+    const k = row.keyword as string | null;
+    if (!k || out[k]) continue;
+    out[k] = {
+      brief: row.brief as Brief,
+      counted: Number(row.counted ?? 0),
+      ranAt: row.ran_at as string,
+    };
+  }
+  return out;
 }
 
-export async function readTheWall(world: World) {
-  return askAI<{ brief: Brief; counted: number }>(
+export async function readPatterns(world: World, keyword: string) {
+  return askAI<{ brief: Brief; counted: number; keyword: string }>(
     "/api/winners/read",
-    { worldId: world.id },
+    { worldId: world.id, keyword },
     { timeoutMs: 240_000 },
   );
 }

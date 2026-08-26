@@ -9,11 +9,11 @@ import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import {
   addExport,
-  loadBrief,
+  loadBriefs,
   loadWinners,
   perDay,
   readExport,
-  readTheWall,
+  readPatterns,
   removeKeyword,
   removeWinner,
   SOLD_AT_LEAST,
@@ -23,11 +23,15 @@ import {
 } from "@/lib/winners";
 
 /**
- * Below this many designs in a group, a "top five" is not a distinction —
- * it would light up more than half of them and mean nothing. The two
- * featured tiles already do that job in a small group.
+ * The crown: how many of a group's designs get the accent border, and the
+ * size a group has to reach before it is a distinction at all.
+ *
+ * It was a top five above ten designs, which stopped being possible when a
+ * keyword's group was capped at ten — five of ten is half the group lit up,
+ * which is not a highlight, it is a second colour scheme.
  */
-const CROWN_ABOVE = 10;
+const CROWN_TOP = 3;
+const CROWN_ABOVE = 5;
 
 const money = (n: number) =>
   n >= 1000 ? `$${Math.round(n / 1000)}k` : `$${Math.round(n)}`;
@@ -44,10 +48,14 @@ export default function WinnersPage() {
 
 function WinnersBody({ world }: { world: World }) {
   const [winners, setWinners] = useState<Winner[]>([]);
-  const [stored, setStored] = useState<StoredBrief | null>(null);
+  const [briefs, setBriefs] = useState<Record<string, StoredBrief>>({});
   const [ready, setReady] = useState(false);
   const [uploading, setUploading] = useState("");
-  const [reading, setReading] = useState(false);
+  /** The keyword currently being read, or "" when nothing is running. */
+  const [reading, setReading] = useState("");
+  /** Which keywords have their patterns showing. The read is stored, so this
+   *  is only about what is on screen — hiding never throws anything away. */
+  const [showing, setShowing] = useState<Record<string, boolean>>({});
   const [err, setErr] = useState("");
   const [said, setSaid] = useState("");
   /* null until an upload has reported back whether Etsy's key is in place. */
@@ -57,10 +65,10 @@ function WinnersBody({ world }: { world: World }) {
   const refresh = useCallback(async () => {
     const [w, b] = await Promise.all([
       loadWinners(world.id).catch(() => []),
-      loadBrief(world.id).catch(() => null),
+      loadBriefs(world.id).catch(() => ({})),
     ]);
     setWinners(w);
-    setStored(b);
+    setBriefs(b);
     setReady(true);
   }, [world.id]);
 
@@ -108,20 +116,21 @@ function WinnersBody({ world }: { world: World }) {
     }
   }
 
-  async function read() {
-    setReading(true);
+  async function read(keyword: string) {
+    setReading(keyword);
     setErr("");
     setSaid("");
     try {
-      await readTheWall(world);
+      await readPatterns(world, keyword);
       await refresh();
+      setShowing((s) => ({ ...s, [keyword]: true }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : "That did not finish.";
       if (!msg.toLowerCase().includes("limit"))
-        report("winners-read", e, { worldId: world.id });
+        report("winners-read", e, { worldId: world.id, keyword });
       setErr(msg);
     } finally {
-      setReading(false);
+      setReading("");
     }
   }
 
@@ -167,7 +176,7 @@ function WinnersBody({ world }: { world: World }) {
           list.length > CROWN_ABOVE
             ? [...list]
                 .sort((a, b) => b.sales - a.sales)
-                .slice(0, 5)
+                .slice(0, CROWN_TOP)
                 .map((w) => w.id)
             : [],
         );
@@ -256,7 +265,7 @@ function WinnersBody({ world }: { world: World }) {
         <button
           onClick={() => pick.current?.click()}
           className="btn btn-accent"
-          disabled={!!uploading || reading}
+          disabled={!!uploading || !!reading}
         >
           {uploading ? "Adding…" : "Add an eRank export"}
         </button>
@@ -270,44 +279,6 @@ function WinnersBody({ world }: { world: World }) {
           </span>
         )}
       </div>
-
-      {reading && (
-        <Card className="mb-7 flex flex-col items-center py-14 text-center">
-          <img
-            src="/globe.png"
-            alt=""
-            className="globe-turn h-14 w-14 opacity-80"
-          />
-          <p className="t-h3 mt-5 text-ink">Looking at the designs…</p>
-          <ReadingBar className="mt-4 max-w-xs" expect={70} />
-          <p className="t-small mt-1.5 text-ink-3">About a minute.</p>
-        </Card>
-      )}
-
-      {/* -------------------------------------------------------- brief */}
-      {!reading && stored && (
-        <BriefPanel
-          stored={stored}
-          world={world.id}
-          onRead={read}
-          busy={reading}
-          stale={winners.length > stored.counted}
-        />
-      )}
-
-      {!reading && !stored && withArt >= 4 && (
-        <Card className="mb-7 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="t-h3 text-ink">Read the whole wall</p>
-            <p className="t-small mt-1 text-ink-2">
-              One look across every design here, not keyword by keyword.
-            </p>
-          </div>
-          <button onClick={read} className="btn btn-accent">
-            Read it
-          </button>
-        </Card>
-      )}
 
       {/* --------------------------------------------------------- wall */}
       {ready && !winners.length && (
@@ -375,6 +346,23 @@ function WinnersBody({ world }: { world: World }) {
                 {g.list.length} designs · {money(g.revenue)} · {when(g.dated)}
               </span>
               <button
+                onClick={() => {
+                  if (!open) toggle(g.keyword, i);
+                  if (!briefs[g.keyword]) read(g.keyword);
+                  else setShowing((s) => ({ ...s, [g.keyword]: !s[g.keyword] }));
+                }}
+                className="btn btn-ghost shrink-0"
+                disabled={!!reading || g.list.length < 3}
+              >
+                {reading === g.keyword
+                  ? "Reading…"
+                  : !briefs[g.keyword]
+                    ? "Show patterns"
+                    : showing[g.keyword]
+                      ? "Hide patterns"
+                      : "Show patterns"}
+              </button>
+              <button
                 onClick={async () => {
                   if (
                     !confirm(
@@ -390,6 +378,28 @@ function WinnersBody({ world }: { world: World }) {
                 Remove keyword
               </button>
             </div>
+
+            {reading === g.keyword && (
+              <Card className="mt-4 flex flex-col items-center py-12 text-center">
+                <img
+                  src="/globe.png"
+                  alt=""
+                  className="globe-turn h-12 w-12 opacity-80"
+                />
+                <p className="t-h3 mt-4 text-ink">Looking at the designs…</p>
+                <ReadingBar className="mt-4 max-w-xs" expect={30} />
+              </Card>
+            )}
+
+            {open && briefs[g.keyword] && showing[g.keyword] && (
+              <BriefPanel
+                stored={briefs[g.keyword]}
+                keyword={g.keyword}
+                onRead={() => read(g.keyword)}
+                busy={!!reading}
+                stale={g.list.length !== briefs[g.keyword].counted}
+              />
+            )}
 
             {open && (
               <div className="mt-4">
@@ -494,107 +504,61 @@ function Section({
 }
 
 /**
- * THE BRIEF.
+ * ONE KEYWORD'S PATTERNS.
  *
- * Three attempts got this wrong in three different ways, and the thread
- * running through all of them was competition: too many things on screen with
- * the same visual weight, so the eye had nowhere to start.
+ * Four earlier versions of this got it wrong in four ways, and the thread
+ * through all of them was competition: too many things on screen at the same
+ * visual weight, so the eye had nowhere to start.
  *
- * A two-by-two grid of four equal sections made the reader do the ranking.
- * Holding the text to a reading measure fixed the line length and left half
- * the panel empty. Splitting it into two parallel columns filled the panel
- * and gave the eye two competing places to begin — and the section names,
- * set as eleven pixel caps labels, were the smallest type on a screen full of
- * fifteen pixel body text, so nothing announced itself at all.
+ * A two-by-two grid of equal sections made the reader do the ranking. Holding
+ * the text to a reading measure fixed the line length and left half the panel
+ * empty. Two parallel columns filled the panel and gave the eye two competing
+ * places to begin. And the section names, set as eleven pixel caps, were the
+ * smallest type on a screen of fifteen pixel body text, so nothing announced
+ * itself at all.
  *
- * So this is one path, not a composition. Sections stack down the page, each
- * with its name in a fixed column on the left and its findings on the right.
- * The eye runs down the left edge, reads four names, and stops wherever it
- * wants. There is one entry point and one direction.
+ * So it is one path, not a composition. Two sections stack, each with its
+ * name in a fixed column on the left and its findings on the right. The eye
+ * runs down the left edge and stops where it likes.
  *
- * Weight descends and never ties: the hole is a full heading with its
- * findings marked down the side in the accent, the reasoning is smaller and
- * unmarked, the two diagnostics are smaller again and greyer. At every level
- * a section's name is larger than the text underneath it.
- *
- * Nothing is dropped or shortened. Every section, entry and sentence the
- * model wrote is on the page — only the arrangement changed.
+ * Opportunities come first, because that is the part the seller is here for,
+ * and they carry the accent down their side. Patterns follow as the evidence
+ * underneath. There is no fold in here — the Show patterns button in the
+ * group header is the fold.
  */
 function BriefPanel({
   stored,
-  world,
+  keyword,
   onRead,
   busy,
   stale,
 }: {
   stored: StoredBrief;
-  /** World id, so the folded state is remembered per world. */
-  world: string;
+  keyword: string;
   onRead: () => void;
   busy: boolean;
+  /** The group has changed since this was read, so it describes a wall that
+   *  is no longer quite there. */
   stale: boolean;
 }) {
   const b = stored.brief;
 
-  /*
-    Folds away like the keyword groups do, and remembers. It is a long read
-    and it sits above the wall, so somebody who came to look at designs
-    should be able to put it away and have it stay away.
-  */
-  const key = `wb-brief-shut-${world}`;
-  const [shut, setShut] = useState(false);
-  useEffect(() => {
-    try {
-      setShut(localStorage.getItem(key) === "1");
-    } catch {
-      /* A browser that refuses storage just gets it open every time. */
-    }
-  }, [key]);
-
-  function fold() {
-    setShut((was) => {
-      try {
-        localStorage.setItem(key, was ? "0" : "1");
-      } catch {
-        /* Not worth failing the click over. */
-      }
-      return !was;
-    });
-  }
-
   return (
-    <Card className="mb-9">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-black pb-3">
-        <button
-          onClick={fold}
-          aria-expanded={!shut}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
-        >
-          <span
-            className="t-small shrink-0 text-ink-3 transition-transform"
-            style={{ transform: shut ? "none" : "rotate(90deg)" }}
-            aria-hidden
-          >
-            ▶
-          </span>
-          <h2 className="t-h2 text-ink">World winners patterns</h2>
-          <span className="t-small shrink-0 text-ink-3">
-            across {stored.counted} designs
-          </span>
-        </button>
+    <Card className="mt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-3">
+        <p className="t-small text-ink-3">
+          {stored.counted} designs under &ldquo;{keyword}&rdquo;
+          {stale && " · the group has changed since this was read"}
+        </p>
         <button onClick={onRead} className="btn btn-ghost" disabled={busy}>
           {stale ? "Read it again" : "Refresh"}
         </button>
       </div>
 
-      {!shut && (
-        <div className="mt-7">
-          <Section name="Where the hole is" lead points={b.gaps} />
-          <Section name="What this world buys" points={b.moves} />
-          <Section name="Still moving" quiet points={b.alive} />
-          <Section name="Worn out" quiet points={b.worn} />
-        </div>
-      )}
+      <div className="mt-7">
+        <Section name="Opportunities" lead points={b.opportunities} />
+        <Section name="Patterns" points={b.patterns} />
+      </div>
     </Card>
   );
 }

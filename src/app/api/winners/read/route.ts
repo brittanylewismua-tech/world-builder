@@ -9,16 +9,22 @@ export const maxDuration = 300;
 const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
 
 /**
- * READ THE WALL.
+ * READ ONE KEYWORD'S WINNERS.
  *
  * Every other AI surface in this app reads words. This one looks at pictures,
  * because the design is a picture and everything written about it on Etsy is
  * search engine sludge.
  *
- * It runs across the whole library at once rather than keyword by keyword. A
- * keyword's three winners tell you nothing; thirty winners from one world tell
- * you what that world is actually buying, and that is a thing no seller can
- * see by eye because they never have thirty of them side by side.
+ * It runs one keyword at a time. The whole-wall version came first and was
+ * dropped: a seller does not want one verdict on everything, they want to
+ * stand in front of one group and ask what is going on in it — and a read
+ * they aimed themselves is worth more than a broader one they did not.
+ *
+ * Two sections now, not four. "Worn out" is gone because nothing here is
+ * being copied: these are all top sellers being read for direction, so
+ * telling somebody a phrase is saturated answers a question nobody asked.
+ * What the world buys and what is still moving were the same observation
+ * split in half, so they are one section.
  *
  * The one thing it must never turn into is a copying machine. "Make this
  * shirt" is worthless and also how people get their shops closed. The output
@@ -26,45 +32,42 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
  * property.
  */
 
-/** Looking at pictures is expensive. Thirty is a wide enough view to see a
- *  pattern and a narrow enough one to keep a read to a few cents. */
-const LOOK_AT = 30;
+/** One keyword's group is capped at this on the way in, so a read is always
+ *  ten pictures and always costs about the same. */
+const LOOK_AT = 10;
 
-const SYSTEM = `You are looking at the print-on-demand designs that already sold in one customer world, and writing the seller a short brief.
+const SYSTEM = `You are looking at the print-on-demand designs that already sold under one search term in one customer world, and writing the seller a short brief.
 
 WHAT YOU ARE ACTUALLY LOOKING AT
 Product photographs from Etsy. Each is a garment with artwork on it. Read the artwork: what is drawn, what is written, how it is laid out, what it is doing. Ignore the garment, the model, the background and the fold of the fabric — the seller prints on blanks and none of that is the design.
 
 Each picture comes with numbers: total sales, sales per day since it was listed, days listed, price. Old and huge and slow is a different animal from young and fast, and you should say so when it matters.
 
-WHAT THE BRIEF CONTAINS
+THE BRIEF HAS TWO PARTS
 
-1. THE MOVES. What these designs keep doing. Not the words they use — the manoeuvre underneath. "Reframes received history so the villain is the record itself" is a move. "Uses the word witch" is a word. A move should be something the seller could apply to a subject that appears nowhere on this wall. Two to four of them, strongest first.
+1. PATTERNS. What these designs keep doing, and which of them are alive right now. Not the words they use — the manoeuvre underneath. "Reframes received history so the villain is the record itself" is a pattern. "Uses the word witch" is a word. Where sales per day or a young fast-selling listing tells you something, say it inside the pattern it belongs to rather than as a separate observation. Three to five, strongest first.
 
-2. WORN OUT. Where the wall is crowded — the same idea from several shops, or one idea holding so much of the sales that arriving now means arriving last. Name what is saturated and say what tells you. One to three.
-
-3. STILL MOVING. What is alive right now rather than what banked the most money over three years. Lean on sales per day and on young listings that are already selling. One to three.
-
-4. THE HOLE. Given the moves, what has this world not been given yet. Each one names a subject and the move to apply to it. This is the part the seller is here for, so it is the part you think hardest about. Two to four.
+2. OPPORTUNITIES. Given those patterns, what this world has not been given yet. Each one names a subject and the move to apply to it. This is the part the seller is here for, so it is the part you think hardest about. Three to five.
 
 HOW TO WRITE IT
-Every entry is a short heading and one or two plain sentences. No preamble, no summary, no restating the brief back. Cite what you saw — "four of these are portrait line-ups", "the top listing is doing seven a day at 575 days old" — because an observation with no evidence behind it is a horoscope.
+Every entry is a short heading and one or two plain sentences. No preamble, no summary, no restating the brief back. Cite what you saw — "four of these are portrait line-ups", "the top one is doing seven a day at 575 days old" — because an observation with no evidence behind it is a horoscope.
 
 NEVER
-- Never tell the seller to make a copy of a design on this wall, or a version of one with the words changed. That is the one thing this must not do.
+- Never tell the seller to make a copy of a design here, or a version of one with the words changed. That is the one thing this must not do.
 - Never write about fabric, fit, cut, colour of the blank, or mockup quality.
 - Never say the sample was small, uneven, or that more data would help.
 - Never hedge with "consider", "you might want to", "it could be worth". Say the thing.`;
 
 const TOOL = {
   name: "write_brief",
-  description: "The read across this world's proven designs.",
+  description: "The read across one keyword's proven designs.",
   input_schema: {
     type: "object",
     properties: {
-      moves: {
+      patterns: {
         type: "array",
-        description: "What these designs keep doing, strongest first.",
+        description:
+          "What these designs keep doing, and which are alive now. Strongest first.",
         items: {
           type: "object",
           properties: {
@@ -74,31 +77,7 @@ const TOOL = {
           required: ["heading", "body"],
         },
       },
-      worn: {
-        type: "array",
-        description: "Where the wall is crowded.",
-        items: {
-          type: "object",
-          properties: {
-            heading: { type: "string" },
-            body: { type: "string" },
-          },
-          required: ["heading", "body"],
-        },
-      },
-      alive: {
-        type: "array",
-        description: "What is moving now rather than what banked the most.",
-        items: {
-          type: "object",
-          properties: {
-            heading: { type: "string" },
-            body: { type: "string" },
-          },
-          required: ["heading", "body"],
-        },
-      },
-      gaps: {
+      opportunities: {
         type: "array",
         description: "Subjects this world has not been given yet.",
         items: {
@@ -111,7 +90,7 @@ const TOOL = {
         },
       },
     },
-    required: ["moves", "worn", "alive", "gaps"],
+    required: ["patterns", "opportunities"],
   },
 } as const;
 
@@ -138,44 +117,33 @@ function smaller(url: string) {
 }
 
 /**
- * Which thirty.
+ * Which ten.
  *
- * Sorting by sales alone hands back the same three-year-old giants every time
- * and the brief never notices anything new. Half the wall is chosen by total
- * sales and half by sales per day, so the established and the fast are both
- * in front of the model — which is the same pair the seller sees featured on
- * each keyword.
+ * The group is already capped at ten on the way in, so this is usually all of
+ * it. The sort still matters for the rare group that predates the cap: by
+ * sales, because within a single search term the biggest sellers are the ones
+ * the seller is standing there asking about.
  */
 function pick(rows: Row[]) {
-  const withArt = rows.filter((r) => r.image_url);
-  const rate = (r: Row) => r.sales / Math.max(1, r.age_days);
-
-  const bySales = [...withArt].sort((a, b) => b.sales - a.sales);
-  const byRate = [...withArt].sort((a, b) => rate(b) - rate(a));
-
-  const chosen: Row[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; chosen.length < LOOK_AT && i < withArt.length; i++) {
-    for (const list of [bySales, byRate]) {
-      const r = list[i];
-      if (!r || seen.has(r.listing_id) || chosen.length >= LOOK_AT) continue;
-      seen.add(r.listing_id);
-      chosen.push(r);
-    }
-  }
-  return chosen;
+  return rows
+    .filter((r) => r.image_url)
+    .sort((a, b) => b.sales - a.sales)
+    .slice(0, LOOK_AT);
 }
 
 export async function POST(req: Request) {
-  let body: { worldId?: string };
+  let body: { worldId?: string; keyword?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
   const worldId = body.worldId;
+  const keyword = body.keyword?.trim();
   if (!worldId)
     return NextResponse.json({ error: "No world given." }, { status: 400 });
+  if (!keyword)
+    return NextResponse.json({ error: "No keyword given." }, { status: 400 });
 
   const door = await ownerOf(req, worldId);
   if ("deny" in door) return door.deny;
@@ -196,16 +164,17 @@ export async function POST(req: Request) {
       "listing_id, keyword, title, shop, age_days, daily_views, sales, price, image_url, design",
     )
     .eq("world_id", worldId)
+    .eq("keyword", keyword)
     .eq("hidden", false);
 
   const rows = (data ?? []) as Row[];
   const chosen = pick(rows);
 
-  if (chosen.length < 4)
+  if (chosen.length < 3)
     return NextResponse.json(
       {
         error:
-          "There are not enough designs on the wall yet. Add a couple more exports and read it then.",
+          "There are not enough designs under this keyword to find a pattern in.",
       },
       { status: 400 },
     );
@@ -218,7 +187,7 @@ export async function POST(req: Request) {
     const rate = (r.sales / Math.max(1, r.age_days)).toFixed(1);
     content.push({
       type: "text",
-      text: `— ${i + 1} — filed under "${r.keyword}" · ${r.sales.toLocaleString()} sales · ${rate}/day · ${r.age_days} days listed · $${Number(r.price).toFixed(2)} · ${r.daily_views} views/day${r.design ? `\nEtsy describes it: ${r.design}` : ""}`,
+      text: `— ${i + 1} — ${r.sales.toLocaleString()} sales · ${rate}/day · ${r.age_days} days listed · $${Number(r.price).toFixed(2)} · ${r.daily_views} views/day${r.design ? `\nEtsy describes it: ${r.design}` : ""}`,
     });
     content.push({
       type: "image",
@@ -227,7 +196,7 @@ export async function POST(req: Request) {
   });
   content.push({
     type: "text",
-    text: "Write the brief. Look at the artwork, not the shirts.",
+    text: `Write the brief. Every one of these is winning the search "${keyword}", so this is one corner of the seller's world rather than all of it. Look at the artwork, not the shirts.`,
   });
 
   try {
@@ -274,13 +243,11 @@ export async function POST(req: Request) {
         }));
 
     const brief = {
-      moves: list("moves"),
-      worn: list("worn"),
-      alive: list("alive"),
-      gaps: list("gaps"),
+      patterns: list("patterns"),
+      opportunities: list("opportunities"),
     };
 
-    if (!brief.moves.length && !brief.gaps.length)
+    if (!brief.patterns.length && !brief.opportunities.length)
       return NextResponse.json(
         { error: "That did not come back with anything. Try it again." },
         { status: 502 },
@@ -288,9 +255,9 @@ export async function POST(req: Request) {
 
     await db
       .from("wb_winner_reads")
-      .insert({ world_id: worldId, brief, counted: chosen.length });
+      .insert({ world_id: worldId, keyword, brief, counted: chosen.length });
 
-    return NextResponse.json({ brief, counted: chosen.length });
+    return NextResponse.json({ brief, counted: chosen.length, keyword });
   } catch (e) {
     console.error("winners/read", e);
     return NextResponse.json(
