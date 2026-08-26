@@ -53,6 +53,54 @@ Start with TikTok, then Reels, Shorts and comments. Search the way the culture t
 const TARGET_ITEMS = 5;
 
 /**
+ * A SOURCE HAS TO GO SOMEWHERE.
+ *
+ * Every citation was checked for being real and none of them for being
+ * useful, so issues shipped linking to "https://tiktok.com", "https://etsy.com"
+ * and a dozen tiktok.com/discover/… pages. Those are real URLs that a search
+ * really returned, and clicking one drops the seller on a homepage or a
+ * keyword feed — which is worse than no link, because it spends their trust
+ * and gives nothing back.
+ *
+ * So a source now has to be a specific page: a post, a video, an article.
+ * Anything that is a front door, a search result, or a hashtag index is not a
+ * source and does not ship.
+ */
+const NOT_A_PAGE =
+  /^\/(discover|search|explore|tag|tags|hashtag|hashtags|topic|topics|trending|browse|category|collections?|shop|s|str)(\/|$)/i;
+
+function usableSource(raw: string) {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+
+  const path = u.pathname.replace(/\/+$/, "");
+  // A bare domain is a front door, never a citation.
+  if (!path || path === "/") return false;
+  if (NOT_A_PAGE.test(path)) return false;
+
+  const host = u.hostname.replace(/^www\./, "");
+
+  // The platforms worth naming individually, because their useless pages look
+  // exactly like their useful ones until you read the path.
+  if (host.endsWith("tiktok.com"))
+    return /\/(video|photo)\/\d+/.test(path) || /^\/t\//.test(path);
+  if (host.endsWith("instagram.com")) return /^\/(p|reel|tv)\//.test(path);
+  if (host.endsWith("youtube.com"))
+    return /^\/shorts\//.test(path) || u.searchParams.has("v");
+  if (host === "youtu.be") return path.length > 1;
+  if (host.endsWith("reddit.com")) return /\/comments\//.test(path);
+  if (host.endsWith("pinterest.com")) return /^\/pin\//.test(path);
+
+  // Everywhere else: a path with something in it is enough.
+  return path.length > 1;
+}
+
+/**
  * WORLD DAILY
  *
  * SPEC: "approximately five distilled daily updates... Actual source links
@@ -140,6 +188,7 @@ HOW TO WRITE IT
 HARD RULES
 1. NEVER tell the seller what to make. No "this would make a great shirt", no design directives. You surface the signal; they decide what it means.
 2. NEVER invent a source. Only cite pages your searches actually returned. Three real observations beat five padded ones.
+2b. A SOURCE MUST BE A SPECIFIC PAGE. The individual post, video or article where you saw the thing — tiktok.com/@someone/video/123, not tiktok.com and not tiktok.com/discover/anything. A homepage, a search page or a hashtag index is not a source; an item whose only links are those is dropped before the seller sees it, so find the real page or drop the item yourself.
 3. NEVER claim sales data, demand, or competition. You cannot see Etsy and do not know what sells.
 4. NEVER report something generic or evergreen. "Faith-based apparel is popular" is not a signal.
 5. NEVER repeat a signal already reported to this world, or a rephrasing of it.
@@ -567,7 +616,9 @@ ${field || "(nothing came back)"}`
           body: (it.body || "").trim(),
           printable: (it.printable || "").trim(),
           sources: (it.sources ?? [])
-            .filter((s) => s.url && seen.has(normalise(s.url)))
+            .filter(
+              (s) => s.url && seen.has(normalise(s.url)) && usableSource(s.url),
+            )
             .map((s) => ({
               title: (s.title || s.url || "").trim(),
               url: s.url!,

@@ -37,6 +37,16 @@ A living slice of culture around this customer that keeps producing new things t
 Good areas for a festival/rave seller: festival fashion · EDM culture · rave humor · festival beauty · nightlife style · music festival lineups.
 Good areas for a Christian motherhood seller: christian motherhood · worship music culture · bible journaling · modest fashion · faith-based home decor.
 
+WHEN THE WORLD IS A CAUSE RATHER THAN A LIFESTYLE
+Some worlds are not organised around a person's hobbies — they are organised around what someone believes. Activism, faith, politics, fandom loyalties. Zooming out from those keywords the usual way produces news categories: "rallies", "movements", "campaigns". Do not do that. Those return press coverage written by reporters, and there is nothing in a news report that anyone can print.
+
+Name the CAUSES and the places their language lives instead: the specific issues by name, protest signs and slogans, the humour, the counter-argument, what the other camp is wearing.
+
+Bad areas for an anti-ICE seller: ice rallies · liberal movements · republican rallies.
+Good areas for the same seller: abolish ice · immigrant rights · protest signs and slogans · leftist humor · anti-war organizing · eat the rich · conservative merch.
+
+Notice the last one. Watching the opposing camp is deliberate, not an accident — where their slogans go tells you where the whole argument is going.
+
 RULES
 1. Areas are about the customer's WORLD, not about products. "Festival fashion" is an area. "Rave t-shirts" is a product category — do not return it.
 2. Never just restate a keyword. Zoom out from the keywords to the culture underneath them.
