@@ -17,7 +17,7 @@ import {
   removeKeyword,
   removeWinner,
   SOLD_AT_LEAST,
-  type Brief,
+  type BriefPoint,
   type StoredBrief,
   type Winner,
 } from "@/lib/winners";
@@ -430,36 +430,91 @@ function WinnersBody({ world }: { world: World }) {
 
 /* ------------------------------------------------------------------ */
 
-/** A small caps label. Used instead of a heading for the quieter sections,
- *  so section titles stop competing with the findings under them. */
-function Label({ children }: { children: React.ReactNode }) {
+/**
+ * One section of the brief: its name on the left, its findings on the right.
+ *
+ * The name is a real heading at a real size. It was an eleven pixel caps
+ * label, which made the section titles the smallest type in the panel —
+ * smaller than the body text they were introducing — so nothing on the screen
+ * announced itself and the eye had nowhere to land.
+ */
+function Section({
+  name,
+  lead = false,
+  quiet = false,
+  points,
+}: {
+  name: string;
+  /** The section the seller acts on. Bigger, and marked down the side. */
+  lead?: boolean;
+  /** Supporting detail. Deliberately recessive. */
+  quiet?: boolean;
+  points: BriefPoint[];
+}) {
+  if (!points.length) return null;
   return (
-    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">
-      {children}
-    </p>
+    <div className="grid gap-x-10 gap-y-3 border-t-2 border-black/10 py-7 first:border-t-0 first:pt-0 lg:grid-cols-[190px_minmax(0,1fr)]">
+      <h3
+        className={`shrink-0 leading-tight ${
+          lead ? "t-h2 text-ink" : "text-[17px] font-bold text-ink-2"
+        }`}
+      >
+        {name}
+      </h3>
+
+      <ul className={`max-w-[62ch] ${lead ? "space-y-5" : "space-y-4"}`}>
+        {points.map((p, i) => (
+          <li
+            key={i}
+            className={lead ? "border-l-2 pl-4" : ""}
+            style={lead ? { borderColor: "var(--accent)" } : undefined}
+          >
+            <p
+              className={
+                lead
+                  ? "text-[17px] font-bold leading-snug text-ink"
+                  : "text-[15px] font-bold text-ink"
+              }
+            >
+              {p.heading}
+            </p>
+            <p
+              className={`mt-1 leading-relaxed ${
+                quiet ? "t-small text-ink-3" : "text-[15px] text-ink-2"
+              }`}
+            >
+              {p.body}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
 /**
  * THE BRIEF.
  *
- * Two mistakes to avoid here, and the first fix walked straight into the
- * second.
+ * Three attempts got this wrong in three different ways, and the thread
+ * running through all of them was competition: too many things on screen with
+ * the same visual weight, so the eye had nowhere to start.
  *
- * Four equal sections in a two-column grid said they were all equally
- * important. They are not: the hole is what the seller acts on, worn out is
- * a footnote, and laying them out as equals made the reader do the ranking.
+ * A two-by-two grid of four equal sections made the reader do the ranking.
+ * Holding the text to a reading measure fixed the line length and left half
+ * the panel empty. Splitting it into two parallel columns filled the panel
+ * and gave the eye two competing places to begin — and the section names,
+ * set as eleven pixel caps labels, were the smallest type on a screen full of
+ * fifteen pixel body text, so nothing announced itself at all.
  *
- * The fix for that was to hold the text to a reading measure — correct in
- * itself, and applied inside a card that is still the full width of a very
- * wide page. The result was a fifteen-hundred-pixel panel with a narrow
- * column of text in its left corner and nothing at all on the right.
+ * So this is one path, not a composition. Sections stack down the page, each
+ * with its name in a fixed column on the left and its findings on the right.
+ * The eye runs down the left edge, reads four names, and stops wherever it
+ * wants. There is one entry point and one direction.
  *
- * A reading measure is a property of a COLUMN, not of a page. So the width
- * is spent on two columns rather than left empty: the hole runs large down
- * the left, the reasoning and the two diagnostics stack down a narrower rail
- * on the right. Both are readable, the panel is full, and the ranking is
- * still done by size and position rather than by the reader.
+ * Weight descends and never ties: the hole is a full heading with its
+ * findings marked down the side in the accent, the reasoning is smaller and
+ * unmarked, the two diagnostics are smaller again and greyer. At every level
+ * a section's name is larger than the text underneath it.
  *
  * Nothing is dropped or shortened. Every section, entry and sentence the
  * model wrote is on the page — only the arrangement changed.
@@ -476,14 +531,10 @@ function BriefPanel({
   stale: boolean;
 }) {
   const b = stored.brief;
-  const foot: [string, Brief["moves"]][] = [
-    ["Still moving", b.alive],
-    ["Worn out", b.worn],
-  ];
 
   return (
     <Card className="mb-9">
-      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+      <div className="mb-7 flex flex-wrap items-baseline justify-between gap-3 border-b-2 border-black pb-3">
         <p className="t-small text-ink-3">
           Read across {stored.counted} designs
         </p>
@@ -492,71 +543,10 @@ function BriefPanel({
         </button>
       </div>
 
-      <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[1.35fr_1fr]">
-        {/* ----------------------------------------- what to do about it */}
-        {b.gaps.length > 0 && (
-          <div>
-            <Label>Where the hole is</Label>
-            <ul className="space-y-5">
-              {b.gaps.map((p, i) => (
-                <li
-                  key={i}
-                  className="border-l-2 pl-4"
-                  style={{ borderColor: "var(--accent)" }}
-                >
-                  <p className="t-h3 text-ink">{p.heading}</p>
-                  <p className="mt-1 text-[15px] leading-relaxed text-ink-2">
-                    {p.body}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* ------------------------------------------------ the reasoning */}
-        {b.moves.length > 0 && (
-          <div className="lg:border-l lg:border-black/10 lg:pl-10">
-            <Label>Why — what this world buys</Label>
-            <ul className="space-y-3.5">
-              {b.moves.map((p, i) => (
-                <li key={i}>
-                  <p className="text-[15px] font-bold text-ink">{p.heading}</p>
-                  <p className="t-small mt-0.5 leading-relaxed text-ink-2">
-                    {p.body}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-
-      {/*
-        The diagnostics sit below both columns rather than stacked under the
-        reasoning. In the rail they made the right side run to twice the
-        height of the left and left a hole the size of a card underneath the
-        gaps — the same empty-space problem, moved to a different corner.
-      */}
-      {foot.some(([, list]) => list.length > 0) && (
-        <div className="mt-8 grid gap-x-10 gap-y-7 border-t border-black/10 pt-6 sm:grid-cols-2">
-          {foot
-            .filter(([, list]) => list.length > 0)
-            .map(([title, list]) => (
-              <div key={title}>
-                <Label>{title}</Label>
-                <ul className="space-y-3">
-                  {list.map((p, i) => (
-                    <li key={i}>
-                      <p className="t-small font-bold text-ink">{p.heading}</p>
-                      <p className="t-small mt-0.5 text-ink-2">{p.body}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-        </div>
-      )}
+      <Section name="Where the hole is" lead points={b.gaps} />
+      <Section name="What this world buys" points={b.moves} />
+      <Section name="Still moving" quiet points={b.alive} />
+      <Section name="Worn out" quiet points={b.worn} />
     </Card>
   );
 }
