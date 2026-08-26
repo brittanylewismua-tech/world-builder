@@ -34,7 +34,11 @@ const KIND_LABEL: Record<string, string> = {
   humor: "a joke",
   aesthetic: "an aesthetic",
   moment: "a moment",
-  opposition: "the competition",
+  /*
+    Deliberately absent: "opposition". A kind with no label here shows no chip
+    at all, which is the point — it is a news item like any other and does not
+    need announcing.
+  */
 };
 
 /**
@@ -379,9 +383,9 @@ function DailyBody({ world }: { world: World }) {
             <Card className="rise" hover pad={false}>
               <div className="flex items-center justify-between px-5 pt-4 md:px-6">
                 <Dots />
-                {lead.kind && (
+                {KIND_LABEL[lead.kind] && (
                   <span className="chip chip-solid">
-                    {KIND_LABEL[lead.kind] ?? lead.kind}
+                    {KIND_LABEL[lead.kind]}
                   </span>
                 )}
               </div>
