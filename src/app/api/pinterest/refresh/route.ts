@@ -17,12 +17,14 @@ export const maxDuration = 300;
  * looking for new boards. Choosing what feeds a drop stays a deliberate act;
  * this just tops up what she already chose.
  *
- * Twenty per board per press, the same as the first pull. Pinterest's daily
- * ceiling is shared across every seller on the app, so this costs one request
- * per linked board and never runs on its own.
+ * Fifty per board per press, the same as the first pull. The old twenty was a
+ * Trial-access limit — a thousand requests a day shared by every seller — and
+ * Standard access replaced that with a per-user ceiling, so a refresh can
+ * bring back a board's worth instead of a sample. It still never runs on its
+ * own; the seller presses it.
  */
 
-const PER_BOARD = 20;
+const PER_BOARD = 50;
 
 export async function POST(req: Request) {
   let body: { worldId?: string; dropId?: string };

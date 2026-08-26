@@ -24,19 +24,26 @@ export const ASSETS = "world-assets";
 /**
  * Only what this app is actually allowed to ask for.
  *
- * Secret boards do need boards:read_secret and pins:read_secret — privacy=ALL
- * cannot hand back something the token was never permitted to see. But those
- * scopes come with Pinterest STANDARD access, and this app is on Production
- * Limited, which grants exactly: pins:read, boards:read, user_accounts:read,
- * ads:read, catalogs:read.
+ * Secret boards need boards:read_secret and pins:read_secret — privacy=ALL
+ * cannot hand back something the token was never permitted to see. Those two
+ * arrive with Pinterest STANDARD access, which this app now holds, so they
+ * are in the list.
  *
- * Asking for a scope the app does not hold is not a harmless no-op — it can
- * fail the whole authorisation and cost the seller the working connection she
- * already has. So the request stays inside what is granted, and secret boards
- * stay invisible until standard access comes through. Add the two _secret
- * scopes here the day it does; nothing else needs to change.
+ * The reason they were absent for so long is worth keeping: asking for a
+ * scope the app does not hold is not a harmless no-op. It can fail the whole
+ * authorisation and cost a seller the working connection she already has. So
+ * this list must never run ahead of what the dashboard actually grants.
+ *
+ * Everything here is still read-only. The app has never had a write scope and
+ * does not want one.
  */
-export const PIN_SCOPES = ["boards:read", "pins:read", "user_accounts:read"];
+export const PIN_SCOPES = [
+  "boards:read",
+  "boards:read_secret",
+  "pins:read",
+  "pins:read_secret",
+  "user_accounts:read",
+];
 
 /**
  * ONE CALLBACK, WHATEVER HOST THEY ARE ON.
@@ -243,17 +250,17 @@ function bestImage(media: unknown): string | null {
 export async function listPins(
   token: string,
   boardId: string,
-  max = 20,
+  max = 50,
 ): Promise<Pin[]> {
   const out: Pin[] = [];
   let bookmark = "";
   while (out.length < max) {
     /*
-      page_size matches the batch exactly, so twenty pins costs exactly one
-      request. Trial access is 1,000 requests a day for the whole app, shared
-      by every seller — at two requests a board only about a hundred people
-      can bring in four boards in a day, and at one request it is two hundred.
-      The seller who wants more presses the button and spends one more.
+      page_size matches the batch, so a board costs one request rather than
+      several. The old cap was twenty because Trial access allowed 1,000
+      requests a day across every seller on the app; Standard replaces that
+      with a per-user-per-minute limit, so the ceiling that forced twenty is
+      gone and a board comes in whole.
     */
     const q = new URLSearchParams({ page_size: String(Math.min(max, 50)) });
     if (bookmark) q.set("bookmark", bookmark);

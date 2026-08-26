@@ -255,11 +255,10 @@ export default function PinterestBoards({ world }: { world: World }) {
           Bring a board in and its pins land on your research board.
         </p>
         {/*
-          Scopes are granted once, at connect time, so a token issued before
-          the secret-board scopes existed will never see a secret board no
-          matter what the code asks for. Reconnecting is the only way to widen
-          an existing grant, and without a way to do it the seller is stuck
-          with an invisible ceiling.
+          Scopes are granted once, at connect time. A token issued before this
+          app had the secret-board scopes will never see a secret board no
+          matter what the code asks for, so reconnecting is the only way to
+          widen a grant that already exists.
         */}
         <button
           onClick={connect}
@@ -269,16 +268,6 @@ export default function PinterestBoards({ world }: { world: World }) {
           Reconnect
         </button>
       </div>
-
-      {/*
-        Said out loud rather than left as a mystery. Pinterest will not hand a
-        Production Limited app anybody's secret boards, so a seller whose
-        competitor board is secret would otherwise just keep looking for it.
-      */}
-      <p className="t-small mb-4 text-ink-3">
-        Secret boards will not appear — Pinterest only shares those with apps
-        on standard access.
-      </p>
 
       {boards.length === 0 && (
         <p className="t-small mt-4 text-ink-3">

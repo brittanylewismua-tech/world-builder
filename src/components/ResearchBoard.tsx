@@ -483,7 +483,7 @@ export default function ResearchBoard({
                 }
               }}
               disabled={pulling}
-              title="Pull the 20 most recent pins from the boards feeding this drop"
+              title="Pull the most recent pins from the boards feeding this drop"
               className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
             >
               {pulling ? "Checking Pinterest…" : "Refresh from Pinterest"}
