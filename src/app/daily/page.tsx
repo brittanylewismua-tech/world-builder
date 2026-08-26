@@ -20,6 +20,7 @@ import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
+import ReadingBar from "@/components/ReadingBar";
 
 /**
  * What sort of signal each item is. This is the one label on the card — the
@@ -329,6 +330,7 @@ function DailyBody({ world }: { world: World }) {
         <Card className="flex flex-col items-center py-14 text-center">
           <img src="/globe.png" alt="" className="globe-turn h-14 w-14 opacity-80" />
           <p className="t-h3 mt-5 text-ink">Reading your world…</p>
+          <ReadingBar className="mt-4 max-w-xs" />
           {/*
             How long, and nothing else. The old line walked the seller through
             the machinery — how many areas were being searched, what was being
