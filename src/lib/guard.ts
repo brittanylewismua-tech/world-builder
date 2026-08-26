@@ -47,6 +47,9 @@ export const DAILY_CAP = {
   /* One analysis per saved item. A busy research week is perhaps forty
      pieces, and this still leaves double that in a single day. */
   board: 80,
+  /* Reading the entire world is the most expensive single call here, and the
+     answer barely moves day to day. Twice is a build and a rethink. */
+  canon: 2,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -81,6 +84,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have reached today's limit. You can add areas yourself in the meantime.",
   board:
     "You have reached today's limit. Everything you saved is safe and still there.",
+  canon:
+    "You have rebuilt your canon a couple of times today. It resets tomorrow.",
 };
 
 export interface Caller {
