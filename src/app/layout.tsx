@@ -17,13 +17,8 @@ export const metadata: Metadata = {
   description:
     "Build around one customer world instead of jumping between unrelated niches.",
   /*
-    Drawn for the size it is actually seen at.
-
-    The first version was the globe from the wordmark, scaled down. Its lines
-    are hairlines — lovely at 200px, and at sixteen they average out into a
-    pale pink smudge with no globe in it. A favicon gets about twelve usable
-    pixels across, so this is a solid disc with two white lines at nine per
-    cent of the width, and nothing else. Legible is the whole brief.
+    Brittany's globe, cut to size. Not a redrawing of it — the tab and the
+    rail should be the same picture.
   */
   icons: {
     icon: [
