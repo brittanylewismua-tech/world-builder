@@ -34,6 +34,11 @@ const KIND_LABEL: Record<string, string> = {
   humor: "a joke",
   aesthetic: "an aesthetic",
   moment: "a moment",
+  /*
+    Marked plainly, because this one is not the seller's customer talking.
+    Read as an ordinary item it would look like advice to make the thing.
+  */
+  opposition: "the other side",
 };
 
 /**
