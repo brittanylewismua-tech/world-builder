@@ -140,7 +140,6 @@ function ProfileBody({ world }: { world: World }) {
       <PageHeader
         eyebrow="World Profile"
         title={world.name.trim() || "Your world"}
-        lede="Everything here stays editable. Add sub-niches as you validate them, swap references as your eye changes, adjust what gets watched."
         actions={
           <Link href="/setup" className="btn btn-ghost">
             Walk through setup again
@@ -153,27 +152,40 @@ function ProfileBody({ world }: { world: World }) {
       <WorldSwitch current={world.id} />
 
       {/*
-        One quiet field, never a prompt.
+        THREE GROUPS, NOT SEVEN ROWS.
 
-        This used to be a card that appeared on Home and again here, asking to
-        be named until it got its way. A name is a convenience — it lets a few
-        screens address the world directly — not a thing the software needs.
-        Nagging for it made a nicety feel like an unfinished task.
+        Everything here used to sit in one flat list of identical accordions
+        under names taken from the internal method — "Demand Foundation",
+        "Visual Calibration", "Active World Areas". Seven equally weighted
+        rows with jargon on them is a wall, and a seller looking for where to
+        change their drop day had to read all of it.
+
+        They are not equally weighted. Two describe the world, three feed it
+        material, two are how it runs — and once that is said out loud you
+        only read the third of the page you came for.
+
+        Titles are what the thing is, in the words somebody would use asking
+        for it.
       */}
-      <div className="mb-6">
-        <label className="eyebrow mb-1.5 block text-ink-3">World name</label>
-        <input
-          value={world.name}
-          onChange={(e) => patch({ name: e.target.value })}
-          onBlur={() => a.setName(world.name)}
-          placeholder="Optional"
-          className="field max-w-sm"
-        />
-      </div>
+      <Group title="The world">
+        {/*
+          One quiet field, never a prompt. A name is a convenience — it lets a
+          few screens address the world directly — not something the software
+          needs, and nagging for it made a nicety feel like an unfinished task.
+        */}
+        <div className="card p-5">
+          <label className="eyebrow mb-1.5 block text-ink-3">Name</label>
+          <input
+            value={world.name}
+            onChange={(e) => patch({ name: e.target.value })}
+            onBlur={() => a.setName(world.name)}
+            placeholder="Optional"
+            className="field max-w-sm"
+          />
+        </div>
 
-      <div className="space-y-3">
         <Module
-          title="Demand Foundation"
+          title="Sub-niches"
           summary={`${world.subNiches.length} validated sub-niche${world.subNiches.length === 1 ? "" : "s"}`}
           warn={!hasDemandFloor(world) ? "Below the minimum of 6" : undefined}
           id="demand"
@@ -190,7 +202,7 @@ function ProfileBody({ world }: { world: World }) {
         </Module>
 
         <Module
-          title="Personal Connection"
+          title="Why this world"
           summary={
             answered === 0
               ? "Not answered yet"
@@ -202,9 +214,11 @@ function ProfileBody({ world }: { world: World }) {
         >
           <AffinityInput affinity={world.affinity} onChange={a.setAffinity} />
         </Module>
+      </Group>
 
+      <Group title="What feeds it">
         <Module
-          title="Visual Calibration"
+          title="Your eye"
           summary={`${world.visualReferences.length} reference${world.visualReferences.length === 1 ? "" : "s"}`}
           id="visual"
           open={open === "visual"}
@@ -234,7 +248,7 @@ function ProfileBody({ world }: { world: World }) {
         </Module>
 
         <Module
-          title="Active World Areas"
+          title="What gets watched"
           summary={
             world.areas.length
               ? `${world.areas.length} watched daily`
@@ -270,9 +284,11 @@ function ProfileBody({ world }: { world: World }) {
         >
           <PinterestBoards world={world} />
         </Module>
+      </Group>
 
+      <Group title="How it runs">
         <Module
-          title="Drop Rhythm"
+          title="Drop schedule"
           summary={`${world.slotsPerDrop} designs, ${DAY_NAME[world.dropWeekday] ?? "weekly"}${world.paused ? " · paused" : ""}`}
           id="rhythm"
           open={open === "rhythm"}
@@ -282,7 +298,7 @@ function ProfileBody({ world }: { world: World }) {
         </Module>
 
         <Module
-          title="Appearance"
+          title="Look"
           summary={
             PRESETS.find((p) => p.id === world.theme.preset)?.name ??
             "Custom look"
@@ -299,14 +315,35 @@ function ProfileBody({ world }: { world: World }) {
         >
           <Customiser world={world} patch={patch} onError={setErr} />
         </Module>
-
-      </div>
+      </Group>
 
       <div className="mt-10 space-y-4 border-t-2 border-black/10 pt-6">
         <AccountCard />
         <OwnYourWorld world={world} />
       </div>
     </Page>
+  );
+}
+
+/**
+ * A heading and the rows under it.
+ *
+ * Plain text rather than another card: a group is a label on a shelf, and
+ * wrapping it in a box would add the visual weight this page is trying to
+ * lose.
+ */
+function Group({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-8">
+      <h2 className="eyebrow mb-2.5 text-ink-3">{title}</h2>
+      <div className="space-y-3">{children}</div>
+    </section>
   );
 }
 
