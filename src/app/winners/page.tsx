@@ -397,7 +397,17 @@ function WinnersBody({ world }: { world: World }) {
                 keyword={g.keyword}
                 onRead={() => read(g.keyword)}
                 busy={!!reading}
-                stale={g.list.length !== briefs[g.keyword].counted}
+                /*
+                  Stale means the group has been re-imported since the read,
+                  not that the read saw fewer designs than the group holds —
+                  it always does, because a read is capped at ten and a group
+                  can be larger. Comparing counts flagged every brief as
+                  stale the moment it was written.
+                */
+                stale={
+                  new Date(g.dated).getTime() >
+                  new Date(briefs[g.keyword].ranAt).getTime()
+                }
               />
             )}
 
