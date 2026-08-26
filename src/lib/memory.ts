@@ -68,14 +68,56 @@ export async function loadMessages(
 ): Promise<Msg[]> {
   const id = await findThread(worldId, kind, dropId);
   if (!id) return [];
+  return readThread(id);
+}
+
+/**
+ * The last SCREEN_TURNS messages of a thread, oldest first.
+ *
+ * This used to order ascending and then limit, which on a long thread hands
+ * back the FIRST hundred and twenty messages and never the recent ones — the
+ * conversation would silently freeze at its own beginning. Take the tail, then
+ * put it back in reading order.
+ */
+export async function readThread(threadId: string): Promise<Msg[]> {
   const { data, error } = await supabase
     .from("wb_messages")
     .select("role, content")
-    .eq("conversation_id", id)
-    .order("created_at")
+    .eq("conversation_id", threadId)
+    .order("created_at", { ascending: false })
     .limit(SCREEN_TURNS);
   if (error) throw new Error(error.message);
-  return (data ?? []) as Msg[];
+  return ((data ?? []) as Msg[]).reverse();
+}
+
+export interface ThreadRef {
+  id: string;
+  dropId: string | null;
+  updatedAt: string;
+}
+
+/**
+ * Every conversation of this kind in the world, newest first.
+ *
+ * The Director keeps one thread per drop, so last week's thinking is already
+ * saved — there was simply no way to reach it once the drop moved on.
+ */
+export async function listThreads(
+  worldId: string,
+  kind: "customer" | "room",
+): Promise<ThreadRef[]> {
+  const { data, error } = await supabase
+    .from("wb_conversations")
+    .select("id, drop_id, updated_at")
+    .eq("world_id", worldId)
+    .eq("kind", kind)
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    dropId: (r.drop_id as string | null) ?? null,
+    updatedAt: r.updated_at as string,
+  }));
 }
 
 /**

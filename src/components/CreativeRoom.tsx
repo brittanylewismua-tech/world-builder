@@ -6,8 +6,12 @@ import type { Drop } from "@/lib/drops";
 import { askAI } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
 import {
+  forget,
+  listThreads,
   loadMessages,
   openThread,
+  readThread,
+  type ThreadRef,
   recent,
   remember,
   type Msg,
@@ -130,6 +134,20 @@ export default function CreativeRoom({
   const [ready, setReady] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
+  /*
+    PAST CONVERSATIONS.
+
+    A thread has always been kept per drop, so the thinking about Drop 03 was
+    saved the moment it happened — there was just no door back to it once the
+    week turned over. `past` is the list; `viewing` is the older thread being
+    read, and while it is set the composer stands down, because a finished
+    conversation about a finished drop is not one you add to.
+  */
+  const [past, setPast] = useState<ThreadRef[]>([]);
+  const [showPast, setShowPast] = useState(false);
+  const [viewing, setViewing] = useState<ThreadRef | null>(null);
+  const [viewMsgs, setViewMsgs] = useState<Msg[]>([]);
+
   // One thread per drop — the thinking stays attached to the board it was
   // about, so opening Drop 04 again brings back the conversation about it.
   useEffect(() => {
@@ -141,8 +159,30 @@ export default function CreativeRoom({
   }, [world.id, drop.id]);
 
   useEffect(() => {
+    listThreads(world.id, "room")
+      .then((all) => setPast(all.filter((t) => t.dropId && t.dropId !== drop.id)))
+      .catch(() => setPast([]));
+  }, [world.id, drop.id, msgs.length]);
+
+  useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, busy]);
+
+  async function openPast(t: ThreadRef) {
+    setShowPast(false);
+    setViewing(t);
+    setViewMsgs(await readThread(t.id).catch(() => []));
+  }
+
+  /** "Drop 03", falling back to the date if that drop is gone. */
+  function labelFor(t: ThreadRef) {
+    const d = drops.find((x) => x.id === t.dropId);
+    if (d) return `Drop ${String(d.number).padStart(2, "0")}`;
+    return new Date(t.updatedAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  }
 
   async function send(text: string) {
     const content = text.trim();
@@ -204,10 +244,65 @@ export default function CreativeRoom({
             ? `Drop ${String(drop.number).padStart(2, "0")} research`
             : `Drop ${String(drop.number).padStart(2, "0")} · ${drop.items.length}/${world.slotsPerDrop}`}
         </span>
+        {past.length > 0 && (
+          <button
+            onClick={() => setShowPast((v) => !v)}
+            className="t-small ml-2 shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink"
+          >
+            past
+          </button>
+        )}
       </div>
 
+      {showPast && (
+        <div className="border-b border-black/12 bg-black/[0.02] px-3 py-2">
+          {past.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => openPast(t)}
+              className="block w-full rounded-lg px-2 py-1.5 text-left text-[13px] text-ink-2 transition hover:bg-black/[0.05] hover:text-ink"
+            >
+              {labelFor(t)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {viewing && (
+        <div className="flex items-center gap-2 border-b border-black/12 bg-black/[0.02] px-4 py-2">
+          <span className="t-small font-semibold text-ink">
+            {labelFor(viewing)}
+          </span>
+          <button
+            onClick={() => setViewing(null)}
+            className="t-small ml-auto text-ink-2 underline underline-offset-2 transition hover:text-ink"
+          >
+            Back
+          </button>
+        </div>
+      )}
+
       <div className="min-h-[300px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {ready && msgs.length === 0 && (
+        {viewing &&
+          viewMsgs.map((m, i) =>
+            m.role === "user" ? (
+              <p
+                key={i}
+                className="ml-6 rounded-lg border-2 border-black bg-black px-3 py-2 text-sm font-medium leading-relaxed text-white"
+              >
+                {m.content}
+              </p>
+            ) : (
+              <div
+                key={i}
+                className="whitespace-pre-wrap text-sm leading-relaxed text-ink-2"
+              >
+                <Said text={m.content} />
+              </div>
+            ),
+          )}
+
+        {!viewing && ready && msgs.length === 0 && (
           <div>
             {/*
               Openers are offers, not calls to action. As bordered boxes with
@@ -232,7 +327,7 @@ export default function CreativeRoom({
           </div>
         )}
 
-        {msgs.map((m, i) =>
+        {!viewing && msgs.map((m, i) =>
           m.role === "user" ? (
             <p
               key={i}
@@ -250,7 +345,7 @@ export default function CreativeRoom({
           ),
         )}
 
-        {busy && (
+        {!viewing && busy && (
           <p className="pulse-soft t-small text-ink-3">Looking at the board…</p>
         )}
         {err && (
@@ -261,7 +356,7 @@ export default function CreativeRoom({
         <div ref={endRef} />
       </div>
 
-      <div className="border-t-2 border-black p-3">
+      <div className={`border-t-2 border-black p-3 ${viewing ? "hidden" : ""}`}>
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -282,6 +377,23 @@ export default function CreativeRoom({
         >
           Send
         </button>
+        {msgs.length > 0 && (
+          <button
+            onClick={async () => {
+              if (
+                !window.confirm(
+                  "Clear this conversation? The Drop Director will forget what you have talked about for this drop.",
+                )
+              )
+                return;
+              setMsgs([]);
+              await forget(world.id, "room", drop.id);
+            }}
+            className="t-small mt-2 text-ink-3 transition hover:text-ink"
+          >
+            Start over
+          </button>
+        )}
       </div>
     </div>
   );
