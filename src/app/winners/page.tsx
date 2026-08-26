@@ -566,8 +566,7 @@ function BriefPanel({
       </div>
 
       <div className="mt-7">
-        <Section name="Opportunities" lead points={b.opportunities} />
-        <Section name="Patterns" points={b.patterns} />
+        <Section name="Patterns" lead points={b.patterns} />
       </div>
     </Card>
   );

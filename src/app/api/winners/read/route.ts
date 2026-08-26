@@ -36,70 +36,49 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
  *  ten pictures and always costs about the same. */
 const LOOK_AT = 10;
 
-const SYSTEM = `You are looking at the print-on-demand designs that already sold under one search term in one customer world, and writing the seller a short brief.
+const SYSTEM = `You are looking at the print-on-demand designs that already sold under one search term, and telling the seller what is working in it.
+
+WHAT THE JOB IS, AND WHAT IT IS NOT
+Your job is to report. What are these designs doing, and which ones are actually selling. That is all.
+
+It is not your job to think of designs. The seller has somewhere else for that, and they will take what you tell them to it. Never suggest what they should make, never say what is missing, never point at a gap. If you catch yourself writing "nobody has done" or "there is room for", stop — you have wandered into somebody else's work.
 
 WHAT YOU ARE ACTUALLY LOOKING AT
-Product photographs from Etsy. Each is a garment with artwork on it. Read the artwork: what is drawn, what is written, how it is laid out, what it is doing. Ignore the garment, the model, the background and the fold of the fabric — the seller prints on blanks and none of that is the design.
+Product photographs from Etsy. Each is a garment or object with artwork on it. Read the artwork: what is drawn, what is written, how it is laid out. Ignore the garment, the model, the background and the fold of the fabric — the seller prints on blanks and none of that is the design.
 
-Each picture comes with numbers: total sales, sales per day since it was listed, days listed, price. Old and huge and slow is a different animal from young and fast, and you should say so when it matters.
+Each picture comes with numbers: total sales, sales per day since it was listed, days listed, price. Old and huge and slow is a different animal from young and fast, and the difference is often the most useful thing on the page.
 
-THE BRIEF HAS TWO PARTS
-
-1. PATTERNS. What these designs keep doing. Not the exact words they use — the thing underneath that you could do again with a different subject. Where a listing's sales per day tells you something, say it inside the pattern it belongs to. Three to five, strongest first.
-
-2. OPPORTUNITIES. Things nobody here has made yet that would fit. Three to five. This is the part the seller is here for.
+WHAT TO WRITE
+Four to six patterns, strongest first. A pattern is a thing several of these designs are doing, or a thing the numbers say about which kind is selling. Where sales per day tells you something, say it inside the pattern it belongs to rather than on its own.
 
 WRITE LIKE A PERSON, NOT A CRITIC
-This is the rule that matters most, and the one most easily broken.
+This is the rule most easily broken. Use short, ordinary words. If a word would look strange in a text message to a friend, do not use it. Banned outright: tableau, motif, device, mechanic, iconography, canon, lineage, reclamation, juxtapose, subvert, interrogate, recontextualise, visual language, design language, semiotic, framing device.
 
-Use short, ordinary words. If a word would look strange in a text message to a friend, do not use it. Banned outright: tableau, motif, device, mechanic, iconography, canon, lineage, reclamation, juxtapose, subvert, interrogate, recontextualise, visual language, design language, semiotic, framing device, and any phrase like "a first-person text piece" or "a longer-form treatment".
-
-SAY THE ACTUAL THING
-An opportunity is only useful if the seller could go and make it this afternoon. Name the words that would be printed, or say plainly what would be drawn.
-
-Bad: "Give the subject a monologue rather than a slogan." Nobody can make that.
-Good: "Nobody has put her side of it on a shirt. Something like 'I was the one being stared at' in plain type under her face."
-
-Bad: "Extend the object-as-shorthand device to another figure."
-Good: "One shirt here sells on a lace collar alone, no face. Nobody has tried the same trick with another woman's one recognisable thing — Frida's flowers, Dolly's hair."
-
-Every opportunity: a heading that is the idea in a handful of plain words, then one or two sentences that either quote the words for the shirt or describe the picture simply. Say what you saw here that makes you think it would work.
-
-PATTERNS ARE PLAIN TOO
 Bad: "Reframes received history so the villain is the record itself."
 Good: "These flip who the bad guy was. 'They didn't burn witches, they burned women' is the whole idea — same event, blame moved."
 
+Bad: "Portrait-plus-arc-of-text layout recurs across the set."
+Good: "Her face straight on, words curved around the top of it. Five of these ten do exactly that."
+
 BACK IT UP
-Point at what you saw. "Four of these are rows of faces." "The top one is doing seven a day after 575 days." An observation with nothing behind it is a horoscope.
+Point at what you saw. "Four of these are rows of faces." "The top one is doing seven a day after 575 days." An observation with nothing behind it is a horoscope. Quote the words off the shirts when the words are the pattern.
 
 NEVER
-- Never tell the seller to copy a design here, or make a version of one with the words swapped.
+- Never suggest a design, an idea, or a subject to try. Report only.
 - Never write about fabric, fit, cut, colour of the blank, or mockup quality.
 - Never say the sample was small or that more data would help.
 - Never hedge with "consider", "you might want to", "it could be worth". Say the thing.`;
 
 const TOOL = {
   name: "write_brief",
-  description: "The read across one keyword's proven designs.",
+  description: "What is working in one keyword's proven designs.",
   input_schema: {
     type: "object",
     properties: {
       patterns: {
         type: "array",
         description:
-          "What these designs keep doing, and which are alive now. Strongest first.",
-        items: {
-          type: "object",
-          properties: {
-            heading: { type: "string" },
-            body: { type: "string" },
-          },
-          required: ["heading", "body"],
-        },
-      },
-      opportunities: {
-        type: "array",
-        description: "Subjects this world has not been given yet.",
+          "What these designs keep doing, and what the numbers say about which kind sells. Strongest first.",
         items: {
           type: "object",
           properties: {
@@ -110,7 +89,7 @@ const TOOL = {
         },
       },
     },
-    required: ["patterns", "opportunities"],
+    required: ["patterns"],
   },
 } as const;
 
@@ -262,12 +241,9 @@ export async function POST(req: Request) {
           body: endWell(String(p.body).trim(), res.stop_reason),
         }));
 
-    const brief = {
-      patterns: list("patterns"),
-      opportunities: list("opportunities"),
-    };
+    const brief = { patterns: list("patterns") };
 
-    if (!brief.patterns.length && !brief.opportunities.length)
+    if (!brief.patterns.length)
       return NextResponse.json(
         { error: "That did not come back with anything. Try it again." },
         { status: 502 },

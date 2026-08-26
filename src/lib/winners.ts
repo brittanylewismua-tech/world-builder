@@ -132,9 +132,16 @@ export interface BriefPoint {
   body: string;
 }
 
+/**
+ * What is working under one keyword. Patterns only.
+ *
+ * There was an "opportunities" half that proposed designs to make. That is a
+ * different tool's job — this one reports what the market has already done,
+ * and the seller takes it wherever they take it. A research surface that
+ * starts inventing is two tools in a coat.
+ */
 export interface Brief {
   patterns: BriefPoint[];
-  opportunities: BriefPoint[];
 }
 
 export interface StoredBrief {
