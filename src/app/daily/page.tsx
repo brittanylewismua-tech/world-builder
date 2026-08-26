@@ -279,16 +279,16 @@ function DailyBody({ world }: { world: World }) {
       {standIn && (
         <div className="mb-5 rounded-xl border border-black/15 bg-white px-4 py-3">
           <p className="t-small text-ink-2">
-            Today&apos;s research did not come back, so this is{" "}
+            Showing{" "}
             <span className="font-semibold text-ink">
               {formatIssueDate(standIn)}
             </span>
-            &apos;s issue rather than today&apos;s. Nothing below is from today.{" "}
+            .{" "}
             <button
               onClick={() => research()}
               className="font-semibold text-ink underline underline-offset-2"
             >
-              Try today again
+              Try this week again
             </button>
           </p>
         </div>
@@ -297,7 +297,7 @@ function DailyBody({ world }: { world: World }) {
       {noAreas && (
         <Empty
           title="Nothing being watched yet"
-          body="Your world reads its own watch list off the keywords you validated. It looks like that never happened here — one click and it will."
+          body="Pick what this world watches, or let your keywords decide."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <button
@@ -437,23 +437,31 @@ function DailyBody({ world }: { world: World }) {
               </section>
             )}
 
-            <p className="t-small mt-5 text-ink-3">
-              These are verified signals from the world around your customer —
-              not demand data, sales proof, or product instructions. You decide
-              what matters. Anything a search could not stand behind was
-              dropped rather than shown.
+            {/*
+              A footer, not an essay.
+
+              This was four sentences of the tool explaining its own epistemics
+              — what it is not, what it dropped, who decides. One line carries
+              the only part a reader needs, which is that none of this is sales
+              data. The button says what it does and the note under it says
+              when it is worth pressing.
+            */}
+            <div className="mt-6 border-t border-black/10 pt-4">
+              <p className="t-small text-ink-3">Not sales or demand data.</p>
               {date === today && (
-                <>
-                  {" "}
+                <div className="mt-3">
                   <button
                     onClick={() => research(true)}
-                    className="font-medium text-ink-2 underline underline-offset-2 transition hover:text-ink"
+                    className="btn btn-ghost"
                   >
-                    Look again — this adds to today, it does not replace it
+                    Refresh
                   </button>
-                </>
+                  <p className="t-small mt-1.5 text-ink-3">
+                    Updates every two to three days.
+                  </p>
+                </div>
               )}
-            </p>
+            </div>
           </>
         );
       })()}
