@@ -307,11 +307,6 @@ function HomeBody({ world }: { world: World }) {
         />
       </div>
 
-      <p className="t-small mt-8 text-ink-3">
-        Nothing on this page is a judgment about your work — it is a count of
-        what you have made and what you have read. What any of it means is
-        yours to decide.
-      </p>
     </Page>
   );
 }
