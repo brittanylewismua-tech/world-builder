@@ -24,6 +24,7 @@ export type Surface =
   | "customer"
   | "room"
   | "board"
+  | "trends"
   | "studio"
   | "setup"
   | "auth";
