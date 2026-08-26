@@ -9,8 +9,6 @@ import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import {
   addExport,
-  briefing,
-  downloadDesigns,
   loadBriefs,
   loadWinners,
   perDay,
@@ -62,9 +60,8 @@ function WinnersBody({ world }: { world: World }) {
   const [said, setSaid] = useState("");
   /* null until an upload has reported back whether Etsy's key is in place. */
   const [keyed, setKeyed] = useState<boolean | null>(null);
-  /** Which keyword's briefing was just copied, so the button can say so. */
-  const [copied, setCopied] = useState("");
-  const [zipping, setZipping] = useState("");
+  /** The keyword whose designs are open in the viewer, or "" for none. */
+  const [viewing, setViewing] = useState("");
   const pick = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -224,6 +221,14 @@ function WinnersBody({ world }: { world: World }) {
 
   return (
     <Page width="full">
+      {viewing && (
+        <Viewer
+          keyword={viewing}
+          list={winners.filter((w) => w.keyword === viewing)}
+          onClose={() => setViewing("")}
+        />
+      )}
+
       <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
           <span className="chip chip-solid">world winners</span>
@@ -368,51 +373,16 @@ function WinnersBody({ world }: { world: World }) {
                       : "Show patterns"}
               </button>
               {/*
-                Two ways out of here and into wherever the seller designs.
-                The text is the briefing — patterns, Etsy's description of
-                each design, the numbers, the links — and pastes anywhere.
-                The archive is the artwork itself, for a chat that can look.
+                A viewer rather than a download. Ten designs at a size where
+                they all fit on one screen is a thing the seller can
+                screenshot in one go and drop into Goldie — no archive, no
+                unzipping, no ten files in a Downloads folder.
               */}
               <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(
-                      briefing(
-                        world.name,
-                        g.keyword,
-                        g.list,
-                        briefs[g.keyword]?.brief ?? null,
-                      ),
-                    );
-                    setCopied(g.keyword);
-                    setTimeout(() => setCopied(""), 2500);
-                  } catch {
-                    setErr("Your browser would not let the page copy that.");
-                  }
-                }}
+                onClick={() => setViewing(g.keyword)}
                 className="t-small shrink-0 text-ink-3 transition hover:text-ink"
               >
-                {copied === g.keyword ? "Copied" : "Copy briefing"}
-              </button>
-              <button
-                onClick={async () => {
-                  setZipping(g.keyword);
-                  setErr("");
-                  try {
-                    await downloadDesigns(world, g.keyword);
-                  } catch (e) {
-                    report("winners", e, { worldId: world.id });
-                    setErr(
-                      e instanceof Error ? e.message : "That did not download.",
-                    );
-                  } finally {
-                    setZipping("");
-                  }
-                }}
-                className="t-small shrink-0 text-ink-3 transition hover:text-ink"
-                disabled={!!zipping}
-              >
-                {zipping === g.keyword ? "Zipping…" : "Download designs"}
+                View all
               </button>
               <button
                 onClick={async () => {
@@ -502,6 +472,78 @@ function WinnersBody({ world }: { world: World }) {
 }
 
 /* ------------------------------------------------------------------ */
+
+/**
+ * ALL OF ONE KEYWORD'S DESIGNS, AT SCREENSHOT SIZE.
+ *
+ * The point of this screen is a single screenshot. Ten designs is two rows of
+ * five, which fits any laptop, so the seller can capture the lot and drop the
+ * picture straight into a chat that can look at pictures. That is a shorter
+ * road than a zip of ten files, and it does not leave anything in a Downloads
+ * folder afterwards.
+ *
+ * So there is nothing else on it. No numbers, no shop names, no borders on
+ * the tiles, no crown. Anything that is not artwork ends up in the
+ * screenshot, and the words go across separately with Copy patterns.
+ */
+function Viewer({
+  keyword,
+  list,
+  onClose,
+}: {
+  keyword: string;
+  list: Winner[];
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    // The page behind must not scroll under an overlay.
+    const had = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", esc);
+      document.body.style.overflow = had;
+    };
+  }, [onClose]);
+
+  const shown = [...list]
+    .filter((w) => w.imageUrl)
+    .sort((a, b) => b.sales - a.sales);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-white p-6 md:p-10"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Every design under ${keyword}`}
+    >
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-5 flex items-baseline justify-between gap-4">
+          <h2 className="t-h2 text-ink">{keyword}</h2>
+          <button onClick={onClose} className="btn btn-ghost">
+            Close
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+          {shown.map((w) => (
+            <img
+              key={w.id}
+              src={w.imageUrl as string}
+              alt={w.design ?? w.title}
+              className="aspect-square w-full rounded object-cover"
+            />
+          ))}
+        </div>
+
+        <p className="t-small mt-5 text-ink-3">
+          Screenshot this and drop it wherever you design. Escape to close.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 /**
  * ONE PATTERN AT A TIME.
@@ -600,6 +642,8 @@ function BriefPanel({
    *  is no longer quite there. */
   stale: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
+
   return (
     <Card className="mt-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-3">
@@ -607,9 +651,30 @@ function BriefPanel({
           Patterns across {stored.counted} designs under &ldquo;{keyword}&rdquo;
           {stale && " · the group has changed since this was read"}
         </p>
-        <button onClick={onRead} className="btn btn-ghost" disabled={busy}>
-          {stale ? "Read it again" : "Refresh"}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          {/* The patterns as text, to paste wherever the seller designs. */}
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(
+                  stored.brief.patterns
+                    .map((p) => `${p.heading}. ${p.body}`)
+                    .join("\n\n"),
+                );
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2500);
+              } catch {
+                /* A browser that refuses the clipboard leaves the label be. */
+              }
+            }}
+            className="btn btn-ghost"
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <button onClick={onRead} className="btn btn-ghost" disabled={busy}>
+            {stale ? "Read it again" : "Refresh"}
+          </button>
+        </div>
       </div>
 
       <Patterns points={stored.brief.patterns} />
