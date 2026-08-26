@@ -432,21 +432,28 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * THE BRIEF, AS A FUNNEL.
+ * THE BRIEF.
  *
- * This was four sections in a two-column grid, all the same size, which said
- * they were all equally important. They are not. The hole is the thing the
- * seller acts on; what worn out means is a footnote. Laying them out as
- * equals made the reader do the ranking, and the two columns meant the eye
- * had no obvious place to go next as the ragged sections ran out.
+ * Two mistakes to avoid here, and the first fix walked straight into the
+ * second.
  *
- * So: the hole first and largest, the moves under it as the reasoning, and
- * the two diagnostics paired and small at the bottom. One column throughout,
- * held to a reading measure, because a line of text spanning the full width
- * of this page is too long to scan.
+ * Four equal sections in a two-column grid said they were all equally
+ * important. They are not: the hole is what the seller acts on, worn out is
+ * a footnote, and laying them out as equals made the reader do the ranking.
+ *
+ * The fix for that was to hold the text to a reading measure — correct in
+ * itself, and applied inside a card that is still the full width of a very
+ * wide page. The result was a fifteen-hundred-pixel panel with a narrow
+ * column of text in its left corner and nothing at all on the right.
+ *
+ * A reading measure is a property of a COLUMN, not of a page. So the width
+ * is spent on two columns rather than left empty: the hole runs large down
+ * the left, the reasoning and the two diagnostics stack down a narrower rail
+ * on the right. Both are readable, the panel is full, and the ranking is
+ * still done by size and position rather than by the reader.
  *
  * Nothing is dropped or shortened. Every section, entry and sentence the
- * model wrote is still here — only the arrangement changed.
+ * model wrote is on the page — only the arrangement changed.
  */
 function BriefPanel({
   stored,
@@ -476,51 +483,52 @@ function BriefPanel({
         </button>
       </div>
 
-      {/* ------------------------------------------- what to do about it */}
-      {b.gaps.length > 0 && (
-        <div className="max-w-[52ch]">
-          <Label>Where the hole is</Label>
-          <ul className="space-y-4">
-            {b.gaps.map((p, i) => (
-              <li
-                key={i}
-                className="border-l-2 pl-4"
-                style={{ borderColor: "var(--accent)" }}
-              >
-                <p className="t-h3 text-ink">{p.heading}</p>
-                <p className="mt-1 text-[15px] leading-relaxed text-ink-2">
-                  {p.body}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[1.35fr_1fr]">
+        {/* ----------------------------------------- what to do about it */}
+        {b.gaps.length > 0 && (
+          <div>
+            <Label>Where the hole is</Label>
+            <ul className="space-y-5">
+              {b.gaps.map((p, i) => (
+                <li
+                  key={i}
+                  className="border-l-2 pl-4"
+                  style={{ borderColor: "var(--accent)" }}
+                >
+                  <p className="t-h3 text-ink">{p.heading}</p>
+                  <p className="mt-1 text-[15px] leading-relaxed text-ink-2">
+                    {p.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      {/* ------------------------------------------------------- and why */}
-      {b.moves.length > 0 && (
-        <div className="mt-7 max-w-[52ch] border-t border-black/10 pt-6">
-          <Label>Why — what this world buys</Label>
-          <ul className="space-y-3.5">
-            {b.moves.map((p, i) => (
-              <li key={i}>
-                <p className="text-[15px] font-bold text-ink">{p.heading}</p>
-                <p className="mt-0.5 text-[15px] leading-relaxed text-ink-2">
-                  {p.body}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {/* ------------------------------------ the reasoning, and notes */}
+        <div className="space-y-7 lg:border-l lg:border-black/10 lg:pl-10">
+          {b.moves.length > 0 && (
+            <div>
+              <Label>Why — what this world buys</Label>
+              <ul className="space-y-3.5">
+                {b.moves.map((p, i) => (
+                  <li key={i}>
+                    <p className="text-[15px] font-bold text-ink">
+                      {p.heading}
+                    </p>
+                    <p className="mt-0.5 t-small leading-relaxed text-ink-2">
+                      {p.body}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-      {/* --------------------------------------------- the two footnotes */}
-      {foot.some(([, list]) => list.length > 0) && (
-        <div className="mt-7 grid gap-7 border-t border-black/10 pt-6 sm:grid-cols-2">
           {foot
             .filter(([, list]) => list.length > 0)
             .map(([title, list]) => (
-              <div key={title}>
+              <div key={title} className="border-t border-black/10 pt-6">
                 <Label>{title}</Label>
                 <ul className="space-y-3">
                   {list.map((p, i) => (
@@ -533,7 +541,7 @@ function BriefPanel({
               </div>
             ))}
         </div>
-      )}
+      </div>
     </Card>
   );
 }
