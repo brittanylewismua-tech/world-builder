@@ -40,6 +40,10 @@ export interface Winner {
   imageUrl: string | null;
   design: string | null;
   firstSeen: string;
+  /** When this row last came in on an export. The sales figures are a
+   *  snapshot from that day and nothing can refresh them — eRank estimates
+   *  them, so only another export moves the number. */
+  refreshedAt: string;
 }
 
 /** Sales per day it has been listed. The old giants and the fast movers are
@@ -66,6 +70,7 @@ function shape(r: Record<string, unknown>): Winner {
     imageUrl: (r.image_url as string | null) ?? null,
     design: (r.design as string | null) ?? null,
     firstSeen: r.first_seen as string,
+    refreshedAt: (r.refreshed_at as string) ?? (r.first_seen as string),
   };
 }
 
@@ -73,7 +78,7 @@ export async function loadWinners(worldId: string): Promise<Winner[]> {
   const { data, error } = await supabase
     .from("wb_winners")
     .select(
-      "id, listing_id, keyword, title, url, shop, age_days, views, daily_views, sales, price, revenue, hearts, image_url, design, first_seen",
+      "id, listing_id, keyword, title, url, shop, age_days, views, daily_views, sales, price, revenue, hearts, image_url, design, first_seen, refreshed_at",
     )
     .eq("world_id", worldId)
     .eq("hidden", false)
@@ -82,8 +87,26 @@ export async function loadWinners(worldId: string): Promise<Winner[]> {
   return (data ?? []).map(shape);
 }
 
-export async function hideWinner(id: string) {
-  await supabase.from("wb_winners").update({ hidden: true }).eq("id", id);
+/**
+ * Removing means removing.
+ *
+ * This used to set hidden = true, which quietly made the mistake permanent:
+ * the row still existed, so re-uploading the export skipped it as already
+ * known and the design never came back. Deleting means the export is always
+ * the undo.
+ */
+export async function removeWinner(id: string) {
+  const { error } = await supabase.from("wb_winners").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removeKeyword(worldId: string, keyword: string) {
+  const { error } = await supabase
+    .from("wb_winners")
+    .delete()
+    .eq("world_id", worldId)
+    .eq("keyword", keyword);
+  if (error) throw new Error(error.message);
 }
 
 /* ------------------------------------------------------------------ */

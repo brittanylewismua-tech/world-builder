@@ -9,17 +9,34 @@ import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import {
   addExport,
-  hideWinner,
   loadBrief,
   loadWinners,
   perDay,
   readExport,
   readTheWall,
+  removeKeyword,
+  removeWinner,
   SOLD_AT_LEAST,
   type Brief,
   type StoredBrief,
   type Winner,
 } from "@/lib/winners";
+
+/**
+ * Below this many designs in a group, a "top five" is not a distinction —
+ * it would light up more than half of them and mean nothing. The two
+ * featured tiles already do that job in a small group.
+ */
+const CROWN_ABOVE = 10;
+
+const money = (n: number) =>
+  n >= 1000 ? `$${Math.round(n / 1000)}k` : `$${Math.round(n)}`;
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 
 export default function WinnersPage() {
   return <Shell>{(world) => <WinnersBody world={world} />}</Shell>;
@@ -112,6 +129,10 @@ function WinnersBody({ world }: { world: World }) {
     Grouped by keyword, because that is how the files arrive and it is the one
     honest thing a keyword tells you: which search this design was winning.
     Biggest group first so the world's centre of gravity is at the top.
+
+    The crown is per keyword rather than across the wall on purpose. A loose
+    world's keywords are separate sub-worlds, and one big keyword would take
+    every highlight on the page if the top five were global.
   */
   const groups = useMemo(() => {
     const by = new Map<string, Winner[]>();
@@ -129,10 +150,48 @@ function WinnersBody({ world }: { world: World }) {
         const rest = list
           .filter((w) => !featured.some((f) => f.id === w.id))
           .sort((a, b) => b.sales - a.sales);
-        return { keyword, list, established, now, featured, rest };
+
+        const crowned = new Set(
+          list.length > CROWN_ABOVE
+            ? [...list]
+                .sort((a, b) => b.sales - a.sales)
+                .slice(0, 5)
+                .map((w) => w.id)
+            : [],
+        );
+
+        return {
+          keyword,
+          list,
+          established,
+          now,
+          featured,
+          rest,
+          crowned,
+          revenue: list.reduce((sum, w) => sum + w.revenue, 0),
+          // The whole group came off one export, so the newest row dates it.
+          dated: list.reduce(
+            (latest, w) => (w.refreshedAt > latest ? w.refreshedAt : latest),
+            list[0].refreshedAt,
+          ),
+        };
       })
       .sort((a, b) => b.list.length - a.list.length);
   }, [winners]);
+
+  /*
+    Collapsed by default past the first group.
+
+    Not for tidiness — for weight. Every open group is ten product
+    photographs, and a seller with twenty keywords would be loading fifteen
+    megabytes of images to look at one of them. A closed group renders none of
+    its tiles, so the page costs the same at thirty keywords as at three, and
+    no artificial cap on keywords is needed.
+  */
+  const [shut, setShut] = useState<Record<string, boolean>>({});
+  const isOpen = (k: string, i: number) => (k in shut ? !shut[k] : i === 0);
+  const toggle = (k: string, i: number) =>
+    setShut((s) => ({ ...s, [k]: k in s ? !s[k] : i !== 0 ? false : true }));
 
   const withArt = winners.filter((w) => w.imageUrl).length;
 
@@ -249,50 +308,113 @@ function WinnersBody({ world }: { world: World }) {
         />
       )}
 
-      {groups.map((g) => (
-        <section key={g.keyword} className="mb-10">
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3 border-b border-black/15 pb-2">
-            <h2 className="t-h2 text-ink">{g.keyword}</h2>
-            <span className="t-small text-ink-3">{g.list.length} designs</span>
-          </div>
+      {groups.map((g, i) => {
+        const open = isOpen(g.keyword, i);
+        const drop = async (w: Winner) => {
+          await removeWinner(w.id);
+          refresh();
+        };
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {g.featured.map((w) => (
-              <Tile
-                key={w.id}
-                w={w}
-                big
-                flag={
-                  g.featured.length === 1
-                    ? "biggest and fastest"
-                    : w.id === g.established.id
-                      ? "most sales"
-                      : "winning now"
-                }
-                onHide={async () => {
-                  await hideWinner(w.id);
+        return (
+          <section key={g.keyword} className="mb-6">
+            {/* ------------------------------------------------ the header */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-black pb-2.5">
+              <button
+                onClick={() => toggle(g.keyword, i)}
+                aria-expanded={open}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <span
+                  className="t-small shrink-0 text-ink-3 transition-transform"
+                  style={{ transform: open ? "rotate(90deg)" : "none" }}
+                  aria-hidden
+                >
+                  ▶
+                </span>
+                <h2 className="t-h2 truncate text-ink">{g.keyword}</h2>
+
+                {/*
+                  A collapsed accordion is a grey bar with a word on it, and
+                  the whole point of this page is that you can see your world.
+                  So the group's two featured designs ride in the header and
+                  stay visible whether it is open or shut.
+                */}
+                {!open && (
+                  <span className="flex shrink-0 gap-1.5">
+                    {g.featured.map(
+                      (w) =>
+                        w.imageUrl && (
+                          <img
+                            key={w.id}
+                            src={w.imageUrl}
+                            alt=""
+                            loading="lazy"
+                            className="h-9 w-9 rounded object-cover"
+                          />
+                        ),
+                    )}
+                  </span>
+                )}
+              </button>
+
+              <span className="t-small shrink-0 text-ink-3">
+                {g.list.length} designs · {money(g.revenue)} · {when(g.dated)}
+              </span>
+              <button
+                onClick={async () => {
+                  if (
+                    !confirm(
+                      `Remove all ${g.list.length} designs under “${g.keyword}”? Uploading the export again brings them back.`,
+                    )
+                  )
+                    return;
+                  await removeKeyword(world.id, g.keyword);
                   refresh();
                 }}
-              />
-            ))}
-          </div>
-
-          {g.rest.length > 0 && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {g.rest.map((w) => (
-                <Tile
-                  key={w.id}
-                  w={w}
-                  onHide={async () => {
-                    await hideWinner(w.id);
-                    refresh();
-                  }}
-                />
-              ))}
+                className="t-small shrink-0 text-ink-3 transition hover:text-ink"
+              >
+                Remove keyword
+              </button>
             </div>
-          )}
-        </section>
-      ))}
+
+            {open && (
+              <div className="mt-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {g.featured.map((w) => (
+                    <Tile
+                      key={w.id}
+                      w={w}
+                      big
+                      crowned={g.crowned.has(w.id)}
+                      flag={
+                        g.featured.length === 1
+                          ? "biggest and fastest"
+                          : w.id === g.established.id
+                            ? "most sales"
+                            : "winning now"
+                      }
+                      onDrop={() => drop(w)}
+                    />
+                  ))}
+                </div>
+
+                {g.rest.length > 0 && (
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {g.rest.map((w) => (
+                      <Tile
+                        key={w.id}
+                        w={w}
+                        crowned={g.crowned.has(w.id)}
+                        onDrop={() => drop(w)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        );
+      })}
     </Page>
   );
 }
@@ -351,20 +473,41 @@ function BriefPanel({
   );
 }
 
+/**
+ * One design.
+ *
+ * Pink means exactly one thing on this page: this is a top five seller in its
+ * keyword. The "most sales" and "winning now" flags used to be pink too, and
+ * three pink things on one screen is no signal at all — they are labels, so
+ * they are plain, and the colour is spent on the border you should be able to
+ * spot from across the room.
+ */
 function Tile({
   w,
   big = false,
   flag,
-  onHide,
+  crowned = false,
+  onDrop,
 }: {
   w: Winner;
   big?: boolean;
   flag?: string;
-  onHide: () => void;
+  crowned?: boolean;
+  onDrop: () => void;
 }) {
   const rate = perDay(w);
   return (
-    <figure className="card overflow-hidden">
+    <figure
+      className="card overflow-hidden"
+      style={
+        crowned
+          ? {
+              borderColor: "var(--accent)",
+              boxShadow: "0 0 0 2px var(--accent)",
+            }
+          : undefined
+      }
+    >
       <div className="relative bg-black/[0.04]">
         {w.imageUrl ? (
           <img
@@ -381,10 +524,7 @@ function Tile({
           </div>
         )}
         {flag && (
-          <span
-            className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold"
-            style={{ background: "var(--accent)", color: "#fff" }}
-          >
+          <span className="absolute left-3 top-3 rounded-full bg-black px-2.5 py-1 text-[11px] font-bold text-white">
             {flag}
           </span>
         )}
@@ -417,7 +557,7 @@ function Tile({
             {w.shop || "on Etsy"} ↗
           </a>
           <button
-            onClick={onHide}
+            onClick={onDrop}
             className="shrink-0 transition hover:text-ink"
           >
             Remove
