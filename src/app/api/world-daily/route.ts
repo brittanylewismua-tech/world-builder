@@ -85,16 +85,15 @@ Fill that field FIRST, before you write the headline. If you cannot fill it hone
   "Brand X released a journalling kit" → nothing to print. Cut it.
   "Daughter of the King" → printable: "Daughter of the King". Publish it.
 
-The ONE exception is an "opposition" item, which by its nature is not something this seller prints. For those, use the field to say in one line what it tells the seller about the space they are selling into. Never words for them to print.
+The ONE exception is an "opposition" item, which is not something this seller prints. There, use the field for what it tells them about the space.
 
 WHOSE SIDE THE SELLER IS ON
 You are reading for THIS seller's customer, and that customer has a position. The issue is overwhelmingly about what their OWN people are saying, wearing and making.
 
-The other side is allowed in, but rarely, and never as a normal item:
-- kind must be "opposition", so the seller can see at a glance that it is not their own customer talking.
-- AT MOST ONE per issue, and only when it is genuinely worth the slot. Zero is the normal number.
-- It has to say something about the CONVERSATION the seller's customer is in — the register it has moved to, the format being used, how it is escalating. "MAGA hats have gone black-and-gold and meme-coded, so the hat is an in-joke now rather than a slogan" earns its place: it says the whole space has shifted from statement to insider signal. "The other side released a new shirt" does not.
-- Never frame it as something to copy or make. It is weather, not instruction.
+The competition — the other camp in the same argument — is worth reporting when it tells you where the argument has moved:
+- kind "opposition".
+- At most one per issue. Zero is normal.
+- It has to say where the CONVERSATION has gone: the register, the format, how it is escalating. "MAGA hats have gone black-and-gold and meme-coded, so the hat is an in-joke now rather than a slogan" earns its place — it says the space has shifted from statement to insider signal. "They released a new shirt" does not.
 
 Still banned outright, both sides: a plain product launch, a restock, a collection drop, follower counts, sales figures.
 
@@ -109,7 +108,7 @@ WHAT PASSES
 - object — a specific thing this world keeps depicting or naming, that could be drawn: a prop, a symbol, an animal, a plant, a tool, a food.
 - humour — a joke format or running bit, quoted.
 - aesthetic — a nameable micro-aesthetic with visual rules you can actually describe.
-- opposition — what the other side of this argument is wearing or saying, and only when it says something about where the whole conversation has moved. At most one per issue, usually none.
+- opposition — what the competition is wearing or saying, when it shows where the whole conversation has moved. At most one per issue, usually none.
 - event — only when there is a dated moment people GIFT around or DRESS for, and you can say what gets printed for it. A date alone is not a signal.
 - moment — sparingly, and only when the reaction to it is producing language or imagery.
 
@@ -176,8 +175,7 @@ const PUBLISH_TOOL = {
                 "humour",
                 "aesthetic",
                 "moment",
-                // The other side. At most one an issue, and marked as such so
-                // it can never be mistaken for the seller's own customer.
+                // The competition. At most one an issue.
                 "opposition",
               ],
             },
@@ -608,14 +606,8 @@ ${field || "(nothing came back)"}`
       );
 
     /*
-      One look at the other side, no more.
-
-      Knowing where the opposing camp has moved is real intelligence — when a
-      rival slogan turns into an in-joke, that says the whole argument has
-      changed register, and that does change what a seller draws. But it is
-      context, not material, and an issue with two or three of them has quietly
-      become a paper about somebody else's customers. The prompt asks for at
-      most one; this makes sure of it.
+      One competition item an issue. Two or three and the paper is about
+      somebody else's customers. The prompt asks; this makes sure.
     */
     let usedOpposition = false;
     const trimmed = items.filter((it) => {
