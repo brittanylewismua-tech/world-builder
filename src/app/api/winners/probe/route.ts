@@ -4,19 +4,19 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * CAN THIS DEPLOYMENT SEE AN ETSY LISTING AT ALL?
+ * IS THE ETSY KEY WORKING?
  *
- * The whole wall rests on one unverified assumption: that Etsy will serve a
- * product page to a Vercel function. Etsy is aggressive about scrapers, and a
- * data-centre IP with a browser user agent is exactly the shape it blocks.
- * If it does not, every design arrives without a picture and the feature is
- * an empty grid.
+ * The first version of this probe asked whether Etsy would serve a listing
+ * page to a Vercel function. The answer was a flat 403 and a DataDome
+ * challenge, which is what sent the whole importer through Etsy's Open API
+ * instead.
  *
- * That is not a thing to discover by asking Brittany to upload a file and
- * watch it fail. This runs the fetch and reports what came back — status,
- * page size, and whether the two things the importer needs were found.
+ * So the question has changed, and it is worth keeping one: the moment the
+ * key lands in Vercel, somebody has to know whether it actually works before
+ * a seller finds out by uploading a file. This asks Etsy for one real listing
+ * and reports whether a picture came back.
  *
- * Guarded by CRON_SECRET. Deleted as soon as it has answered.
+ * Guarded by CRON_SECRET, and it never returns the key itself.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -26,44 +26,49 @@ export async function GET(req: Request) {
   )
     return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-  const id = url.searchParams.get("listing") ?? "1865753173";
+  const key = process.env.ETSY_API_KEY;
+  if (!key)
+    return NextResponse.json({ configured: false, reason: "No ETSY_API_KEY." });
+
+  // Defaults to the top "feminist shirt" listing, which is public and busy.
+  const ids = url.searchParams.get("listings") ?? "1865753173";
 
   try {
-    const res = await fetch(`https://www.etsy.com/listing/${id}`, {
-      headers: {
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        accept: "text/html,application/xhtml+xml",
-        "accept-language": "en-US,en;q=0.9",
+    const res = await fetch(
+      `https://openapi.etsy.com/v3/application/listings/batch?listing_ids=${encodeURIComponent(ids)}&includes=Images`,
+      {
+        headers: { "x-api-key": key, accept: "application/json" },
+        signal: AbortSignal.timeout(25_000),
       },
-      signal: AbortSignal.timeout(15_000),
-    });
-    const html = await res.text();
+    );
+    const text = await res.text();
 
-    const image =
-      html.match(
-        /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-      )?.[1] ??
-      html.match(
-        /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
-      )?.[1] ??
-      null;
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      /* Etsy answered with something that is not JSON; the body says what. */
+    }
 
-    const design =
-      html.match(/alt=["']May include:\s*([^"']{10,600})["']/i)?.[1] ?? null;
+    const results =
+      (parsed as { results?: { listing_id?: number; images?: { url_570xN?: string; alt_text?: string | null }[] }[] })
+        ?.results ?? [];
 
     return NextResponse.json({
+      configured: true,
       status: res.status,
-      bytes: html.length,
-      image,
-      design,
-      // If both are null, seeing how the page opens says whether it was a
-      // block page, a challenge, or simply different markup.
-      head: image || design ? undefined : html.slice(0, 700),
+      count: results.length,
+      sample: results.slice(0, 2).map((l) => ({
+        listing_id: l.listing_id,
+        image: l.images?.[0]?.url_570xN ?? null,
+        alt: l.images?.[0]?.alt_text ?? null,
+      })),
+      // Only on failure, and only the first stretch — never the key.
+      body: res.ok ? undefined : text.slice(0, 400),
     });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "failed" },
+      { configured: true, error: e instanceof Error ? e.message : "failed" },
       { status: 500 },
     );
   }

@@ -33,6 +33,8 @@ function WinnersBody({ world }: { world: World }) {
   const [reading, setReading] = useState(false);
   const [err, setErr] = useState("");
   const [said, setSaid] = useState("");
+  /* null until an upload has reported back whether Etsy's key is in place. */
+  const [keyed, setKeyed] = useState<boolean | null>(null);
   const pick = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -68,6 +70,7 @@ function WinnersBody({ world }: { world: World }) {
         const res = await addExport(world, parsed);
         added += res.added;
         already += res.already;
+        setKeyed(res.keyed);
       }
       await refresh();
       setSaid(
@@ -154,6 +157,19 @@ function WinnersBody({ world }: { world: World }) {
       </header>
 
       {err && <ErrorNote>{err}</ErrorNote>}
+
+      {/*
+        The numbers work without Etsy's key; the pictures do not, and the
+        pictures are the feature. Say that plainly rather than letting the
+        wall fill up with grey boxes that look like a bug.
+      */}
+      {keyed === false && (
+        <div className="note t-small mb-5 px-4 py-3 text-ink-2">
+          The designs are missing because Etsy&rsquo;s key is not connected
+          yet. Everything you upload is being kept, and the artwork will fill
+          in once it is.
+        </div>
+      )}
 
       {/* ------------------------------------------------------- upload */}
       <div className="mb-7 flex flex-wrap items-center gap-3">

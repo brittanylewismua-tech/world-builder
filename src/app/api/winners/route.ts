@@ -11,25 +11,26 @@ export const maxDuration = 300;
  * The export has everything except the one thing that matters. A hundred rows
  * of sales, age, views and price — and for the design itself, a link.
  *
- * So this opens each listing that actually sold and takes two things off the
- * page: the full-size photo, and Etsy's own written description of what is in
- * it ("a peach t-shirt with portraits of Frida Kahlo, Audre Lorde, Maya
- * Angelou..."). Etsy writes that itself for accessibility and it is a better
- * account of the artwork than any title, because titles are keyword stuffing
- * from the first word to the last.
+ * THE FIRST ATTEMPT AT THIS WAS TO OPEN THE LISTING PAGE AND READ THE PHOTO
+ * OFF IT. Etsy will not have it. A probe from this deployment came back 403
+ * with a DataDome challenge page: a data-centre address gets a captcha no
+ * matter what user agent it claims, and pretending harder is both futile and
+ * not something to do to somebody who has not agreed to it.
  *
- * Listings already on the wall are not fetched again — their numbers are
- * refreshed and that is all. A world that has been running for months should
- * not re-read three hundred pages to add one export.
+ * So the pictures come through Etsy's own front door instead. The Open API v3
+ * batch endpoint returns public listing data — including every image, at
+ * every size — for up to a hundred listing ids in a single request, and for
+ * public data it needs nothing but the application key. One call per upload,
+ * no scraping, and Etsy can see exactly who is asking.
+ *
+ * Listings already on the wall are not asked for again; their numbers are
+ * refreshed and that is all.
  */
 
-/** How many new listings one upload may open. A bound on the wait, not on
- *  the library: the rest arrive on the next upload. */
-const MOST_PER_UPLOAD = 60;
+/** Etsy's cap on one batch request. */
+const MOST_PER_UPLOAD = 100;
 
-/** Etsy serves a plain 403 to anything that does not look like a browser. */
-const UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+const ETSY_BATCH = "https://openapi.etsy.com/v3/application/listings/batch";
 
 interface Row {
   listingId?: string;
@@ -45,59 +46,59 @@ interface Row {
   hearts?: number;
 }
 
-/**
- * What is actually printed on it.
- *
- * Two things are wanted and they come from different places in the markup.
- * og:image is the primary photo at full size. The description is in the alt
- * text of that same photo, which Etsy writes as "May include: ...". Every
- * later alt on the page is a size chart or a colour swatch, so only the first
- * one is any use.
- */
-async function readListing(id: string) {
-  const res = await fetch(`https://www.etsy.com/listing/${id}`, {
-    headers: {
-      "user-agent": UA,
-      accept: "text/html,application/xhtml+xml",
-      "accept-language": "en-US,en;q=0.9",
-    },
-    // Etsy pages are heavy and none of this is worth a long stall.
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) return null;
-  const html = await res.text();
-
-  const image =
-    html.match(
-      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-    )?.[1] ??
-    html.match(
-      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
-    )?.[1] ??
-    null;
-
-  const design =
-    html
-      .match(/alt=["']May include:\s*([^"']{10,600})["']/i)?.[1]
-      ?.replace(/&quot;/g, '"')
-      .replace(/&amp;/g, "&")
-      .replace(/&#39;/g, "'")
-      .trim() ?? null;
-
-  return { image, design };
+interface EtsyImage {
+  url_570xN?: string;
+  url_fullxfull?: string;
+  alt_text?: string | null;
 }
 
-/** Run the fetches a few at a time. One at a time is minutes; all at once
- *  gets the deployment rate limited. */
-async function inWaves<T, R>(
-  items: T[],
-  width: number,
-  job: (item: T) => Promise<R>,
-) {
-  const out: R[] = [];
-  for (let i = 0; i < items.length; i += width)
-    out.push(...(await Promise.all(items.slice(i, i + width).map(job))));
-  return out;
+interface EtsyListing {
+  listing_id?: number;
+  images?: EtsyImage[];
+}
+
+/**
+ * Ask Etsy for the pictures.
+ *
+ * One request, up to a hundred listings. The first image is the one Etsy
+ * shows as the thumbnail, which is the one with the design on it — the rest
+ * of a print-on-demand listing's photos are size charts and colour swatches.
+ *
+ * alt_text is Etsy's own written account of the artwork where a seller has
+ * filled it in ("a peach t-shirt with portraits of Frida Kahlo, Audre Lorde,
+ * Maya Angelou..."). Often blank, which is fine: the read looks at the
+ * picture, and this only ever helps it along.
+ */
+async function askEtsy(ids: string[], key: string) {
+  const found = new Map<string, { image: string | null; design: string | null }>();
+  if (!ids.length) return found;
+
+  const url = `${ETSY_BATCH}?listing_ids=${ids.join(",")}&includes=Images`;
+  const res = await fetch(url, {
+    headers: { "x-api-key": key, accept: "application/json" },
+    signal: AbortSignal.timeout(25_000),
+  });
+
+  if (!res.ok) {
+    // 401/403 is a key problem and the caller has to be told plainly; a 404
+    // on a batch is not possible, so anything else is Etsy being unwell.
+    throw new Error(
+      res.status === 401 || res.status === 403
+        ? "Etsy would not accept the API key."
+        : `Etsy returned ${res.status}.`,
+    );
+  }
+
+  const body = (await res.json()) as { results?: EtsyListing[] };
+  for (const l of body.results ?? []) {
+    const first = l.images?.[0];
+    if (!l.listing_id) continue;
+    found.set(String(l.listing_id), {
+      image: first?.url_570xN ?? first?.url_fullxfull ?? null,
+      design: first?.alt_text?.trim() || null,
+    });
+  }
+  return found;
 }
 
 export async function POST(req: Request) {
@@ -143,16 +144,29 @@ export async function POST(req: Request) {
     .filter((r) => !known.has(r.listingId as string))
     .slice(0, MOST_PER_UPLOAD);
 
-  const pictures = new Map<string, { image: string | null; design: string | null }>();
-  await inWaves(fresh, 6, async (r) => {
+  const key = process.env.ETSY_API_KEY;
+  let pictures = new Map<string, { image: string | null; design: string | null }>();
+
+  if (key && fresh.length) {
     try {
-      const got = await readListing(r.listingId as string);
-      if (got) pictures.set(r.listingId as string, got);
-    } catch {
-      // A listing that has been taken down, or that Etsy would not serve.
-      // It simply does not go on the wall.
+      pictures = await askEtsy(
+        fresh.map((r) => r.listingId as string),
+        key,
+      );
+    } catch (e) {
+      // Without pictures this is a spreadsheet, so say so rather than
+      // quietly filling the wall with grey boxes.
+      return NextResponse.json(
+        {
+          error:
+            e instanceof Error
+              ? `${e.message} Nothing was added.`
+              : "Etsy did not answer. Nothing was added.",
+        },
+        { status: 502 },
+      );
     }
-  });
+  }
 
   const now = new Date().toISOString();
   const payload = clean.map((r) => {
@@ -197,5 +211,8 @@ export async function POST(req: Request) {
     already: clean.length - fresh.length,
     noPicture: fresh.filter((r) => !pictures.get(r.listingId as string)?.image)
       .length,
+    /* So the screen can explain a wall of grey boxes instead of looking
+       broken while the Etsy key is still being applied for. */
+    keyed: !!key,
   });
 }

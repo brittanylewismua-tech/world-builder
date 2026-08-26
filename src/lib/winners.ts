@@ -273,7 +273,12 @@ export async function readExport(file: File): Promise<ParsedExport> {
 }
 
 export async function addExport(world: World, parsed: ParsedExport) {
-  return askAI<{ added: number; already: number; noPicture: number }>(
+  return askAI<{
+    added: number;
+    already: number;
+    noPicture: number;
+    keyed: boolean;
+  }>(
     "/api/winners",
     { worldId: world.id, keyword: parsed.keyword, rows: parsed.kept },
     { timeoutMs: 240_000 },
