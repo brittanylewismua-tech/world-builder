@@ -144,9 +144,21 @@ function WinnersBody({ world }: { world: World }) {
     return [...by.entries()]
       .map(([keyword, list]) => {
         const established = [...list].sort((a, b) => b.sales - a.sales)[0];
-        const now = [...list].sort((a, b) => perDay(b) - perDay(a))[0];
-        const featured =
-          established.id === now.id ? [established] : [established, now];
+        const byRate = [...list].sort((a, b) => perDay(b) - perDay(a));
+        /*
+          Always two featured tiles, because one tile in a two-up row leaves
+          half the width empty. When the biggest seller is also the fastest,
+          the second slot goes to the next fastest rather than being dropped —
+          which is a real thing to show, not filler.
+        */
+        const now = byRate[0];
+        const second =
+          established.id === now.id
+            ? byRate.find((w) => w.id !== established.id)
+            : now;
+        const featured = second ? [established, second] : [established];
+        const secondFlag =
+          established.id === now.id ? "next fastest" : "winning now";
         const rest = list
           .filter((w) => !featured.some((f) => f.id === w.id))
           .sort((a, b) => b.sales - a.sales);
@@ -168,6 +180,7 @@ function WinnersBody({ world }: { world: World }) {
           featured,
           rest,
           crowned,
+          secondFlag,
           revenue: list.reduce((sum, w) => sum + w.revenue, 0),
           // The whole group came off one export, so the newest row dates it.
           dated: list.reduce(
@@ -387,11 +400,7 @@ function WinnersBody({ world }: { world: World }) {
                       big
                       crowned={g.crowned.has(w.id)}
                       flag={
-                        g.featured.length === 1
-                          ? "biggest and fastest"
-                          : w.id === g.established.id
-                            ? "most sales"
-                            : "winning now"
+                        w.id === g.established.id ? "most sales" : g.secondFlag
                       }
                       onDrop={() => drop(w)}
                     />
@@ -505,30 +514,36 @@ function BriefPanel({
           </div>
         )}
 
-        {/* ------------------------------------ the reasoning, and notes */}
-        <div className="space-y-7 lg:border-l lg:border-black/10 lg:pl-10">
-          {b.moves.length > 0 && (
-            <div>
-              <Label>Why — what this world buys</Label>
-              <ul className="space-y-3.5">
-                {b.moves.map((p, i) => (
-                  <li key={i}>
-                    <p className="text-[15px] font-bold text-ink">
-                      {p.heading}
-                    </p>
-                    <p className="mt-0.5 t-small leading-relaxed text-ink-2">
-                      {p.body}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {/* ------------------------------------------------ the reasoning */}
+        {b.moves.length > 0 && (
+          <div className="lg:border-l lg:border-black/10 lg:pl-10">
+            <Label>Why — what this world buys</Label>
+            <ul className="space-y-3.5">
+              {b.moves.map((p, i) => (
+                <li key={i}>
+                  <p className="text-[15px] font-bold text-ink">{p.heading}</p>
+                  <p className="t-small mt-0.5 leading-relaxed text-ink-2">
+                    {p.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
+      {/*
+        The diagnostics sit below both columns rather than stacked under the
+        reasoning. In the rail they made the right side run to twice the
+        height of the left and left a hole the size of a card underneath the
+        gaps — the same empty-space problem, moved to a different corner.
+      */}
+      {foot.some(([, list]) => list.length > 0) && (
+        <div className="mt-8 grid gap-x-10 gap-y-7 border-t border-black/10 pt-6 sm:grid-cols-2">
           {foot
             .filter(([, list]) => list.length > 0)
             .map(([title, list]) => (
-              <div key={title} className="border-t border-black/10 pt-6">
+              <div key={title}>
                 <Label>{title}</Label>
                 <ul className="space-y-3">
                   {list.map((p, i) => (
@@ -541,7 +556,7 @@ function BriefPanel({
               </div>
             ))}
         </div>
-      </div>
+      )}
     </Card>
   );
 }
