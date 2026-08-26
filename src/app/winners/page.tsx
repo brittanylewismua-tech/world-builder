@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
@@ -60,6 +61,8 @@ function WinnersBody({ world }: { world: World }) {
   const [said, setSaid] = useState("");
   /* null until an upload has reported back whether Etsy's key is in place. */
   const [keyed, setKeyed] = useState<boolean | null>(null);
+  /** The design opened full size, or null. */
+  const [zoom, setZoom] = useState<Winner | null>(null);
   const pick = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -219,6 +222,8 @@ function WinnersBody({ world }: { world: World }) {
 
   return (
     <Page width="full">
+      {zoom && <Zoom w={zoom} onClose={() => setZoom(null)} />}
+
       <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
           <span className="chip chip-solid">world winners</span>
@@ -307,7 +312,7 @@ function WinnersBody({ world }: { world: World }) {
               <button
                 onClick={() => toggle(g.keyword, i)}
                 aria-expanded={open}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                className="flex min-w-0 items-center gap-3 text-left"
               >
                 <span
                   className="t-small shrink-0 text-ink-3 transition-transform"
@@ -342,9 +347,13 @@ function WinnersBody({ world }: { world: World }) {
                 )}
               </button>
 
-              <span className="t-small shrink-0 text-ink-3">
-                {g.list.length} designs · {money(g.revenue)} · {when(g.dated)}
-              </span>
+              {/*
+                Show patterns belongs beside the keyword, not away at the
+                other end with the housekeeping. It is the thing you came to
+                press, and the rule between them says it belongs to this
+                keyword rather than to the row.
+              */}
+              <span className="h-6 w-px shrink-0 bg-black/20" aria-hidden />
               <button
                 onClick={() => {
                   if (!open) toggle(g.keyword, i);
@@ -356,12 +365,17 @@ function WinnersBody({ world }: { world: World }) {
               >
                 {reading === g.keyword
                   ? "Reading…"
-                  : !briefs[g.keyword]
-                    ? "Show patterns"
-                    : showing[g.keyword]
-                      ? "Hide patterns"
-                      : "Show patterns"}
+                  : briefs[g.keyword] && showing[g.keyword]
+                    ? "Hide patterns"
+                    : "Show patterns"}
               </button>
+
+              {/* Everything past here is reference and housekeeping. */}
+              <span className="flex-1" />
+
+              <span className="t-small shrink-0 text-ink-3">
+                {g.list.length} designs · {money(g.revenue)} · {when(g.dated)}
+              </span>
               {/*
                 A viewer rather than a download. Ten designs at a size where
                 they all fit on one screen is a thing the seller can
@@ -425,35 +439,36 @@ function WinnersBody({ world }: { world: World }) {
               />
             )}
 
-            {open && (
-              <div className="mt-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  {g.featured.map((w) => (
-                    <Tile
-                      key={w.id}
-                      w={w}
-                      big
-                      crowned={g.crowned.has(w.id)}
-                      flag={
-                        w.id === g.established.id ? "most sales" : g.secondFlag
-                      }
-                      onDrop={() => drop(w)}
-                    />
-                  ))}
-                </div>
+            {/*
+              One grid, every tile the same size.
 
-                {g.rest.length > 0 && (
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {g.rest.map((w) => (
-                      <Tile
-                        key={w.id}
-                        w={w}
-                        crowned={g.crowned.has(w.id)}
-                        onDrop={() => drop(w)}
-                      />
-                    ))}
-                  </div>
-                )}
+              The two featured designs used to run half the page wide above
+              the rest, which made a keyword feel like a poster rather than a
+              wall — two enormous photographs and then everything else. They
+              are already marked by their flag and by the accent border; being
+              physically twice the size on top of that was saying the same
+              thing three times, loudly.
+
+              Small tiles need a way back to a big one, so the artwork opens.
+            */}
+            {open && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                {[...g.featured, ...g.rest].map((w) => (
+                  <Tile
+                    key={w.id}
+                    w={w}
+                    crowned={g.crowned.has(w.id)}
+                    flag={
+                      w.id === g.established.id
+                        ? "most sales"
+                        : w.id === g.featured[1]?.id
+                          ? g.secondFlag
+                          : undefined
+                    }
+                    onOpen={() => setZoom(w)}
+                    onDrop={() => drop(w)}
+                  />
+                ))}
               </div>
             )}
           </section>
@@ -603,28 +618,113 @@ function BriefPanel({
 }
 
 /**
+ * ONE DESIGN, BIG.
+ *
+ * The wall is small tiles now, which is right for taking a keyword in at a
+ * glance and wrong for actually looking at a design. So any tile opens to
+ * the full-size photograph with its numbers beside it.
+ *
+ * Through a portal, because the content column sits below the navigation
+ * rail in the same stacking context and an overlay written inside it comes
+ * out underneath the sidebar.
+ */
+function Zoom({ w, onClose }: { w: Winner; onClose: () => void }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    const had = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", esc);
+      document.body.style.overflow = had;
+    };
+  }, [onClose]);
+
+  const view = (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 md:p-10"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={w.design ?? w.title}
+    >
+      {/* The card itself must not close it. */}
+      <div
+        className="max-h-full w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={(w.imageUrl ?? "").replace(/il_\d+x[N\d]+\./i, "il_fullxfull.")}
+          alt={w.design ?? w.title}
+          className="mx-auto max-h-[70vh] w-auto rounded"
+        />
+
+        <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="numeral text-[1.3rem] text-ink">
+            {w.sales.toLocaleString()}
+          </span>
+          <span className="t-small text-ink-2">sales</span>
+          <span className="t-small font-bold text-ink">
+            {perDay(w).toFixed(1)}/day
+          </span>
+          <span className="t-small text-ink-3">{w.ageDays} days</span>
+          {w.hearts > 0 && (
+            <span className="t-small text-ink-3">
+              {w.hearts.toLocaleString()} saved
+              {w.views ? ` · ${((100 * w.hearts) / w.views).toFixed(0)}% of views` : ""}
+            </span>
+          )}
+        </div>
+
+        {w.design && <p className="t-small mt-2 text-ink-2">{w.design}</p>}
+
+        <div className="t-small mt-3 flex items-center justify-between gap-4 text-ink-3">
+          <a
+            href={w.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-ink"
+          >
+            {w.shop || "on Etsy"} ↗
+          </a>
+          <button onClick={onClose} className="btn btn-ghost">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return typeof document === "undefined"
+    ? null
+    : createPortal(view, document.body);
+}
+
+/**
  * One design.
  *
- * Pink means exactly one thing on this page: this is a top five seller in its
- * keyword. The "most sales" and "winning now" flags used to be pink too, and
- * three pink things on one screen is no signal at all — they are labels, so
- * they are plain, and the colour is spent on the border you should be able to
- * spot from across the room.
+ * Pink means exactly one thing on this page: this is a top seller in its
+ * keyword. The flags used to be pink too, and three pink things on one screen
+ * is no signal at all — they are labels, so they are plain, and the colour is
+ * spent on the border you should be able to spot from across the room.
+ *
+ * Every tile is the same size and the artwork opens on click. Two of them
+ * used to run half the page wide, which made the page feel like a poster
+ * instead of a wall.
  */
 function Tile({
   w,
-  big = false,
   flag,
   crowned = false,
+  onOpen,
   onDrop,
 }: {
   w: Winner;
-  big?: boolean;
   flag?: string;
   crowned?: boolean;
+  onOpen: () => void;
   onDrop: () => void;
 }) {
-  const rate = perDay(w);
   return (
     <figure
       className="card overflow-hidden"
@@ -637,58 +737,46 @@ function Tile({
           : undefined
       }
     >
-      <div className="relative bg-black/[0.04]">
+      <button
+        onClick={onOpen}
+        className="relative block w-full bg-black/[0.04]"
+        aria-label={`Open ${w.design ?? w.title}`}
+      >
         {w.imageUrl ? (
           <img
             src={w.imageUrl}
             alt={w.design ?? w.title}
             loading="lazy"
-            className={`w-full object-cover ${big ? "aspect-[4/3]" : "aspect-square"}`}
+            className="aspect-square w-full object-cover"
           />
         ) : (
-          <div
-            className={`flex items-center justify-center ${big ? "aspect-[4/3]" : "aspect-square"}`}
-          >
+          <span className="flex aspect-square items-center justify-center">
             <span className="t-small text-ink-3">No picture</span>
-          </div>
+          </span>
         )}
         {flag && (
-          <span className="absolute left-3 top-3 rounded-full bg-black px-2.5 py-1 text-[11px] font-bold text-white">
+          <span className="absolute left-2 top-2 rounded-full bg-black px-2 py-0.5 text-[10px] font-bold text-white">
             {flag}
           </span>
         )}
-      </div>
+      </button>
 
-      <figcaption className="p-3.5">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-          <span className="numeral text-[1.15rem] text-ink">
+      <figcaption className="p-3">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="numeral text-[1rem] text-ink">
             {w.sales.toLocaleString()}
           </span>
           <span className="t-small text-ink-2">sales</span>
           <span className="t-small font-bold text-ink">
-            {rate.toFixed(1)}/day
+            {perDay(w).toFixed(1)}/day
           </span>
-          <span className="t-small text-ink-3">{w.ageDays} days</span>
-          {/*
-            Hearts sit next to sales because they answer a different question.
-            Sales follows views, so the biggest seller is largely the
-            best-ranked listing. Saves do not follow views — one design here
-            is saved by nearly half the people who see it and another by one
-            in sixty. That gap is what people wanted, as opposed to what
-            search sent them.
-          */}
-          {w.hearts > 0 && (
-            <span className="t-small text-ink-3">
-              {w.hearts.toLocaleString()} saved
-            </span>
-          )}
         </div>
+        <p className="t-small mt-0.5 text-ink-3">
+          {w.ageDays} days
+          {w.hearts > 0 && ` · ${w.hearts.toLocaleString()} saved`}
+        </p>
 
-        {w.design && big && (
-          <p className="t-small mt-2 line-clamp-3 text-ink-2">{w.design}</p>
-        )}
-
-        <div className="t-small mt-2 flex items-center justify-between gap-3 text-ink-3">
+        <div className="t-small mt-2 flex items-center justify-between gap-2 text-ink-3">
           <a
             href={w.url}
             target="_blank"
