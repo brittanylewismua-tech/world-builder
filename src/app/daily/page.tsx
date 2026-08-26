@@ -22,25 +22,14 @@ import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
 import ReadingBar from "@/components/ReadingBar";
 
-/**
- * What sort of signal each item is. This is the one label on the card — the
- * seller's own keywords are deliberately not repeated back at them.
- */
-const KIND_LABEL: Record<string, string> = {
-  phrase: "a phrase",
-  visual: "a look",
-  object: "an object",
-  event: "coming up",
-  humour: "a joke",
-  humor: "a joke",
-  aesthetic: "an aesthetic",
-  moment: "a moment",
-  /*
-    Deliberately absent: "news". A kind with no label here shows no chip at
-    all, which is the point — it is a news item and does not need announcing
-    as one.
-  */
-};
+/*
+  There is no label on a card any more.
+
+  Every item used to be announced — "a phrase", "a joke", "an aesthetic" —
+  which is the tool narrating its own filing system. A reader looking at a
+  quoted phrase can see that it is a phrase. The label taught them nothing and
+  took the top of the card to do it.
+*/
 
 /**
  * KEEPING A SIGNAL.
@@ -385,11 +374,6 @@ function DailyBody({ world }: { world: World }) {
             <Card className="rise" hover pad={false}>
               <div className="flex items-center justify-between px-5 pt-4 md:px-6">
                 <Dots />
-                {KIND_LABEL[lead.kind] && (
-                  <span className="chip chip-solid">
-                    {KIND_LABEL[lead.kind]}
-                  </span>
-                )}
               </div>
               <div className="px-5 pb-5 pt-4 md:px-6">
                 <h2 className="t-h2 text-ink">{lead.headline}</h2>
