@@ -49,7 +49,18 @@ Write down anything that is language or imagery, even when you are unsure it mat
 Do not write conclusions, recommendations, or opinions about what the seller should make. Notes only.
 
 SEARCH LIKE AN INSIDER
-Start with TikTok, then Reels, Shorts and comments. Search the way the culture talks about itself, not the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which are useless here.`;
+Search the way the culture talks about itself, not the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which are useless here.
+
+GO TO REDDIT FIRST
+It is the best source you have and the easiest to skip. Three reasons:
+
+1. It is TEXT. Short-form video hides its language inside the video, which is why searching TikTok so often lands on a /discover/ page — a keyword index with no actual post on it. On Reddit the words are written down and can be quoted exactly.
+2. The communities are already sorted. Find the subreddits this person actually posts in and read those, rather than searching the topic in the abstract.
+3. UPVOTES ARE A COUNT OF PEOPLE AGREEING WITH A SENTENCE. Nothing else you look at has this. Everywhere else you are guessing whether a phrase is spreading; here it is measured, and the number is on the page. A comment with four thousand upvotes is a line thousands of insiders endorsed.
+
+So: search "<area> reddit", "site:reddit.com <area>", the subreddit names themselves, and the phrasings people would use inside those communities. Read the top comments, not just the post. WRITE THE SCORE DOWN when you can see it — "[4.2k upvotes]" next to a quote is the most useful thing you can hand over, because it is the difference between a phrase somebody said and a phrase a community agreed with.
+
+Then the rest: TikTok, Reels, Shorts and their comment sections.`;
 const TARGET_ITEMS = 5;
 
 /**
@@ -149,7 +160,10 @@ What still does not belong, because there is nothing in it for anyone:
 And never claim sales figures or demand you cannot see. "This is selling well on Etsy" is something you do not know. "This has forty thousand comments" is something you can see — say that instead.
 
 WHERE THE GOOD MATERIAL LIVES
-Short-form video is where this world says things out loud. TikTok above all, then Reels and Shorts, then the comment sections underneath them. That is where a phrase becomes a phrase — someone says it, it gets stitched, it turns into a caption, and within a fortnight people are describing themselves with it. Go there first, every time.
+Reddit first, then short-form video. Reddit is where this world writes things down — the exact wording, in text, inside communities that have already sorted themselves by sub-niche. Short-form video is where a phrase spreads, and TikTok, Reels and the comment sections underneath them are worth reading too, but the language is easier to catch in writing than in a caption on a video you cannot watch.
+
+A NUMBER BEATS AN IMPRESSION
+When the notes carry a score — "[4.2k upvotes]", a comment count — treat it as the strongest evidence available that a phrase is real rather than one person's turn of phrase. You are usually judging whether something is spreading from indirect signals. A vote count is people agreeing, counted. Weight it accordingly, and say so plainly in the body: a line thousands of people upvoted is worth more than a caption seen once.
 
 Hunt for language most of all. The exact words people use about themselves, the sounds and lines being quoted, the captions repeating across a hundred posts, what they call each other, what they say back to the thing that annoys them, the joke that keeps getting reused. Quotes are the most printable thing that exists — a phrase IS a design.
 
@@ -327,7 +341,9 @@ ${!body.memory && body.subNiches?.length ? `Sub-niches the seller sells into: ${
 AREAS TO WATCH:
 ${areas.map((a) => `- ${a}`).join("\n")}
 
-Search for what is actually being said in these areas right now. Prioritise the last two weeks, and start with TikTok — search terms like "<area> tiktok", "<area> tiktok caption", "<area> trending sound", "<area> quotes", "<area> shirt sayings", and the phrases insiders would use about themselves.
+Search for what is actually being said in these areas right now. Prioritise the last two weeks.
+
+Start on Reddit: "<area> reddit", "site:reddit.com <area>", and the subreddits this person actually posts in. Read the top comments, and write down the upvote count beside anything you quote. Then TikTok and the rest — "<area> tiktok caption", "<area> quotes", "<area> shirt sayings", and the phrasings insiders use about themselves.
 
 Search the way someone inside that culture talks, never the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which is exactly the material this seller cannot use. You are hunting for language and imagery.
 
