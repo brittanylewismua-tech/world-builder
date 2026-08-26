@@ -175,6 +175,13 @@ interface Body {
 export async function POST(req: Request) {
   const door = await admit(req, "daily");
   if ("deny" in door) return door.deny;
+  /*
+    Pulled out of the union here. The metering calls now live inside closures,
+    and TypeScript will not carry the narrowing of `door` across a function
+    boundary — it only knows `door` is one of two shapes again once you are
+    inside `sweep` or `judge`.
+  */
+  const { caller } = door;
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
@@ -221,9 +228,35 @@ Search the way someone inside that culture talks, never the way a marketer or jo
 
 Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the test. Every item must change what somebody would print on a shirt.`;
 
+  /**
+   * THE SECOND SWEEP.
+   *
+   * The first pass reads the seller's watch list, which is the right place to
+   * start and the wrong place to stop. A watch list is a handful of phrases
+   * somebody typed once; on a slow week it simply has nothing moving in it,
+   * and the page used to hand back an apology for that.
+   *
+   * There is no shortage of internet. If the narrow read comes up short, go
+   * wide: the world itself, the sub-niches under it, the culture next door,
+   * and a month instead of a fortnight.
+   */
+  const widerPrompt = `Today is ${today}.
+
+${body.memory?.trim() || `CUSTOMER WORLD: ${body.worldName || "unnamed"}`}
+${body.subNiches?.length ? `Sub-niches: ${body.subNiches.join(" · ")}` : ""}
+
+A first search of this seller's watch list came back thin. Do not repeat it. Search WIDER:
+
+- The world and its sub-niches directly, not the watch-list phrasing.
+- The culture immediately next door — what this same person is also into, what else is in their feed.
+- Widen the window to the last month rather than the last fortnight.
+- Go to where the talking happens: TikTok, Reels, Shorts, comment sections, and the subreddits and forums this person actually posts in.
+- Hunt the evergreen language too: the sayings, in-jokes and self-descriptions this world has used for a while. A phrase does not have to be new to be worth printing — it has to be real and theirs.
+
+Write down everything that is language or imagery. Quote exactly.`;
+
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const began = Date.now();
 
     /* ------------------------------------------------------------ */
     /* stage one — the reading                                        */
@@ -270,10 +303,17 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
     };
     const allow = (u: string) => seen.add(normalise(u));
 
-    let notes = "";
-
-    if (TWO_STAGE) {
-      const scoutBegan = Date.now();
+    /**
+     * One sweep of the web, written down. Called more than once on a thin
+     * day, with a different brief each time.
+     *
+     * Twelve searches rather than six: the old ceiling was reached routinely
+     * on the first three areas, so the rest of the watch list was never
+     * actually read and the seller was told the world was quiet when really
+     * the reader had run out of budget.
+     */
+    async function sweep(brief: string) {
+      const at = Date.now();
       const scout = await client.messages.create({
         model: SCOUT,
         max_tokens: 8000,
@@ -282,10 +322,10 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
           {
             type: "web_search_20250305",
             name: "web_search",
-            max_uses: 6,
+            max_uses: 12,
           } as unknown as Anthropic.Tool,
         ],
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: brief }],
       });
 
       for (const block of scout.content) {
@@ -301,15 +341,15 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
             }
       }
 
-      notes = scout.content
+      const text = scout.content
         .map((b) => (b.type === "text" ? b.text : ""))
         .join("")
         .trim();
 
       // Anything the scout wrote down, it saw. Add those too.
-      for (const m of notes.matchAll(/https?:\/\/[^\s\])>"']+/g)) allow(m[0]);
+      for (const m of text.matchAll(/https?:\/\/[^\s\])>"']+/g)) allow(m[0]);
 
-      meter("daily", door.caller.userId, {
+      meter("daily", caller.userId, {
         model: SCOUT,
         ...scout.usage,
         web_searches:
@@ -318,76 +358,18 @@ Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the t
               server_tool_use?: { web_search_requests?: number };
             }
           )?.server_tool_use?.web_search_requests ?? 0,
-        ms: Date.now() - scoutBegan,
+        ms: Date.now() - at,
       });
+
+      return text;
     }
+
+    let notes = TWO_STAGE ? await sweep(prompt) : "";
 
     /* ------------------------------------------------------------ */
     /* stage two — the judgment                                       */
     /* ------------------------------------------------------------ */
 
-    const judgeBegan = Date.now();
-    const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 6000,
-      system: SYSTEM,
-      tools: TWO_STAGE
-        ? [PUBLISH_TOOL as unknown as Anthropic.Tool]
-        : [
-            {
-              type: "web_search_20250305",
-              name: "web_search",
-              max_uses: 6,
-            } as unknown as Anthropic.Tool,
-            PUBLISH_TOOL as unknown as Anthropic.Tool,
-          ],
-      messages: [
-        {
-          role: "user",
-          content: TWO_STAGE
-            ? `${prompt}
-
-The searching has already been done. Below are raw field notes, written down without judgement — that job is yours. Most of it will not pass the test, which is expected and is the whole reason you are reading it rather than the web. Cite only URLs that appear in these notes.
-
---- FIELD NOTES ---
-${notes || "(nothing came back)"}`
-            : prompt,
-        },
-      ],
-    });
-
-    meter("daily", door.caller.userId, {
-      model: MODEL,
-      ...res.usage,
-      web_searches:
-        (
-          res.usage as unknown as {
-            server_tool_use?: { web_search_requests?: number };
-          }
-        )?.server_tool_use?.web_search_requests ?? 0,
-      ms: Date.now() - judgeBegan,
-    });
-
-    // Collect every URL the search tool genuinely returned. In two-stage mode
-    // the searching happened in stage one, so this adds nothing and the set
-    // built there is what citations are checked against — the guarantee that
-    // no source is invented survives the split unchanged.
-    for (const block of res.content) {
-      const b = block as unknown as {
-        type: string;
-        content?: { url?: string }[];
-      };
-      if (b.type === "web_search_tool_result" && Array.isArray(b.content)) {
-        for (const r of b.content)
-          if (r.url) {
-            realUrls.add(r.url);
-            allow(r.url);
-          }
-      }
-    }
-
-    // The issue arrives as tool input, already structured. The old
-    // text-parsing path stays as a fallback for a model that answers in prose.
     type Item = {
       area?: string;
       kind?: string;
@@ -395,74 +377,166 @@ ${notes || "(nothing came back)"}`
       body?: string;
       sources?: { title?: string; url?: string }[];
     };
-    let parsed: { items?: Item[] } | null = null;
 
-    for (const block of res.content) {
-      const b = block as unknown as { type: string; name?: string; input?: unknown };
-      if (b.type === "tool_use" && b.name === "publish_issue") {
-        parsed = b.input as { items?: Item[] };
-        break;
-      }
-    }
+    /**
+     * Read the notes, decide what is printable, publish.
+     *
+     * `relaxed` lowers the editorial bar, not the honesty bar. Everything is
+     * still real, still quoted, still cited to a page a search actually
+     * returned — it just stops holding out for the perfect item. A quieter
+     * true observation beats an apology.
+     */
+    async function judge(field: string, relaxed: boolean) {
+      const at = Date.now();
+      const res = await client.messages.create({
+        model: MODEL,
+        max_tokens: 6000,
+        system: SYSTEM,
+        tools: TWO_STAGE
+          ? [PUBLISH_TOOL as unknown as Anthropic.Tool]
+          : [
+              {
+                type: "web_search_20250305",
+                name: "web_search",
+                max_uses: 10,
+              } as unknown as Anthropic.Tool,
+              PUBLISH_TOOL as unknown as Anthropic.Tool,
+            ],
+        messages: [
+          {
+            role: "user",
+            content: TWO_STAGE
+              ? `${prompt}
 
-    if (!parsed) {
-      const text = res.content
-        .map((b) => (b.type === "text" ? b.text : ""))
-        .join("")
-        .trim();
-      const cleaned = text
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/```\s*$/, "")
-        .trim();
-      const first = cleaned.indexOf("{");
-      const last = cleaned.lastIndexOf("}");
-      if (first !== -1 && last !== -1) {
-        try {
-          parsed = JSON.parse(cleaned.slice(first, last + 1));
-        } catch {
-          parsed = null;
+The searching has already been done. Below are raw field notes, written down without judgement — that job is yours. Most of it will not pass the test, which is expected and is the whole reason you are reading it rather than the web. Cite only URLs that appear in these notes.
+${
+  relaxed
+    ? `
+THE BAR IS LOWER THIS TIME, AND THIS IS DELIBERATE.
+A strict pass over these notes published nothing, and an empty paper is worse than a modest one. Publish the two or three best real things in here even if they are quieter than you would like — an ordinary phrase this world genuinely uses, a recurring image, a saying that is not new but is theirs.
+
+What does NOT change: never invent anything, never cite a page not in these notes, never report garments or fabric, never report a competitor's product. Real and small is fine. Made up is not.
+`
+    : ""
+}
+--- FIELD NOTES ---
+${field || "(nothing came back)"}`
+              : prompt,
+          },
+        ],
+      });
+
+      meter("daily", caller.userId, {
+        model: MODEL,
+        ...res.usage,
+        web_searches:
+          (
+            res.usage as unknown as {
+              server_tool_use?: { web_search_requests?: number };
+            }
+          )?.server_tool_use?.web_search_requests ?? 0,
+        ms: Date.now() - at,
+      });
+
+      // Collect every URL the search tool genuinely returned. In two-stage
+      // mode the searching happened in stage one, so this adds nothing and the
+      // set built there is what citations are checked against — the guarantee
+      // that no source is invented survives the split unchanged.
+      for (const block of res.content) {
+        const b = block as unknown as {
+          type: string;
+          content?: { url?: string }[];
+        };
+        if (b.type === "web_search_tool_result" && Array.isArray(b.content)) {
+          for (const r of b.content)
+            if (r.url) {
+              realUrls.add(r.url);
+              allow(r.url);
+            }
         }
       }
+
+      // The issue arrives as tool input, already structured. The old
+      // text-parsing path stays as a fallback for a model answering in prose.
+      let parsed: { items?: Item[] } | null = null;
+
+      for (const block of res.content) {
+        const b = block as unknown as {
+          type: string;
+          name?: string;
+          input?: unknown;
+        };
+        if (b.type === "tool_use" && b.name === "publish_issue") {
+          parsed = b.input as { items?: Item[] };
+          break;
+        }
+      }
+
+      if (!parsed) {
+        const text = res.content
+          .map((b) => (b.type === "text" ? b.text : ""))
+          .join("")
+          .trim();
+        const cleaned = text
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/```\s*$/, "")
+          .trim();
+        const first = cleaned.indexOf("{");
+        const last = cleaned.lastIndexOf("}");
+        if (first !== -1 && last !== -1) {
+          try {
+            parsed = JSON.parse(cleaned.slice(first, last + 1));
+          } catch {
+            parsed = null;
+          }
+        }
+      }
+
+      // Verification. A link that was never in a search result does not ship.
+      return (parsed?.items ?? [])
+        .map((it) => ({
+          area: (it.area || "").trim(),
+          kind: (it.kind || "").trim().toLowerCase(),
+          headline: (it.headline || "").trim(),
+          body: (it.body || "").trim(),
+          sources: (it.sources ?? [])
+            .filter((s) => s.url && seen.has(normalise(s.url)))
+            .map((s) => ({
+              title: (s.title || s.url || "").trim(),
+              url: s.url!,
+            })),
+        }))
+        .filter((it) => it.headline && it.body && it.sources.length > 0);
     }
 
-    if (!parsed)
-      return NextResponse.json(
-        {
-          error:
-            "Today's research came back in a shape I could not read. Nothing was saved — try again.",
-        },
-        { status: 502 },
-      );
+    /*
+      THREE CHANCES BEFORE ANYONE SAYS "NOTHING TODAY".
 
-    // Verification pass. A link that was never in a search result does not ship.
-    const items = (parsed.items ?? [])
-      .map((it) => ({
-        area: (it.area || "").trim(),
-        kind: (it.kind || "").trim().toLowerCase(),
-        headline: (it.headline || "").trim(),
-        body: (it.body || "").trim(),
-        sources: (it.sources ?? [])
-          .filter((s) => s.url && seen.has(normalise(s.url)))
-          .map((s) => ({ title: (s.title || s.url || "").trim(), url: s.url! })),
-      }))
-      .filter((it) => it.headline && it.body && it.sources.length > 0);
+      The page used to hand back an apology the moment one narrow read of the
+      watch list came up short — which, on a Tuesday, it often does. The world
+      had not gone quiet; the search had. So:
 
-    if (!items.length) {
-      /*
-        Two different failures wore the same message, which made this
-        undiagnosable from the outside: nothing was FOUND, versus things were
-        found and every citation was rejected. Say which.
-      */
-      const searched = seen.size;
-      return NextResponse.json(
-        {
-          error: searched
-            ? `Today's search across your areas found ${searched} pages, but nothing in them passed the bar for a real signal. That happens on quiet days. Try again later, or widen your Active World Areas.`
-            : "The search came back empty for your areas today. If this keeps happening, your Active World Areas may be too narrow to have daily chatter.",
-        },
-        { status: 502 },
-      );
+        1. the watch list, strictly judged      — the normal day
+        2. a wider sweep, strictly judged       — world, sub-niches, a month
+        3. everything found so far, lower bar   — free, no new searching
+
+      Only the third costs nothing extra in searches, and the first two only
+      run again on a day that would otherwise have been empty.
+    */
+    let items = await judge(notes, false);
+
+    if (!items.length && TWO_STAGE) {
+      notes = `${notes}\n\n${await sweep(widerPrompt)}`.trim();
+      items = await judge(notes, false);
     }
+
+    if (!items.length && TWO_STAGE) items = await judge(notes, true);
+
+    if (!items.length)
+      return NextResponse.json(
+        { error: "Today's read came back empty. Try again in a little while." },
+        { status: 502 },
+      );
 
     return NextResponse.json({ items: items.slice(0, TARGET_ITEMS) });
   } catch (e) {
