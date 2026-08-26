@@ -288,6 +288,7 @@ function WinnersBody({ world }: { world: World }) {
       {!reading && stored && (
         <BriefPanel
           stored={stored}
+          world={world.id}
           onRead={read}
           busy={reading}
           stale={winners.length > stored.counted}
@@ -521,32 +522,79 @@ function Section({
  */
 function BriefPanel({
   stored,
+  world,
   onRead,
   busy,
   stale,
 }: {
   stored: StoredBrief;
+  /** World id, so the folded state is remembered per world. */
+  world: string;
   onRead: () => void;
   busy: boolean;
   stale: boolean;
 }) {
   const b = stored.brief;
 
+  /*
+    Folds away like the keyword groups do, and remembers. It is a long read
+    and it sits above the wall, so somebody who came to look at designs
+    should be able to put it away and have it stay away.
+  */
+  const key = `wb-brief-shut-${world}`;
+  const [shut, setShut] = useState(false);
+  useEffect(() => {
+    try {
+      setShut(localStorage.getItem(key) === "1");
+    } catch {
+      /* A browser that refuses storage just gets it open every time. */
+    }
+  }, [key]);
+
+  function fold() {
+    setShut((was) => {
+      try {
+        localStorage.setItem(key, was ? "0" : "1");
+      } catch {
+        /* Not worth failing the click over. */
+      }
+      return !was;
+    });
+  }
+
   return (
     <Card className="mb-9">
-      <div className="mb-7 flex flex-wrap items-baseline justify-between gap-3 border-b-2 border-black pb-3">
-        <p className="t-small text-ink-3">
-          Read across {stored.counted} designs
-        </p>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-black pb-3">
+        <button
+          onClick={fold}
+          aria-expanded={!shut}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <span
+            className="t-small shrink-0 text-ink-3 transition-transform"
+            style={{ transform: shut ? "none" : "rotate(90deg)" }}
+            aria-hidden
+          >
+            ▶
+          </span>
+          <h2 className="t-h2 text-ink">World winners patterns</h2>
+          <span className="t-small shrink-0 text-ink-3">
+            across {stored.counted} designs
+          </span>
+        </button>
         <button onClick={onRead} className="btn btn-ghost" disabled={busy}>
           {stale ? "Read it again" : "Refresh"}
         </button>
       </div>
 
-      <Section name="Where the hole is" lead points={b.gaps} />
-      <Section name="What this world buys" points={b.moves} />
-      <Section name="Still moving" quiet points={b.alive} />
-      <Section name="Worn out" quiet points={b.worn} />
+      {!shut && (
+        <div className="mt-7">
+          <Section name="Where the hole is" lead points={b.gaps} />
+          <Section name="What this world buys" points={b.moves} />
+          <Section name="Still moving" quiet points={b.alive} />
+          <Section name="Worn out" quiet points={b.worn} />
+        </div>
+      )}
     </Card>
   );
 }
