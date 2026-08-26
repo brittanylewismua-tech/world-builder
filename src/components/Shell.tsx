@@ -35,7 +35,6 @@ const NAV = [
 ];
 
 const NAV_FOOT = [
-  { href: "/canon", label: "world canon" },
   { href: "/history", label: "drop history" },
   { href: "/profile", label: "world profile" },
 ];
