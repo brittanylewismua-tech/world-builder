@@ -83,3 +83,47 @@ export function normalise(u: string) {
     return u.trim().toLowerCase();
   }
 }
+
+
+/**
+ * A SHOP IS NOT THE WORLD.
+ *
+ * A seller's keywords come from eRank, so they are shopping terms — "eat the
+ * rich shirt", "immigrant shirt", "anti war shirt". Search one of those on the
+ * open web and you get shops selling exactly that, which is how the first run
+ * of the web came back as a catalogue of eleven competitors' listings and
+ * nothing else.
+ *
+ * Marketplaces are easy to name. Independent shops are not — they live on
+ * ordinary domains — but they nearly all share a URL shape, because they are
+ * nearly all running the same handful of storefront platforms.
+ */
+const MARKETPLACES =
+  /(^|\.)(etsy|redbubble|teepublic|amazon|ebay|zazzle|society6|spreadshirt|teespring|threadless|bonfire|customink|printful|printify|walmart|target|aliexpress|temu|shopify|gumroad|displate)\./i;
+
+const STOREFRONT_PATH =
+  /^\/(listing|listings|products?|collections|shop|store|item|dp|gp)(\/|$)/i;
+
+export function isShop(raw: string) {
+  try {
+    const u = new URL(raw);
+    if (MARKETPLACES.test(u.hostname)) return true;
+    return STOREFRONT_PATH.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The subject, without the shopping.
+ *
+ * "eat the rich shirt" is a thing to buy. "eat the rich" is a thing people
+ * say — and the second one is what the world is actually made of.
+ */
+const COMMERCE_WORDS =
+  /\b(shirt|t-?shirt|tee|tees|hoodie|sweatshirt|sweater|crewneck|mug|tote|sticker|stickers|poster|print|prints|apparel|merch|gift|gifts|design|designs|svg|png|for sale|buy|cheap|custom)\b/gi;
+
+export function subjectOf(keyword: string) {
+  const stripped = keyword.replace(COMMERCE_WORDS, " ").replace(/\s+/g, " ").trim();
+  return stripped.length >= 3 ? stripped : keyword;
+}

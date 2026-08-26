@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { meter, ownerOf } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
-import { normalise, usableSource } from "@/lib/sources";
+import { isShop, normalise, subjectOf, usableSource } from "@/lib/sources";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -43,6 +43,14 @@ Things that belong to this customer's world but would never be typed into an Ets
 - Moments. Something that happened that this world reacted to.
 - Symbols and imagery that keep appearing.
 - Running jokes and joke formats.
+
+NEVER BRING BACK A SHOP
+This is the mistake that ruins this job. The terms you are given come from Etsy, so they are shopping terms, and searching them plainly returns page after page of people selling that exact product. A competitor's listing is not this world — it is a catalogue.
+
+So: never search the term with "shirt", "tee", "merch", "buy" or "for sale" attached, and never write down a page that is selling something. If a URL contains /listing/, /product/, /products/ or /collections/, or sits on Etsy, Redbubble, Amazon, TeePublic or any storefront, it does not go in your notes. Skip it and search again somewhere people are talking.
+
+WHERE PEOPLE ARE TALKING
+Reddit threads and their comments. News reports of something that happened. Posts, captions and comment sections. Forums. Somebody at a march, somebody arguing, somebody making a joke. That is the world. A product page is the shop at the end of it.
 
 QUOTE EXACTLY, AND ALWAYS WITH ITS SOURCE
 Every single line you write must start with the URL in square brackets, then the exact wording in quotation marks, then one plain sentence saying what it is. A note without a URL is worthless downstream and will be thrown away.
@@ -175,6 +183,17 @@ export async function POST(req: Request) {
       { status: 400 },
     );
 
+  /*
+    Search the subject, not the product.
+
+    The first real run came back with eleven competitors' listings and nothing
+    else, because the keywords are eRank terms — "eat the rich shirt",
+    "immigrant shirt" — and searching those on the open web returns shops
+    selling exactly that. Stripping the commerce words turns a thing to buy
+    back into a thing people say.
+  */
+  const subjects = [...new Set(keywords.map(subjectOf))];
+
   // The spine, written once so the picture has something to hang off.
   await db.from("wb_web_nodes").upsert(
     keywords.map((k) => ({
@@ -216,10 +235,13 @@ export async function POST(req: Request) {
           role: "user",
           content: `Customer world: ${world?.name || "unnamed"}.
 
-The seller sells into these, and they came from Etsy search data:
-${keywords.map((k) => `- ${k}`).join("\n")}
+These are the subjects this world is about. They have had the shopping words
+stripped off them deliberately — search the SUBJECT, never the product:
+${subjects.map((k) => `- ${k}`).join("\n")}
 
-Go and read what this world is actually saying and doing right now — the parts that would never be an Etsy search. Quote exactly, always with the URL, and write down the upvote count wherever you can see one.
+Go and read what this world is actually saying and doing right now. Reddit threads and their comments, news of something that happened, posts and captions and arguments. Quote exactly, always with the URL, and write down the upvote count wherever you can see one.
+
+Do not bring back anything that is selling something. If you land on a shop, go back and search where people talk instead.
 
 Already on the map, so do not bring these back: ${[...known].slice(0, 200).join(" · ") || "(nothing yet)"}`,
         },
@@ -326,6 +348,8 @@ ${notes || "(nothing came back)"}`,
         const url = (n.url ?? "").trim();
         if (!label || !anchor || !quote || !note) return null;
         if (!url || !usableSource(url) || !seen.has(normalise(url))) return null;
+        // A shop is somebody else's product, not this world.
+        if (isShop(url)) return null;
         if (known.has(label.toLowerCase())) return null;
         known.add(label.toLowerCase());
         return {
@@ -360,7 +384,7 @@ ${notes || "(nothing came back)"}`,
         {
           error:
             proposed > 0
-              ? "Nothing came back that could be checked all the way to its source. Try again."
+              ? "What came back was shops selling things rather than people talking. Try again."
               : "Nothing came back this time. Try again.",
         },
         { status: 502 },
