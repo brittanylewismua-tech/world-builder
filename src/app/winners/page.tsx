@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
@@ -511,7 +512,16 @@ function Viewer({
     .filter((w) => w.imageUrl)
     .sort((a, b) => b.sales - a.sales);
 
-  return (
+  /*
+    Through a portal to the body, not into the page where it is written.
+
+    The content column sits at z-10 and the navigation rail at z-20, both
+    inside the same stacking context, so an overlay written inside the column
+    cannot climb over the rail however high its own z-index goes — it was
+    covering nine designs and hiding three behind the sidebar. Attaching it to
+    the body puts it above everything, which is what "overlay" means.
+  */
+  const view = (
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-white p-6 md:p-10"
       role="dialog"
@@ -543,6 +553,11 @@ function Viewer({
       </div>
     </div>
   );
+
+  // Rendered on the client only; there is no document during prerender.
+  return typeof document === "undefined"
+    ? null
+    : createPortal(view, document.body);
 }
 
 /**
