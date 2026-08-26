@@ -77,6 +77,25 @@ function KeepIt({
   );
 }
 
+/**
+ * WHAT TO SEARCH FOR, WHEN YOU WANT MORE THAN THE PARAGRAPH.
+ *
+ * Citations are now held to a hard standard — a real page, not a homepage or
+ * a hashtag index — which is right, and means some items ship with one link
+ * or none. That is honest but it leaves the seller at a dead end on exactly
+ * the items they most want to pull on.
+ *
+ * A headline in this paper is usually the thing itself: the phrase, in
+ * quotes, because the exact wording is the point. So the quoted part is the
+ * search, and everything else falls back to the headline.
+ */
+function lookupQuery(item: DailyItem) {
+  // Straight quotes and curly ones — the model writes both.
+  const quoted = item.headline.match(/["“]([^"”]{2,80})["”]/);
+  if (quoted) return `"${quoted[1]}"`;
+  return item.headline.replace(/[.,;:]+$/, "");
+}
+
 /** Source links, deliberately quiet — they are provenance, not content. */
 function Sources({
   item,
@@ -88,7 +107,6 @@ function Sources({
   /** Drop the top margin when a surrounding row already spaces it. */
   bare?: boolean;
 }) {
-  if (!item.sources.length) return null;
   return (
     <div className={`flex flex-wrap gap-1.5 ${bare ? "" : small ? "mt-2" : "mt-4"}`}>
       {item.sources.map((s, j) => (
@@ -102,6 +120,14 @@ function Sources({
           {hostOf(s.url)} ↗
         </a>
       ))}
+      <a
+        href={`https://www.google.com/search?q=${encodeURIComponent(lookupQuery(item))}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rounded-md border border-dashed border-black/25 px-2 py-0.5 text-[11.5px] text-ink-2 transition hover:border-black hover:text-ink"
+      >
+        Look it up ↗
+      </a>
     </div>
   );
 }
