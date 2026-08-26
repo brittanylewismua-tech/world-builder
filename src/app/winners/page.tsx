@@ -2,7 +2,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
@@ -61,8 +60,6 @@ function WinnersBody({ world }: { world: World }) {
   const [said, setSaid] = useState("");
   /* null until an upload has reported back whether Etsy's key is in place. */
   const [keyed, setKeyed] = useState<boolean | null>(null);
-  /** The keyword whose designs are open in the viewer, or "" for none. */
-  const [viewing, setViewing] = useState("");
   const pick = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -222,14 +219,6 @@ function WinnersBody({ world }: { world: World }) {
 
   return (
     <Page width="full">
-      {viewing && (
-        <Viewer
-          keyword={viewing}
-          list={winners.filter((w) => w.keyword === viewing)}
-          onClose={() => setViewing("")}
-        />
-      )}
-
       <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
           <span className="chip chip-solid">world winners</span>
@@ -379,12 +368,14 @@ function WinnersBody({ world }: { world: World }) {
                 screenshot in one go and drop into Goldie — no archive, no
                 unzipping, no ten files in a Downloads folder.
               */}
-              <button
-                onClick={() => setViewing(g.keyword)}
+              <a
+                href={`/winners/view?world=${world.id}&keyword=${encodeURIComponent(g.keyword)}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="t-small shrink-0 text-ink-3 transition hover:text-ink"
               >
-                View all
-              </button>
+                View all ↗
+              </a>
               <button
                 onClick={async () => {
                   if (
@@ -473,92 +464,6 @@ function WinnersBody({ world }: { world: World }) {
 }
 
 /* ------------------------------------------------------------------ */
-
-/**
- * ALL OF ONE KEYWORD'S DESIGNS, AT SCREENSHOT SIZE.
- *
- * The point of this screen is a single screenshot. Ten designs is two rows of
- * five, which fits any laptop, so the seller can capture the lot and drop the
- * picture straight into a chat that can look at pictures. That is a shorter
- * road than a zip of ten files, and it does not leave anything in a Downloads
- * folder afterwards.
- *
- * So there is nothing else on it. No numbers, no shop names, no borders on
- * the tiles, no crown. Anything that is not artwork ends up in the
- * screenshot, and the words go across separately with Copy patterns.
- */
-function Viewer({
-  keyword,
-  list,
-  onClose,
-}: {
-  keyword: string;
-  list: Winner[];
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", esc);
-    // The page behind must not scroll under an overlay.
-    const had = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", esc);
-      document.body.style.overflow = had;
-    };
-  }, [onClose]);
-
-  const shown = [...list]
-    .filter((w) => w.imageUrl)
-    .sort((a, b) => b.sales - a.sales);
-
-  /*
-    Through a portal to the body, not into the page where it is written.
-
-    The content column sits at z-10 and the navigation rail at z-20, both
-    inside the same stacking context, so an overlay written inside the column
-    cannot climb over the rail however high its own z-index goes — it was
-    covering nine designs and hiding three behind the sidebar. Attaching it to
-    the body puts it above everything, which is what "overlay" means.
-  */
-  const view = (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-white p-6 md:p-10"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Every design under ${keyword}`}
-    >
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-5 flex items-baseline justify-between gap-4">
-          <h2 className="t-h2 text-ink">{keyword}</h2>
-          <button onClick={onClose} className="btn btn-ghost">
-            Close
-          </button>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-          {shown.map((w) => (
-            <img
-              key={w.id}
-              src={w.imageUrl as string}
-              alt={w.design ?? w.title}
-              className="aspect-square w-full rounded object-cover"
-            />
-          ))}
-        </div>
-
-        <p className="t-small mt-5 text-ink-3">
-          Screenshot this and drop it wherever you design. Escape to close.
-        </p>
-      </div>
-    </div>
-  );
-
-  // Rendered on the client only; there is no document during prerender.
-  return typeof document === "undefined"
-    ? null
-    : createPortal(view, document.body);
-}
 
 /**
  * ONE PATTERN AT A TIME.
