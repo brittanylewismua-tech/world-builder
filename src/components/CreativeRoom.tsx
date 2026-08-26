@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
-import { askAI } from "@/lib/askAI";
+import { askAI, LimitReached } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
 import {
   listThreads,
@@ -131,6 +131,8 @@ export default function CreativeRoom({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  /* A limit is not a failure. Same text, calmer frame. */
+  const [capped, setCapped] = useState(false);
   const [ready, setReady] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -227,11 +229,15 @@ export default function CreativeRoom({
       });
       const reply = { role: "assistant" as const, content: j.text };
       setMsgs([...next, reply]);
+      setCapped(false);
       const thread = await openThread(world.id, "room", drop.id);
       await remember(thread, [{ role: "user", content }, reply]);
     } catch (e) {
-      report("room", e, { worldId: world.id, dropId: drop.id });
+      const limit = e instanceof LimitReached;
+      // Not worth reporting: nothing is broken and nothing needs looking at.
+      if (!limit) report("room", e, { worldId: world.id, dropId: drop.id });
       setErr(e instanceof Error ? e.message : "That did not go through.");
+      setCapped(limit);
     } finally {
       setBusy(false);
     }
@@ -357,7 +363,13 @@ export default function CreativeRoom({
           <p className="pulse-soft t-small text-ink-3">Looking at the board…</p>
         )}
         {err && (
-          <p className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-3 py-2 text-sm text-[#8a2020]">
+          <p
+            className={
+              capped
+                ? "t-small rounded-lg bg-black/[0.04] px-3 py-2 text-ink-2"
+                : "rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-3 py-2 text-sm text-[#8a2020]"
+            }
+          >
             {err}
           </p>
         )}

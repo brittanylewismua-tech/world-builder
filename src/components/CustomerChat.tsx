@@ -12,7 +12,7 @@ import {
   startNewThread,
   type Msg,
 } from "@/lib/memory";
-import { askAI } from "@/lib/askAI";
+import { askAI, LimitReached } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
@@ -65,6 +65,8 @@ export default function CustomerChat({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [stuck, setStuck] = useState(false);
+  /* A limit is not a failure. Same text, calmer frame, no retry offered. */
+  const [capped, setCapped] = useState(false);
   const [err, setErr] = useState("");
   const [daily, setDaily] = useState<DailyItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -116,12 +118,16 @@ export default function CustomerChat({
       const reply = { role: "assistant" as const, content: j.text };
       setMsgs([...all, reply]);
       setStuck(false);
+      setCapped(false);
       const thread = await openThread(world.id, "customer");
       await remember(thread, [{ role: "user", content: asked }, reply]);
     } catch (e) {
-      report("customer", e, { worldId: world.id, turns: all.length });
+      const limit = e instanceof LimitReached;
+      // Not worth reporting: nothing is broken and nothing needs looking at.
+      if (!limit) report("customer", e, { worldId: world.id, turns: all.length });
       setErr(e instanceof Error ? e.message : "That did not go through.");
-      setStuck(true);
+      setCapped(limit);
+      setStuck(!limit);
     } finally {
       setBusy(false);
     }
@@ -190,7 +196,12 @@ export default function CustomerChat({
             typing…
           </p>
         )}
-        {err && (
+        {err && capped && (
+          <p className="t-small rounded-lg bg-black/[0.04] px-3 py-2 text-ink-2">
+            {err}
+          </p>
+        )}
+        {err && !capped && (
           <div
             role="alert"
             className="rounded-lg border border-[#f3c9c9] bg-[#fdf0f0] px-3 py-2 text-[13px] text-[#8a2020]"

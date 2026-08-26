@@ -20,6 +20,7 @@ import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
+import { LimitReached } from "@/lib/askAI";
 import ReadingBar from "@/components/ReadingBar";
 
 /*
@@ -193,6 +194,16 @@ function DailyBody({ world }: { world: World }) {
         setItems(await generateIssue(world, date, { append }));
         setDates(await loadIssueDates(world.id));
       } catch (e) {
+        /*
+          A limit is not a failure. Say it plainly and leave the page alone —
+          no error report, and no hunting for an older issue to stand in,
+          because nothing went wrong with the issue that is already here.
+        */
+        if (e instanceof LimitReached) {
+          setErr(e.message);
+          setResearching(false);
+          return;
+        }
         report("daily", e, { worldId: world.id, date, append });
         setErr(e instanceof Error ? e.message : "Research failed.");
         /*

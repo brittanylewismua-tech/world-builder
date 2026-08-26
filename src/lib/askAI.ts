@@ -10,6 +10,16 @@ import { supabase } from "./supabase";
  * it, and the 401 and 429 cases get one consistent, human explanation instead
  * of four slightly different ones.
  */
+/**
+ * A limit is not a failure, and the screen has to be able to tell.
+ *
+ * Every error arrived as the same plain Error, so a cap looked exactly like a
+ * crash: red box, alarming tone, and in the customer chat a "Send it again"
+ * button that could not possibly work. Pressing retry on a daily limit just
+ * fails again.
+ */
+export class LimitReached extends Error {}
+
 export async function askAI<T>(
   path: string,
   payload: unknown,
@@ -59,6 +69,8 @@ export async function askAI<T>(
     /* a non-JSON failure is handled by the status check below */
   }
 
+  if (r.status === 429)
+    throw new LimitReached(body.error || "You have reached today's limit.");
   if (!r.ok) throw new Error(body.error || "That did not go through.");
   return body as T;
 }

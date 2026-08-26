@@ -38,8 +38,8 @@ const KEY =
  * Set so that a heavy, genuine day of work never touches them.
  */
 export const DAILY_CAP = {
-  /* An issue is weekly. Two runs in a day is the paper plus one refresh. */
-  daily: 2,
+  /* Counted per WEEK, not per day — see WEEKLY below. */
+  daily: 6,
   /* A real conversation is ten or fifteen turns. Thirty is a long session. */
   customer: 30,
   room: 30,
@@ -51,16 +51,36 @@ export const DAILY_CAP = {
 
 export type Route = keyof typeof DAILY_CAP;
 
+/**
+ * Routes whose allowance runs by the week rather than by the day.
+ *
+ * World News publishes once a week. A daily cap on it, however small, still
+ * multiplies by thirty — two a day is sixty research runs a month for
+ * something that needs four. Six a week is the issue plus five refreshes, and
+ * it puts a real ceiling on the month instead of a ceiling on the morning.
+ */
+const WEEKLY: ReadonlySet<Route> = new Set<Route>(["daily"]);
+
+/*
+  Hitting a limit is not a mistake and these should not read like a telling
+  off. Every one of them used to open with "That is a lot of ..." and then
+  explain the internals — what resets, when the reading picks up again.
+
+  Say the fact, say when it lifts, and add one line only where the person
+  might reasonably worry about losing something.
+
+  ("She will be here again tomorrow" also had to go: not every seller is
+  building for a woman.)
+*/
 const OUT_OF_BUDGET: Record<Route, string> = {
   daily:
-    "You have re-run today's research several times already. It resets tomorrow — or read one of your back issues.",
-  customer:
-    "That is a lot of conversation for one day. She will be here again tomorrow.",
-  room: "That is a lot of conversation for one day. The board will still be here tomorrow.",
+    "You have reached this week's limit for new research. It resets on Monday.",
+  customer: "You have reached today's limit for this chat. It resets tomorrow.",
+  room: "You have reached today's limit for this chat. It resets tomorrow.",
   areas:
-    "You have asked for suggestions plenty of times today. Add areas by hand for now; this resets tomorrow.",
+    "You have reached today's limit. You can add areas yourself in the meantime.",
   board:
-    "That is a lot of research in one day. Everything you saved is safe — the reading of it picks up again tomorrow.",
+    "You have reached today's limit. Everything you saved is safe and still there.",
 };
 
 export interface Caller {
@@ -112,10 +132,10 @@ export async function admit(
       ),
     };
 
-  const { data: allowed, error: spendError } = await supabase.rpc("wb_spend", {
-    k: route,
-    cap: DAILY_CAP[route],
-  });
+  const { data: allowed, error: spendError } = await supabase.rpc(
+    WEEKLY.has(route) ? "wb_spend_weekly" : "wb_spend",
+    { k: route, cap: DAILY_CAP[route] },
+  );
 
   // A counter that will not write is not a reason to refuse someone their
   // work; it is logged and the request proceeds.
