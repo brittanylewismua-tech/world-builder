@@ -639,7 +639,19 @@ function Tile({
             {rate.toFixed(1)}/day
           </span>
           <span className="t-small text-ink-3">{w.ageDays} days</span>
-          <span className="t-small text-ink-3">${w.price.toFixed(2)}</span>
+          {/*
+            Hearts sit next to sales because they answer a different question.
+            Sales follows views, so the biggest seller is largely the
+            best-ranked listing. Saves do not follow views — one design here
+            is saved by nearly half the people who see it and another by one
+            in sixty. That gap is what people wanted, as opposed to what
+            search sent them.
+          */}
+          {w.hearts > 0 && (
+            <span className="t-small text-ink-3">
+              {w.hearts.toLocaleString()} saved
+            </span>
+          )}
         </div>
 
         {w.design && big && (
