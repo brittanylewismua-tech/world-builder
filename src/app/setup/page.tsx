@@ -18,7 +18,7 @@ import {
   VisualCalibrationInput,
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
-import { Globe } from "@/components/Globe";
+import Logo from "@/components/Logo";
 import { ThemeStyle, Wallpaper } from "@/components/Wallpaper";
 import { DEFAULT_THEME } from "@/lib/theme";
 import { report } from "@/lib/report";
@@ -213,10 +213,7 @@ function SetupBody({
 
       <div className="relative z-10 border-b border-black/12 bg-white/78 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-2xl items-center gap-2 px-5 md:px-8">
-          <Globe size={22} />
-          <span className="text-[1.05rem] font-extrabold tracking-tight">
-            world builder
-          </span>
+          <Logo height={20} />
           <span className="t-small ml-auto tabular-nums text-ink-3">
             {step + 1} of {STEPS.length}
           </span>

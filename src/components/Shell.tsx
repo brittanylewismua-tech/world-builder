@@ -8,6 +8,7 @@ import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 import { DEFAULT_THEME, onAccent } from "@/lib/theme";
 import { ThemeStyle, Wallpaper } from "./Wallpaper";
+import Logo from "./Logo";
 
 /**
  * The room. Rail on the left in whichever style the seller chose, wallpaper
@@ -52,11 +53,8 @@ export function Loading() {
       <span className="sr-only">Loading your world</span>
 
       <aside className="sticky top-0 hidden h-dvh w-[248px] shrink-0 border-r-2 border-black bg-black p-4 lg:block">
-        <div className="flex items-center gap-2">
-          <img src="/globe.png" alt="" className="globe-turn h-7 w-7" />
-          <span className="text-[17px] font-extrabold leading-none tracking-tight text-white">
-            world builder
-          </span>
+        <div className="flex items-center text-white">
+          <Logo height={22} />
         </div>
         <div className="mt-6 space-y-2">
           {NAV.map((n) => (
@@ -133,11 +131,10 @@ export default function Shell({
         className="pointer-events-none absolute -bottom-16 -left-16 h-[250px] w-[250px] max-w-none opacity-[0.16]"
       />
       <div className="relative">
-        <Link href="/home" className="flex items-center gap-2">
-          <img src="/globe.png" alt="" className="h-7 w-7" />
-          <span className="text-[17px] font-extrabold leading-none tracking-tight">
-            world builder
-          </span>
+        {/* The lockup inherits the rail's text colour, so "world" stays
+            legible whichever rail the seller has chosen. */}
+        <Link href="/home" className="flex items-center">
+          <Logo height={22} />
         </Link>
 
         <nav className="mt-6 space-y-1">
@@ -250,10 +247,7 @@ export default function Shell({
         >
           ☰
         </button>
-        <img src="/globe.png" alt="" className="h-5 w-5" />
-        <span className="text-[15px] font-extrabold tracking-tight">
-          world builder
-        </span>
+        <Logo height={18} />
       </div>
 
       {navOpen && (

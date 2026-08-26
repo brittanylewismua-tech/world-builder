@@ -16,23 +16,28 @@ export const metadata: Metadata = {
   },
   description:
     "Build around one customer world instead of jumping between unrelated niches.",
+  /*
+    The brand globe, cut from the wordmark artwork so the tab and the rail
+    are the same drawing rather than two near-identical ones.
+  */
   icons: {
-    icon: [{ url: "/globe.png", type: "image/png" }],
-    apple: "/globe.png",
+    icon: [{ url: "/mark.png", type: "image/png" }],
+    apple: "/mark.png",
   },
   openGraph: {
     title: "World Builder",
     description:
       "Build around one customer world instead of jumping between unrelated niches.",
-    images: ["/globe.png"],
+    // The full lockup, not the globe alone — a shared link should say the name.
+    images: ["/og.png"],
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "World Builder",
     description:
       "Build around one customer world instead of jumping between unrelated niches.",
-    images: ["/globe.png"],
+    images: ["/og.png"],
   },
 };
 

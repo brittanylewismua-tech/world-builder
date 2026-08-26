@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Globe } from "@/components/Globe";
+import Logo from "@/components/Logo";
 import { report } from "@/lib/report";
 
 /**
@@ -94,11 +94,8 @@ export default function Reset() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-white px-5 py-12">
       <div className="w-full max-w-sm">
-        <div className="mb-7 flex items-center gap-2">
-          <Globe size={26} />
-          <span className="text-[1.15rem] font-extrabold tracking-tight">
-            world builder
-          </span>
+        <div className="mb-7 flex items-center">
+          <Logo height={24} />
         </div>
 
         {mode === "set" ? (

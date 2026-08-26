@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useWorld } from "@/lib/useWorld";
 import { Star } from "@/components/ui";
+import Logo from "@/components/Logo";
 
 /**
  * The sign-in door stays dark with the globe — this is the brand moment, and
@@ -129,10 +130,11 @@ export default function Login() {
           <span className="eyebrow">for print on demand sellers</span>
         </div>
 
-        <h1 className="mt-5 text-[clamp(2.6rem,9vw,4.2rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-white">
-          world
-          <br />
-          builder
+        {/* The mark itself is the heading here. The h1 stays for structure
+            and screen readers; the artwork carries it visually. */}
+        <h1 className="mt-6 text-white">
+          <span className="sr-only">World Builder</span>
+          <Logo height="clamp(2.1rem,7.5vw,3rem)" />
         </h1>
         <p className="mt-4 text-[15px] font-medium leading-relaxed text-white/70">
           build one customer world deeply — instead of jumping between unrelated niches.
