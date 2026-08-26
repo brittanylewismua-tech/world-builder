@@ -26,50 +26,83 @@ export async function GET(req: Request) {
   )
     return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-  const key = process.env.ETSY_API_KEY;
+  const key = process.env.ETSY_API_KEY?.trim();
+  const secret = process.env.ETSY_SHARED_SECRET?.trim();
   if (!key)
     return NextResponse.json({ configured: false, reason: "No ETSY_API_KEY." });
 
   // Defaults to the top "feminist shirt" listing, which is public and busy.
   const ids = url.searchParams.get("listings") ?? "1865753173";
 
-  try {
-    const res = await fetch(
-      `https://openapi.etsy.com/v3/application/listings/batch?listing_ids=${encodeURIComponent(ids)}&includes=Images`,
-      {
-        headers: { "x-api-key": key, accept: "application/json" },
-        signal: AbortSignal.timeout(25_000),
-      },
-    );
-    const text = await res.text();
+  /*
+    Etsy's own error message names two possible faults — an inactive key, or
+    the wrong shared secret — so try both shapes and report which one it
+    accepts. That distinguishes "the secret is needed" from "the key was
+    pasted wrong", which no single attempt can.
+  */
+  const shapes: [string, string][] = [["keystring", key]];
+  if (secret) shapes.push(["keystring:secret", `${key}:${secret}`]);
 
-    let parsed: unknown = null;
+  const tried: Record<string, unknown>[] = [];
+
+  for (const [name, value] of shapes) {
     try {
-      parsed = JSON.parse(text);
-    } catch {
-      /* Etsy answered with something that is not JSON; the body says what. */
+      const res = await fetch(
+        `https://openapi.etsy.com/v3/application/listings/batch?listing_ids=${encodeURIComponent(ids)}&includes=Images`,
+        {
+          headers: { "x-api-key": value, accept: "application/json" },
+          signal: AbortSignal.timeout(25_000),
+        },
+      );
+      const text = await res.text();
+
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        /* Not JSON; the body below says what it was instead. */
+      }
+
+      const results =
+        (
+          parsed as {
+            results?: {
+              listing_id?: number;
+              images?: { url_570xN?: string; alt_text?: string | null }[];
+            }[];
+          }
+        )?.results ?? [];
+
+      if (res.ok && results.length)
+        return NextResponse.json({
+          configured: true,
+          works: name,
+          count: results.length,
+          sample: results.slice(0, 2).map((l) => ({
+            listing_id: l.listing_id,
+            image: l.images?.[0]?.url_570xN ?? null,
+            alt: l.images?.[0]?.alt_text ?? null,
+          })),
+        });
+
+      // Only ever the shape's name and Etsy's own words. Never the key.
+      tried.push({ shape: name, status: res.status, body: text.slice(0, 200) });
+    } catch (e) {
+      tried.push({
+        shape: name,
+        error: e instanceof Error ? e.message : "failed",
+      });
     }
-
-    const results =
-      (parsed as { results?: { listing_id?: number; images?: { url_570xN?: string; alt_text?: string | null }[] }[] })
-        ?.results ?? [];
-
-    return NextResponse.json({
-      configured: true,
-      status: res.status,
-      count: results.length,
-      sample: results.slice(0, 2).map((l) => ({
-        listing_id: l.listing_id,
-        image: l.images?.[0]?.url_570xN ?? null,
-        alt: l.images?.[0]?.alt_text ?? null,
-      })),
-      // Only on failure, and only the first stretch — never the key.
-      body: res.ok ? undefined : text.slice(0, 400),
-    });
-  } catch (e) {
-    return NextResponse.json(
-      { configured: true, error: e instanceof Error ? e.message : "failed" },
-      { status: 500 },
-    );
   }
+
+  return NextResponse.json(
+    {
+      configured: true,
+      works: null,
+      haveSecret: !!secret,
+      keyLength: key.length,
+      tried,
+    },
+    { status: 502 },
+  );
 }

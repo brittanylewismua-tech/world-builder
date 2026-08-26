@@ -32,6 +32,25 @@ const MOST_PER_UPLOAD = 100;
 
 const ETSY_BATCH = "https://openapi.etsy.com/v3/application/listings/batch";
 
+/**
+ * What Etsy wants in x-api-key.
+ *
+ * The documentation says the keystring. The live API says otherwise: sending
+ * the keystring alone comes back 403 with "API key not found or not active,
+ * or incorrect shared secret for API key", and it is the second half of that
+ * sentence that matters — a commercial app is identified by keystring and
+ * shared secret joined with a colon.
+ *
+ * The secret stays optional so that a deployment with only the keystring
+ * still tries, rather than refusing before it has asked.
+ */
+export function etsyKey() {
+  const key = process.env.ETSY_API_KEY;
+  if (!key) return null;
+  const secret = process.env.ETSY_SHARED_SECRET;
+  return secret ? `${key.trim()}:${secret.trim()}` : key.trim();
+}
+
 interface Row {
   listingId?: string;
   title?: string;
@@ -144,7 +163,7 @@ export async function POST(req: Request) {
     .filter((r) => !known.has(r.listingId as string))
     .slice(0, MOST_PER_UPLOAD);
 
-  const key = process.env.ETSY_API_KEY;
+  const key = etsyKey();
   let pictures = new Map<string, { image: string | null; design: string | null }>();
 
   if (key && fresh.length) {
