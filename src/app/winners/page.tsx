@@ -421,6 +421,33 @@ function WinnersBody({ world }: { world: World }) {
 
 /* ------------------------------------------------------------------ */
 
+/** A small caps label. Used instead of a heading for the quieter sections,
+ *  so section titles stop competing with the findings under them. */
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">
+      {children}
+    </p>
+  );
+}
+
+/**
+ * THE BRIEF, AS A FUNNEL.
+ *
+ * This was four sections in a two-column grid, all the same size, which said
+ * they were all equally important. They are not. The hole is the thing the
+ * seller acts on; what worn out means is a footnote. Laying them out as
+ * equals made the reader do the ranking, and the two columns meant the eye
+ * had no obvious place to go next as the ragged sections ran out.
+ *
+ * So: the hole first and largest, the moves under it as the reasoning, and
+ * the two diagnostics paired and small at the bottom. One column throughout,
+ * held to a reading measure, because a line of text spanning the full width
+ * of this page is too long to scan.
+ *
+ * Nothing is dropped or shortened. Every section, entry and sentence the
+ * model wrote is still here — only the arrangement changed.
+ */
 function BriefPanel({
   stored,
   onRead,
@@ -433,16 +460,14 @@ function BriefPanel({
   stale: boolean;
 }) {
   const b = stored.brief;
-  const parts: [string, Brief["moves"]][] = [
-    ["What this world buys", b.moves],
-    ["Where the hole is", b.gaps],
+  const foot: [string, Brief["moves"]][] = [
     ["Still moving", b.alive],
     ["Worn out", b.worn],
   ];
 
   return (
     <Card className="mb-9">
-      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
         <p className="t-small text-ink-3">
           Read across {stored.counted} designs
         </p>
@@ -451,24 +476,64 @@ function BriefPanel({
         </button>
       </div>
 
-      <div className="grid gap-7 lg:grid-cols-2">
-        {parts
-          .filter(([, list]) => list.length > 0)
-          .map(([title, list]) => (
-            <div key={title}>
-              <h3 className="t-h3 text-ink">{title}</h3>
-              <span className="rule-accent mt-2" />
-              <ul className="mt-3 space-y-3.5">
-                {list.map((p, i) => (
-                  <li key={i}>
-                    <p className="text-[15px] font-bold text-ink">{p.heading}</p>
-                    <p className="t-small mt-0.5 text-ink-2">{p.body}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-      </div>
+      {/* ------------------------------------------- what to do about it */}
+      {b.gaps.length > 0 && (
+        <div className="max-w-[52ch]">
+          <Label>Where the hole is</Label>
+          <ul className="space-y-4">
+            {b.gaps.map((p, i) => (
+              <li
+                key={i}
+                className="border-l-2 pl-4"
+                style={{ borderColor: "var(--accent)" }}
+              >
+                <p className="t-h3 text-ink">{p.heading}</p>
+                <p className="mt-1 text-[15px] leading-relaxed text-ink-2">
+                  {p.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------- and why */}
+      {b.moves.length > 0 && (
+        <div className="mt-7 max-w-[52ch] border-t border-black/10 pt-6">
+          <Label>Why — what this world buys</Label>
+          <ul className="space-y-3.5">
+            {b.moves.map((p, i) => (
+              <li key={i}>
+                <p className="text-[15px] font-bold text-ink">{p.heading}</p>
+                <p className="mt-0.5 text-[15px] leading-relaxed text-ink-2">
+                  {p.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* --------------------------------------------- the two footnotes */}
+      {foot.some(([, list]) => list.length > 0) && (
+        <div className="mt-7 grid gap-7 border-t border-black/10 pt-6 sm:grid-cols-2">
+          {foot
+            .filter(([, list]) => list.length > 0)
+            .map(([title, list]) => (
+              <div key={title}>
+                <Label>{title}</Label>
+                <ul className="space-y-3">
+                  {list.map((p, i) => (
+                    <li key={i}>
+                      <p className="t-small font-bold text-ink">{p.heading}</p>
+                      <p className="t-small mt-0.5 text-ink-2">{p.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+        </div>
+      )}
     </Card>
   );
 }
