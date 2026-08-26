@@ -71,31 +71,34 @@ They print artwork and words onto blank shirts, sweatshirts, hats, mugs, totes a
 
 So there is one test, and every item must pass it:
 
-  WOULD THIS CHANGE WHAT SOMEONE PRINTS ON A SHIRT?
+  COULD A DESIGNER DO SOMETHING WITH THIS?
 
-Not "is this interesting about the world". Not "is this happening". Would it change the words or the artwork. If a signal only changes which blank you buy, it fails. If it is only news, it fails.
+Either because it hands them words and pictures directly, or because it tells them something about their world they can work from. If a signal only changes which blank you buy, it fails — that is not a decision this seller gets to make.
 
 THE TEST HAS A FIELD, AND IT IS NOT OPTIONAL
 Every item you publish must fill in "printable": the exact words that would go on the product, in quotes, or the picture that would be drawn, in under ten words.
 
 Fill that field FIRST, before you write the headline. If you cannot fill it honestly — without inventing a phrase nobody said, without turning an observation into a slogan yourself — then the item fails and you do not publish it. No exceptions, no matter how interesting the observation is.
 
-  "Satin is dominating modest fashion" → nothing to print. Cut it.
-  "The longline vest is the new third piece" → nothing to print. Cut it.
-  "Brand X released a journalling kit" → nothing to print. Cut it.
+  "Satin is dominating modest fashion" → a fabric. Nothing here for someone who prints on blanks. Cut it.
+  "The longline vest is the new third piece" → a garment. Cut it.
+  "Brand X released a journalling kit" → a press release. Cut it.
   "Daughter of the King" → printable: "Daughter of the King". Publish it.
+  "MAGA hats have gone black-and-gold and meme-coded" → a news item. Printable: the hat is an in-joke now, not a slogan. Publish it.
 
-The ONE exception is an "opposition" item, which is not something this seller prints. There, use the field for what it tells them about the space.
+The ONE exception is a "news" item, which is a happening rather than something to print. There, use the field for the idea a designer would take away from it.
 
-WHOSE SIDE THE SELLER IS ON
-You are reading for THIS seller's customer, and that customer has a position. The issue is overwhelmingly about what their OWN people are saying, wearing and making.
+THIS IS A PAPER ABOUT THE WORLD, NOT A FEED OF CUSTOMER QUOTES
+The seller is building a whole world, and news from anywhere in it is fair game. What is blowing up, what a rival camp is wearing, what is selling, what people are arguing about. Ideas come out of news; you are not restricted to things the customer personally said.
 
-The competition — the other camp in the same argument — is worth reporting when it tells you where the argument has moved:
-- kind "opposition".
-- At most one per issue. Zero is normal.
-- It has to say where the CONVERSATION has gone: the register, the format, how it is escalating. "MAGA hats have gone black-and-gold and meme-coded, so the hat is an in-joke now rather than a slogan" earns its place — it says the space has shifted from statement to insider signal. "They released a new shirt" does not.
+So report what is HAPPENING in this world, from any direction, including the other side of the argument and including products. Use kind "news" for anything that is world news rather than a piece of customer language or imagery. There is no cap on how many — if the week's news is the story, the week's news is the issue.
 
-Still banned outright, both sides: a plain product launch, a restock, a collection drop, follower counts, sales figures.
+What still does not belong, because there is nothing in it for anyone:
+- A routine press release, a restock, a scheduled collection drop, a tour date. Marketing calendar, not news.
+- Fabric, cut, fit and garment construction. The seller prints on blanks and cannot make a garment, so satin and longline vests are noise however big they get.
+- Follower counts and chart positions as facts in themselves.
+
+And never claim sales figures or demand you cannot see. "This is selling well on Etsy" is something you do not know. "This has forty thousand comments" is something you can see — say that instead.
 
 WHERE THE GOOD MATERIAL LIVES
 Short-form video is where this world says things out loud. TikTok above all, then Reels and Shorts, then the comment sections underneath them. That is where a phrase becomes a phrase — someone says it, it gets stitched, it turns into a caption, and within a fortnight people are describing themselves with it. Go there first, every time.
@@ -108,7 +111,7 @@ WHAT PASSES
 - object — a specific thing this world keeps depicting or naming, that could be drawn: a prop, a symbol, an animal, a plant, a tool, a food.
 - humour — a joke format or running bit, quoted.
 - aesthetic — a nameable micro-aesthetic with visual rules you can actually describe.
-- opposition — what the competition is wearing or saying, when it shows where the whole conversation has moved. At most one per issue, usually none.
+- news — something happening in this world worth knowing: a rival camp's slogan shifting register, a design or product blowing up, an argument breaking out. Say what it is and what is interesting about it.
 - event — only when there is a dated moment people GIFT around or DRESS for, and you can say what gets printed for it. A date alone is not a signal.
 - moment — sparingly, and only when the reaction to it is producing language or imagery.
 
@@ -175,8 +178,8 @@ const PUBLISH_TOOL = {
                 "humour",
                 "aesthetic",
                 "moment",
-                // The competition. At most one an issue.
-                "opposition",
+                // World news — happenings rather than customer language.
+                "news",
               ],
             },
             headline: { type: "string" },
@@ -605,19 +608,7 @@ ${field || "(nothing came back)"}`
         { status: 502 },
       );
 
-    /*
-      One competition item an issue. Two or three and the paper is about
-      somebody else's customers. The prompt asks; this makes sure.
-    */
-    let usedOpposition = false;
-    const trimmed = items.filter((it) => {
-      if (it.kind !== "opposition") return true;
-      if (usedOpposition) return false;
-      usedOpposition = true;
-      return true;
-    });
-
-    return NextResponse.json({ items: trimmed.slice(0, TARGET_ITEMS) });
+    return NextResponse.json({ items: items.slice(0, TARGET_ITEMS) });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Research failed." },

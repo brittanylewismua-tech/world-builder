@@ -35,9 +35,9 @@ const KIND_LABEL: Record<string, string> = {
   aesthetic: "an aesthetic",
   moment: "a moment",
   /*
-    Deliberately absent: "opposition". A kind with no label here shows no chip
-    at all, which is the point — it is a news item like any other and does not
-    need announcing.
+    Deliberately absent: "news". A kind with no label here shows no chip at
+    all, which is the point — it is a news item and does not need announcing
+    as one.
   */
 };
 
