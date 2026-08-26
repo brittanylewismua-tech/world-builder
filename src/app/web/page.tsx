@@ -87,7 +87,7 @@ function WebBody({ world }: { world: World }) {
     <Page>
       <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
-          <span className="chip chip-solid">the web</span>
+          <span className="chip chip-solid">world web</span>
           {found > 0 && (
             <span className="t-small text-ink-3">{found} things in this world</span>
           )}
