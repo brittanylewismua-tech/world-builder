@@ -49,10 +49,20 @@ export const DAILY_CAP = {
   board: 80,
   /* Reading the world is the expensive call. Twice is a grow and a retry. */
   web: 2,
-  /* Looking at thirty product photographs is the most expensive single call
-     in the app. A seller uploads a few exports and reads the wall once; three
-     covers that plus a retry. */
-  winners: 3,
+  /*
+    Patterns are read one keyword at a time, at about three cents a read, and
+    a world holds ten keywords. Somebody setting one up in an evening does ten
+    reads in a row, so a cap of three stopped them a third of the way in and
+    sent them back tomorrow. Twice.
+
+    This is also the only real spend gate on World Winners. Uploading costs
+    nothing but an Etsy call, and deleting a keyword deletes its designs, so
+    churning keywords to dodge the ten-keyword limit buys a reshuffled wall
+    and no extra reads. The money is here, so the ceiling is here: twelve is a
+    full world plus a couple of second looks, and about thirty-six cents in
+    the worst case anybody could contrive.
+  */
+  winners: 12,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -89,7 +99,7 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have reached today's limit. Everything you saved is safe and still there.",
   web: "The web has already grown today. There will be more tomorrow.",
   winners:
-    "You have read the wall as many times as you can today. It resets tomorrow, and everything you uploaded is still here.",
+    "You have read patterns as many times as you can today. It resets tomorrow, and every brief you already have is still here.",
 };
 
 export interface Caller {

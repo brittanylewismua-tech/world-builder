@@ -100,6 +100,14 @@ export async function removeWinner(id: string) {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Remove a keyword, and everything written about it.
+ *
+ * The brief has to go with the designs. Leaving it behind meant that removing
+ * a keyword and later adding it again resurrected an old read — patterns and
+ * opportunities describing ten designs that are no longer on the wall,
+ * presented as though they were current, with no way for the seller to tell.
+ */
 export async function removeKeyword(worldId: string, keyword: string) {
   const { error } = await supabase
     .from("wb_winners")
@@ -107,6 +115,12 @@ export async function removeKeyword(worldId: string, keyword: string) {
     .eq("world_id", worldId)
     .eq("keyword", keyword);
   if (error) throw new Error(error.message);
+
+  await supabase
+    .from("wb_winner_reads")
+    .delete()
+    .eq("world_id", worldId)
+    .eq("keyword", keyword);
 }
 
 /* ------------------------------------------------------------------ */
