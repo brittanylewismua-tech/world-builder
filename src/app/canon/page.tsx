@@ -17,10 +17,18 @@ import {
   loadCanonHistory,
   loadCanonVersion,
   type Canon,
+  type SectionId,
 } from "@/lib/canon";
 
 export default function CanonPage() {
   return <Shell>{(world) => <CanonBody world={world} />}</Shell>;
+}
+
+/** The first line of a section, for the tile. Never more. */
+function preview(text: string) {
+  const flat = text.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  const stop = flat.search(/[.!?]\s/);
+  return stop > 40 ? flat.slice(0, stop + 1) : flat.slice(0, 150);
 }
 
 function CanonBody({ world }: { world: World }) {
@@ -34,6 +42,7 @@ function CanonBody({ world }: { world: World }) {
     drops: number;
     findings: number;
   } | null>(null);
+  const [open, setOpen] = useState<SectionId | null>(null);
   const [ready, setReady] = useState(false);
   const [building, setBuilding] = useState(false);
   const [err, setErr] = useState("");
@@ -59,6 +68,7 @@ function CanonBody({ world }: { world: World }) {
     setBuilding(true);
     setErr("");
     setCapped(false);
+    setOpen(null);
     try {
       await buildCanon(world);
       await refresh();
@@ -73,11 +83,21 @@ function CanonBody({ world }: { world: World }) {
   }
 
   /*
-    Said out loud before the button is pressed, because this feature is
-    honestly thin in week one. A seller who can see they have nine pieces
-    understands why the canon is short, instead of concluding it is broken.
+    How much has arrived since this was written.
+
+    The canon is a standing document, so the useful question on arriving is
+    not when it was built but whether the world has moved since. One number
+    answers that, and it is also the trigger the overnight rebuild uses.
   */
-  const total = have ? have.signals + have.pieces + have.findings : 0;
+  const now = have ? have.signals + have.pieces + have.findings : 0;
+  const then = canon
+    ? (canon.evidence.signals ?? 0) +
+      (canon.evidence.pieces ?? 0) +
+      (canon.evidence.findings ?? 0)
+    : 0;
+  const since = Math.max(0, now - then);
+
+  const section = open ? SECTIONS.find((s) => s.id === open) : null;
 
   return (
     <Page width="reading">
@@ -120,11 +140,7 @@ function CanonBody({ world }: { world: World }) {
       {!building && ready && !canon && (
         <Empty
           title="Nothing written yet"
-          body={
-            total < 15
-              ? `Your world holds ${total} piece${total === 1 ? "" : "s"} so far. This gets better the more there is.`
-              : "Read everything at once and see what it adds up to."
-          }
+          body="Read everything at once and see what it adds up to."
           action={
             <button onClick={build} className="btn btn-accent">
               Write it
@@ -133,30 +149,72 @@ function CanonBody({ world }: { world: World }) {
         />
       )}
 
-      {!building && canon && (
+      {/* ---------------------------------------------- one section, open */}
+      {!building && canon && section && (
         <>
-          <div className="space-y-7">
+          <button
+            onClick={() => setOpen(null)}
+            className="t-small mb-4 text-ink-2 underline underline-offset-2 transition hover:text-ink"
+          >
+            ← All of it
+          </button>
+          <h2 className="t-h2 text-ink">{section.title}</h2>
+          <div className="t-body mt-3 whitespace-pre-wrap text-ink-2">
+            <Said text={canon.sections[section.id] ?? ""} />
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-2 border-t border-black/10 pt-4">
+            {SECTIONS.filter((s) => s.id !== section.id && canon.sections[s.id]).map(
+              (s) => (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setOpen(s.id);
+                    window.scrollTo({ top: 0 });
+                  }}
+                  className="rounded-lg border border-black/20 px-2.5 py-1 text-[12px] text-ink-2 transition hover:border-black hover:text-ink"
+                >
+                  {s.title}
+                </button>
+              ),
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ------------------------------------------------------- the map */}
+      {!building && canon && !section && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
             {SECTIONS.map((s) => {
               const text = canon.sections[s.id];
-              if (!text) return null;
               return (
-                <section key={s.id}>
-                  <h2 className="eyebrow mb-2 text-ink-3">{s.title}</h2>
-                  <div className="t-body whitespace-pre-wrap text-ink-2">
-                    <Said text={text} />
-                  </div>
-                </section>
+                <button
+                  key={s.id}
+                  onClick={() => setOpen(s.id)}
+                  disabled={!text}
+                  className="card card-hover flex h-full flex-col items-start p-4 text-left disabled:opacity-40"
+                >
+                  <span className="eyebrow text-ink-3">{s.title}</span>
+                  <span className="t-small mt-2 line-clamp-4 text-ink-2">
+                    {text ? preview(text) : "—"}
+                  </span>
+                </button>
               );
             })}
           </div>
 
           <div className="mt-8 border-t border-black/10 pt-4">
-            {/* What it was built from. The canon should visibly sharpen as the
-                evidence grows, and that is only legible if the count is here. */}
             <p className="t-small text-ink-3">
               Built from {canon.evidence.signals ?? 0} signals,{" "}
               {canon.evidence.pieces ?? 0} saved pieces and{" "}
               {canon.evidence.drops ?? 0} drops.
+              {since > 0 && (
+                <>
+                  {" "}
+                  {since} new since.
+                </>
+              )}
             </p>
             <button
               onClick={build}

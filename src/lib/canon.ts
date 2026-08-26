@@ -35,8 +35,8 @@ export const SECTIONS = [
   { id: "lexicon", title: "How they talk" },
   { id: "look", title: "What it looks like" },
   { id: "made", title: "What this world has made" },
-  { id: "untouched", title: "Sitting unused" },
-  { id: "open", title: "Still unsettled" },
+  { id: "shelf", title: "On the shelf" },
+  { id: "tension", title: "Where they differ" },
 ] as const;
 
 export type SectionId = (typeof SECTIONS)[number]["id"];
