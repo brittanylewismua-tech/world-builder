@@ -66,15 +66,29 @@ async function post(path: string, tasks: unknown[]) {
   Deliberately defensive. This is somebody else's JSON, five levels deep, and
   a missing branch should cost one term rather than the whole update.
 */
+/*
+  `data` is polymorphic and that is where the first version went wrong.
+
+  On a graph item it is an ARRAY of dated points. On a queries-list item it is
+  an OBJECT holding `top` and `rising`. The first parser read `rising` straight
+  off the item, which is one level too high, so it always found nothing and
+  reported an empty list rather than an error — the worst kind of wrong.
+
+  Confirmed against a real response in DataForSEO's own playground rather than
+  against the documentation, which describes the fields without showing the
+  nesting.
+*/
+type Query = { query?: string; value?: number };
+
 interface Task {
   status_code?: number;
   result?: {
     items?: {
       type?: string;
       keywords?: string[];
-      data?: { date_from?: string; values?: (number | null)[] }[];
-      rising?: { query?: string; value?: number }[];
-      top?: { query?: string; value?: number }[];
+      data?:
+        | { date_from?: string; values?: (number | null)[] }[]
+        | { top?: Query[]; rising?: Query[] };
     }[];
   }[];
 }
@@ -114,7 +128,7 @@ export async function readCurves(terms: string[]): Promise<Reading[]> {
     const graph = tasks[0]?.result?.[0]?.items?.find(
       (i) => i.type === "google_trends_graph",
     );
-    const points = graph?.data ?? [];
+    const points = Array.isArray(graph?.data) ? graph.data : [];
 
     batch.forEach((term, index) => {
       const curve = points
@@ -154,7 +168,18 @@ export async function readRising(term: string): Promise<string[]> {
     (i) => i.type === "google_trends_queries_list",
   );
 
-  return (list?.rising ?? [])
+  const data = list?.data;
+  const bucket = data && !Array.isArray(data) ? data : undefined;
+
+  /*
+    Rising first, because a term climbing is the interesting one. Top is the
+    fallback: on a quiet keyword Google returns established related searches
+    and no risers at all, and an established neighbour is still a term this
+    world did not know it had.
+  */
+  const picked = bucket?.rising?.length ? bucket.rising : (bucket?.top ?? []);
+
+  return picked
     .map((r) => (r.query ?? "").trim().toLowerCase())
     .filter(Boolean)
     .slice(0, 10);
