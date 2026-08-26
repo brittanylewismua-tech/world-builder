@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Zoomable from "@/components/Zoomable";
 import Shell from "@/components/Shell";
 import DropBoard from "@/components/DropBoard";
 import {
@@ -153,11 +154,10 @@ function HistoryBody({ world }: { world: World }) {
                 {Array.from({ length: world.slotsPerDrop }, (_, i) => {
                   const item = d.items.find((x) => x.slot === i + 1);
                   return item ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Zoomable
                       key={i}
-                      src={item.src}
-                      alt=""
+                      src={item.src ?? ""}
+                      caption={item.title}
                       className="h-14 w-14 shrink-0 rounded-md object-cover"
                     />
                   ) : (

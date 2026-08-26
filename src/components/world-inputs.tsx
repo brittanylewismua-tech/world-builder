@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Zoomable from "@/components/Zoomable";
 import {
   AFFINITY_QUESTIONS,
   MIN_SUB_NICHES,
@@ -481,10 +482,8 @@ export function VisualCalibrationInput({
                 : ""
             }`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={r.src}
-              alt=""
+            <Zoomable
+              src={r.src ?? ""}
               className="h-full w-full rounded-xl border border-black/12 object-cover"
             />
             {/*

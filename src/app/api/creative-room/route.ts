@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit, meter } from "@/lib/guard";
+import { admit, endWell, meter } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -186,10 +186,13 @@ export async function POST(req: Request) {
       ms: Date.now() - began,
     });
 
-    const text = res.content
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("")
-      .trim();
+    const text = endWell(
+      res.content
+        .map((b) => (b.type === "text" ? b.text : ""))
+        .join("")
+        .trim(),
+      res.stop_reason,
+    );
     return NextResponse.json({ text });
   } catch (e) {
     return NextResponse.json(

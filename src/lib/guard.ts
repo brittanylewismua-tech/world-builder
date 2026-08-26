@@ -264,3 +264,36 @@ export function readState(state: string): string | null {
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   return payload;
 }
+
+/**
+ * NEVER HAND BACK HALF A SENTENCE.
+ *
+ * A reply that runs into max_tokens stops wherever the model happened to be —
+ * mid-word, as "Halftone ret". A bigger ceiling makes that rarer and cannot
+ * make it impossible, because the ceiling exists precisely so that a runaway
+ * reply has an end.
+ *
+ * So when the model was cut off, walk back to the last place a sentence
+ * genuinely finished and stop there. Losing an unfinished thought is
+ * invisible; showing its severed first half is not.
+ *
+ * Only ever applied when the stop reason really was the ceiling. A model that
+ * chose to end on a fragment — a one-word answer, a question — keeps it.
+ */
+export function endWell(text: string, stopReason: string | null | undefined) {
+  if (stopReason !== "max_tokens") return text;
+
+  const trimmed = text.trimEnd();
+  // Look for the last sentence end that is not an abbreviation or a decimal.
+  const done = /[.!?…]["'”’)]?(?=\s|$)/g;
+  let cut = -1;
+  for (let m = done.exec(trimmed); m; m = done.exec(trimmed))
+    cut = m.index + m[0].length;
+
+  // Nothing finished at all — better a clean paragraph than a broken word.
+  if (cut < 40) {
+    const para = trimmed.lastIndexOf("\n\n");
+    return para > 40 ? trimmed.slice(0, para).trimEnd() : trimmed;
+  }
+  return trimmed.slice(0, cut);
+}

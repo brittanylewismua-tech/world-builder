@@ -29,6 +29,7 @@ import type { World } from "@/lib/world";
 import { report } from "@/lib/report";
 import Link from "next/link";
 import SplitPane from "./SplitPane";
+import Zoomable from "./Zoomable";
 import Capture from "./Capture";
 import Said from "./Said";
 import { Dots, Star } from "./ui";
@@ -889,11 +890,10 @@ function Piece({
       className="group/piece relative cursor-grab active:cursor-grabbing"
     >
       {item.kind === "image" && item.src && (
-        <img
+        <Zoomable
           src={item.src}
-          alt=""
-          loading="lazy"
           draggable={false}
+          caption={item.note || item.originalName}
           className="w-full rounded-lg border border-black/8 object-cover"
         />
       )}

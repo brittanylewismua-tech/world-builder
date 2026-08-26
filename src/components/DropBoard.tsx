@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import SlotCount from "./SlotCount";
+import Zoomable from "./Zoomable";
 import { formatDropDate, type Drop, type DropItem } from "@/lib/drops";
 
 /**
@@ -218,8 +219,11 @@ function Tile({
             frozen ? "" : "cursor-grab active:cursor-grabbing"
           } ${dragging === slot ? "opacity-40" : ""}`}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.src} alt="" className="h-full w-full object-cover" />
+          <Zoomable
+            src={item.src ?? ""}
+            caption={item.title}
+            className="h-full w-full object-cover"
+          />
           <span className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white">
             {String(slot).padStart(2, "0")}
           </span>
