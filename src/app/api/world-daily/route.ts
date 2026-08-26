@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { admit, meter } from "@/lib/guard";
-import { usableSource } from "@/lib/sources";
+import { normalise, usableSource } from "@/lib/sources";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -354,27 +354,6 @@ Write down everything that is language or imagery. Quote exactly.`;
      * that never appeared anywhere in the run, which is the actual promise.
      */
     const seen = new Set<string>();
-    const normalise = (u: string) => {
-      try {
-        const url = new URL(u);
-        url.hash = "";
-        for (const junk of [
-          "utm_source",
-          "utm_medium",
-          "utm_campaign",
-          "utm_content",
-          "utm_term",
-          "fbclid",
-          "gclid",
-          "igshid",
-          "si",
-        ])
-          url.searchParams.delete(junk);
-        return `${url.hostname.replace(/^www\./, "")}${url.pathname.replace(/\/$/, "")}${url.search}`.toLowerCase();
-      } catch {
-        return u.trim().toLowerCase();
-      }
-    };
     const allow = (u: string) => seen.add(normalise(u));
 
     /**

@@ -46,3 +46,40 @@ export function usableSource(raw: string) {
   return path.length > 1;
 }
 
+
+
+/**
+ * THE SAME PAGE, WRITTEN TWO WAYS.
+ *
+ * A citation has to be a page a search actually returned, and that guarantee
+ * is checked by comparing strings. Compared raw, it breaks constantly: the
+ * search tool hands back a URL with a tracking parameter, the model writes it
+ * down without one, and an identical page fails to match itself. World News
+ * once threw away every source in an issue for exactly that reason, and the
+ * seller was told nothing could be verified while both models had run and
+ * billed.
+ *
+ * So strip what does not identify the page — the fragment, the trackers, a
+ * trailing slash — and compare what is left.
+ */
+export function normalise(u: string) {
+  try {
+    const url = new URL(u);
+    url.hash = "";
+    for (const junk of [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "fbclid",
+      "gclid",
+      "igshid",
+      "si",
+    ])
+      url.searchParams.delete(junk);
+    return `${url.hostname.replace(/^www\./, "")}${url.pathname.replace(/\/$/, "")}${url.search}`.toLowerCase();
+  } catch {
+    return u.trim().toLowerCase();
+  }
+}

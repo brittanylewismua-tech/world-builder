@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { meter, ownerOf } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
-import { usableSource } from "@/lib/sources";
+import { normalise, usableSource } from "@/lib/sources";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -226,17 +226,28 @@ Already on the map, so do not bring these back: ${[...known].slice(0, 200).join(
       ],
     });
 
+    /*
+      Compared normalised, not raw.
+
+      The first version matched URL strings exactly and threw away every node
+      in the run because of it — the search tool returns a link with a
+      tracking parameter, the model writes it down without one, and a page
+      fails to match itself. World News had the same bug and the same fix; it
+      simply did not get carried across.
+    */
     const seen = new Set<string>();
     for (const block of scout.content) {
       const b = block as unknown as { type: string; content?: { url?: string }[] };
       if (b.type === "web_search_tool_result" && Array.isArray(b.content))
-        for (const r of b.content) if (r.url) seen.add(r.url);
+        for (const r of b.content) if (r.url) seen.add(normalise(r.url));
     }
     const notes = scout.content
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("")
       .trim();
-    for (const m of notes.matchAll(/https?:\/\/[^\s\])>"']+/g)) seen.add(m[0]);
+    // Anything the scout wrote down, it saw.
+    for (const m of notes.matchAll(/https?:\/\/[^\s\])>"']+/g))
+      seen.add(normalise(m[0]));
 
     meter("web", door.userId, {
       model: SCOUT,
@@ -314,7 +325,7 @@ ${notes || "(nothing came back)"}`,
         const note = (n.note ?? "").trim();
         const url = (n.url ?? "").trim();
         if (!label || !anchor || !quote || !note) return null;
-        if (!url || !usableSource(url) || !seen.has(url)) return null;
+        if (!url || !usableSource(url) || !seen.has(normalise(url))) return null;
         if (known.has(label.toLowerCase())) return null;
         known.add(label.toLowerCase());
         return {
@@ -334,19 +345,37 @@ ${notes || "(nothing came back)"}`,
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
 
-    if (rows.length)
-      await db
-        .from("wb_web_nodes")
-        .upsert(rows, {
-          onConflict: "world_id,kind,label",
-          ignoreDuplicates: true,
-        });
+    const proposed = parsed?.nodes?.length ?? 0;
+
+    /*
+      A run that wrote nothing does not count as today's run.
+
+      The first one recorded itself, added zero, and then locked the seller
+      out for twenty hours with an empty page and no way to try again. A daily
+      ceiling is there to stop a cost running away, and a grow that produced
+      nothing has not cost anything worth protecting.
+    */
+    if (!rows.length)
+      return NextResponse.json(
+        {
+          error:
+            proposed > 0
+              ? "Nothing came back that could be checked all the way to its source. Try again."
+              : "Nothing came back this time. Try again.",
+        },
+        { status: 502 },
+      );
+
+    await db.from("wb_web_nodes").upsert(rows, {
+      onConflict: "world_id,kind,label",
+      ignoreDuplicates: true,
+    });
 
     await db
       .from("wb_web_runs")
       .insert({ world_id: worldId, added: rows.length });
 
-    return NextResponse.json({ ok: true, added: rows.length });
+    return NextResponse.json({ ok: true, added: rows.length, proposed });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "That did not finish." },
