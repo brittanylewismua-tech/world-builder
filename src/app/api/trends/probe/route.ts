@@ -31,6 +31,9 @@ export async function GET(req: Request) {
   const term = url.searchParams.get("q") || "abolish ice";
   const out: Record<string, unknown> = { configured: true, term };
 
+  const only = url.searchParams.get("only");
+
+  if (only !== "rising")
   try {
     const curves = await readCurves([term]);
     out.curves = {
@@ -44,6 +47,7 @@ export async function GET(req: Request) {
     out.curvesError = e instanceof Error ? e.message : "failed";
   }
 
+  if (only !== "curves")
   try {
     const rising = await readRising(term);
     out.rising = rising;
