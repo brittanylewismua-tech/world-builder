@@ -17,11 +17,41 @@ export interface DailyItem {
   kind: string;
   headline: string;
   body: string;
+  /**
+   * The exact words or image that would go on a product. Every item has to be
+   * able to state one — it is the test for whether a signal is printable at
+   * all, and an item that cannot fill it in never reaches the seller.
+   */
+  printable: string;
   sources: DailySource[];
 }
 
 export function todayISO() {
   const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * THE PAPER COMES OUT ONCE A WEEK.
+ *
+ * It used to be daily, which was wrong on both counts. A customer world does
+ * not turn over in twenty-four hours — a phrase takes a fortnight to spread —
+ * so asking for five new findings every morning meant the good model either
+ * padded the issue or found nothing and apologised. And it cost seven times
+ * what it needed to, for a page nobody opens every day.
+ *
+ * Weekly also matches what the seller is actually doing: one drop a week. The
+ * paper is there when they sit down to decide it.
+ *
+ * An issue is filed under the MONDAY of its week, so every read during the
+ * week lands on the same issue and it simply stays up.
+ */
+export function weekStartISO(from = new Date()) {
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  // getDay(): 0 = Sunday. Shift so Monday starts the week.
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 10);
 }
@@ -32,7 +62,7 @@ export async function loadIssue(
 ): Promise<DailyItem[]> {
   const { data, error } = await supabase
     .from("wb_daily_items")
-    .select("id, area, kind, headline, body, sources")
+    .select("id, area, kind, headline, body, printable, sources")
     .eq("world_id", worldId)
     .eq("issue_date", date)
     .order("position");
@@ -104,6 +134,7 @@ export async function generateIssue(
     kind: it.kind,
     headline: it.headline,
     body: it.body,
+    printable: it.printable,
     sources: it.sources,
     position: offset + i,
   }));
@@ -115,12 +146,14 @@ export async function generateIssue(
 }
 
 export function formatIssueDate(iso: string) {
-  return new Date(`${iso}T00:00:00`)
-    .toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
+  /*
+    Issues are weekly now, so the weekday was noise — "Monday, August 24" for
+    a paper that covers the whole week reads like it is about that Monday.
+  */
+  return `Week of ${new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+  })}`;
 }
 
 export function greeting() {

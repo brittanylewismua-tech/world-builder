@@ -75,6 +75,19 @@ So there is one test, and every item must pass it:
 
 Not "is this interesting about the world". Not "is this happening". Would it change the words or the artwork. If a signal only changes which blank you buy, it fails. If it is only news, it fails.
 
+THE TEST HAS A FIELD, AND IT IS NOT OPTIONAL
+Every item you publish must fill in "printable": the exact words that would go on the product, in quotes, or the picture that would be drawn, in under ten words.
+
+Fill that field FIRST, before you write the headline. If you cannot fill it honestly — without inventing a phrase nobody said, without turning an observation into a slogan yourself — then the item fails and you do not publish it. No exceptions, no matter how interesting the observation is.
+
+  "Satin is dominating modest fashion" → nothing to print. Cut it.
+  "The longline vest is the new third piece" → nothing to print. Cut it.
+  "Brand X released a journalling kit" → nothing to print. Cut it.
+  "Daughter of the King" → printable: "Daughter of the King". Publish it.
+
+WHOSE SIDE THE SELLER IS ON
+You are reading for THIS seller's customer, and that customer has a position. Report what their own people are saying, wearing and making. Never report the opposition's merchandise, slogans or symbols as a signal — an anti-ICE seller has no use for what MAGA hats are doing this season, and reporting it as a trend is worse than useless. If the only thing you found in an area is the other side, that area gets skipped.
+
 WHERE THE GOOD MATERIAL LIVES
 Short-form video is where this world says things out loud. TikTok above all, then Reels and Shorts, then the comment sections underneath them. That is where a phrase becomes a phrase — someone says it, it gets stitched, it turns into a caption, and within a fortnight people are describing themselves with it. Go there first, every time.
 
@@ -105,7 +118,8 @@ A worked example, so the bar is unmistakable:
     Why: a garment. The seller does not make garments.
 
 HOW TO WRITE IT
-- Up to ${TARGET_ITEMS} items, and FEWER IS BETTER when the rest would be padding. Three that pass beat five with two fillers. Do not spread across areas for coverage — an area with nothing printable gets skipped.
+- ${TARGET_ITEMS} is a CEILING, never a target. There is no quota. Two real items is a good issue; five with two fillers is a bad one, and padding is the most common way this job gets done badly. Do not spread across areas for coverage — an area with nothing printable gets skipped.
+- This is a WEEKLY paper, not a daily one, so you are choosing the best of a whole week rather than scraping together whatever moved today. Be more selective, not less.
 - Headline: short, concrete, naming the actual thing. When it is a phrase, the phrase IS the headline, in quotes.
 - Body: two or three sentences, 70 words maximum. What it is, where it is showing up, and what it says about the person wearing it. Quote real wording exactly.
 - Write like a well-edited culture newsletter. No bullet lists inside the body.
@@ -147,6 +161,25 @@ const PUBLISH_TOOL = {
             },
             headline: { type: "string" },
             body: { type: "string" },
+            /*
+              THE GATE.
+
+              Everything else here is prose, and prose rules get ignored. The
+              banned list said "never report fabric" and "never report a
+              competitor's product launch", and issues still shipped with
+              satin, longline vests and another brand's journalling kit.
+
+              This field cannot be filled in for those. "Satin is dominating"
+              has no words to print and no picture to draw, so the model has
+              to either invent something — which the verification pass and the
+              instructions both forbid — or drop the item. Made the rule
+              structural instead of hoping.
+            */
+            printable: {
+              type: "string",
+              description:
+                "The exact thing that would go on the product: the words to print, in quotes, or the image to draw, in under ten words. If you cannot fill this in without inventing it, the item does not belong in the issue.",
+            },
             sources: {
               type: "array",
               items: {
@@ -156,7 +189,7 @@ const PUBLISH_TOOL = {
               },
             },
           },
-          required: ["area", "kind", "headline", "body", "sources"],
+          required: ["area", "kind", "headline", "body", "printable", "sources"],
         },
       },
     },
@@ -375,6 +408,7 @@ Write down everything that is language or imagery. Quote exactly.`;
       kind?: string;
       headline?: string;
       body?: string;
+      printable?: string;
       sources?: { title?: string; url?: string }[];
     };
 
@@ -492,13 +526,23 @@ ${field || "(nothing came back)"}`
         }
       }
 
-      // Verification. A link that was never in a search result does not ship.
+      /*
+        Verification, and it throws things away on purpose.
+
+        A link that was never in a search result does not ship — that is the
+        promise that no source is invented. And an item with nothing in
+        `printable` does not ship either: it means the model could not say
+        what would actually go on the product, which is the whole test. Both
+        checks run here rather than in the prompt because a rule the code
+        enforces is a rule, and a rule only written in prose is a suggestion.
+      */
       return (parsed?.items ?? [])
         .map((it) => ({
           area: (it.area || "").trim(),
           kind: (it.kind || "").trim().toLowerCase(),
           headline: (it.headline || "").trim(),
           body: (it.body || "").trim(),
+          printable: (it.printable || "").trim(),
           sources: (it.sources ?? [])
             .filter((s) => s.url && seen.has(normalise(s.url)))
             .map((s) => ({
@@ -506,7 +550,10 @@ ${field || "(nothing came back)"}`
               url: s.url!,
             })),
         }))
-        .filter((it) => it.headline && it.body && it.sources.length > 0);
+        .filter(
+          (it) =>
+            it.headline && it.body && it.printable && it.sources.length > 0,
+        );
     }
 
     /*

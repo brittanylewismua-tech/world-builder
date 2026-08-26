@@ -11,7 +11,7 @@ import {
   hostOf,
   loadIssue,
   loadIssueDates,
-  todayISO,
+  weekStartISO,
   type DailyItem,
 } from "@/lib/daily";
 import { deriveAreas } from "@/lib/api";
@@ -131,7 +131,8 @@ export default function Daily() {
 
 function DailyBody({ world }: { world: World }) {
   const { patch } = useWorld();
-  const today = todayISO();
+  // The issue that is current right now — this week's, filed under its Monday.
+  const today = weekStartISO();
   const [deriving, setDeriving] = useState(false);
   const [date, setDate] = useState(today);
   const [items, setItems] = useState<DailyItem[] | null>(null);

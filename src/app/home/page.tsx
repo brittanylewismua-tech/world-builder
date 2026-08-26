@@ -8,7 +8,7 @@ import {
   formatIssueDate,
   greeting,
   loadIssue,
-  todayISO,
+  weekStartISO,
   type DailyItem,
 } from "@/lib/daily";
 import {
@@ -44,7 +44,7 @@ export default function HomePage() {
 }
 
 function HomeBody({ world }: { world: World }) {
-  const today = todayISO();
+  const today = weekStartISO();
   const [items, setItems] = useState<DailyItem[] | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
   const [next, setNext] = useState<Drop | null>(null);

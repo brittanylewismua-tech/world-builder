@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Star } from "./ui";
 import Said from "./Said";
-import { loadIssue, todayISO, type DailyItem } from "@/lib/daily";
+import { loadIssue, weekStartISO, type DailyItem } from "@/lib/daily";
 import {
   forget,
   loadMessages,
@@ -79,7 +79,7 @@ export default function CustomerChat({
   }, [world.id]);
 
   useEffect(() => {
-    loadIssue(world.id, todayISO())
+    loadIssue(world.id, weekStartISO())
       .then(setDaily)
       .catch(() => setDaily([]));
   }, [world.id]);
