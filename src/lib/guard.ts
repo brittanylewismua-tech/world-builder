@@ -22,15 +22,31 @@ const KEY =
   process.env.NEXT_PUBLIC_SUPABASE_KEY ||
   "sb_publishable_1dP18eUzIVckldFdIR2w7Q_6clKwTmu";
 
-/** Calls per person per day, by route. */
+/**
+ * Calls per person per day, by route.
+ *
+ * These are not a fairness rule, they are the spend ceiling. Nothing else
+ * limits what one account can cost, so the worst case is exactly this table
+ * multiplied by the price of each call — and the old numbers came to roughly
+ * $190 a month for a single determined user, against a subscription that will
+ * never be anywhere near that.
+ *
+ * They were also written for a product that published a paper every morning.
+ * It is weekly now, so eight research runs a day was eight times a week's
+ * entire allowance, every day.
+ *
+ * Set so that a heavy, genuine day of work never touches them.
+ */
 export const DAILY_CAP = {
-  daily: 8,
-  customer: 80,
-  room: 80,
-  areas: 15,
-  /* One analysis per saved item plus pattern runs. A busy research week is
-     perhaps forty pieces; this leaves room for that and then some. */
-  board: 120,
+  /* An issue is weekly. Two runs in a day is the paper plus one refresh. */
+  daily: 2,
+  /* A real conversation is ten or fifteen turns. Thirty is a long session. */
+  customer: 30,
+  room: 30,
+  areas: 5,
+  /* One analysis per saved item. A busy research week is perhaps forty
+     pieces, and this still leaves double that in a single day. */
+  board: 80,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;

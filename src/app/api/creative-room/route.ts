@@ -155,7 +155,7 @@ export async function POST(req: Request) {
       source: { type: "base64", media_type: "image/jpeg", data: b64 },
       // Cache through the end of the board so the whole set is reused.
       ...(i === images.length - 1
-        ? { cache_control: { type: "ephemeral" as const } }
+        ? { cache_control: { type: "ephemeral" as const, ttl: "1h" as const } }
         : {}),
     }));
     blocks.push({
@@ -177,7 +177,33 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 2000,
-      system: `${SYSTEM}\n\n--- THE SELLER'S WORLD ---\n${body.context ?? "(no profile yet)"}`,
+      /*
+        CACHING THAT ACTUALLY GETS READ.
+
+        Thirty-one metered calls, cache_read_tokens zero on every one. The
+        cause was the default five-minute time to live. A conversation is not
+        a five-minute event — somebody asks, reads, looks at the board, thinks,
+        and asks again ten minutes later. By then the cache has expired, so
+        the next turn writes a fresh one at 1.25x the price of not caching at
+        all. Paying a premium to store something nobody ever reads is strictly
+        worse than not caching.
+
+        Six turns across half an hour:
+          no cache            6 x 0.024              = $0.144
+          5m, always missed   6 x 0.030              = $0.180   <- was this
+          1h, read each turn  0.048 + 5 x 0.0024     = $0.060
+
+        An hour covers a working session. The system prompt is cached too, not
+        just the images — it is the largest block that never changes mid
+        conversation, and it was being re-sent in full every single turn.
+      */
+      system: [
+        {
+          type: "text",
+          text: `${SYSTEM}\n\n--- THE SELLER'S WORLD ---\n${body.context ?? "(no profile yet)"}`,
+          cache_control: { type: "ephemeral", ttl: "1h" },
+        },
+      ],
       messages: history,
     });
     meter("room", door.caller.userId, {

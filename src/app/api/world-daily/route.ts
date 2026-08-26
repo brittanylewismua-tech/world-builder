@@ -428,10 +428,10 @@ Write down everything that is language or imagery. Quote exactly.`;
      * One sweep of the web, written down. Called more than once on a thin
      * day, with a different brief each time.
      *
-     * Twelve searches rather than six: the old ceiling was reached routinely
-     * on the first three areas, so the rest of the watch list was never
-     * actually read and the seller was told the world was quiet when really
-     * the reader had run out of budget.
+     * Eight searches rather than six. Twelve was the first correction and it
+     * overshot — searches are a cent each and drive the reading cost with
+     * them, so the ceiling went straight into the bill twice over. Eight
+     * still covers a seven-area watch list, which six did not.
      */
     async function sweep(brief: string) {
       const at = Date.now();
@@ -443,7 +443,7 @@ Write down everything that is language or imagery. Quote exactly.`;
           {
             type: "web_search_20250305",
             name: "web_search",
-            max_uses: 12,
+            max_uses: 8,
           } as unknown as Anthropic.Tool,
         ],
         messages: [{ role: "user", content: brief }],
