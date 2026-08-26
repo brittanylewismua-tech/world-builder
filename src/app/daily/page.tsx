@@ -323,11 +323,14 @@ function DailyBody({ world }: { world: World }) {
         <Card className="flex flex-col items-center py-14 text-center">
           <img src="/globe.png" alt="" className="globe-turn h-14 w-14 opacity-80" />
           <p className="t-h3 mt-5 text-ink">Reading your world…</p>
-          <p className="t-small mx-auto mt-1.5 max-w-sm text-ink-2">
-            Searching {world.areas.length} area
-            {world.areas.length === 1 ? "" : "s"}, then throwing out everything
-            that is not genuinely current. This takes a minute.
-          </p>
+          {/*
+            How long, and nothing else. The old line walked the seller through
+            the machinery — how many areas were being searched, what was being
+            discarded — which is both none of their business and quietly
+            damaging: describing the work as "searching a few places" invites
+            them to think they could just do that themselves.
+          */}
+          <p className="t-small mt-1.5 text-ink-3">About a minute.</p>
         </Card>
       )}
 
@@ -336,9 +339,15 @@ function DailyBody({ world }: { world: World }) {
           title={
             date === today ? "Ready when you are" : "No issue on that date"
           }
+          /*
+            What they get, not how it is made. The previous version described
+            the pipeline — how many areas, what gets discarded, how long it
+            takes — which reads as a tool explaining its own effort rather
+            than a paper worth opening.
+          */
           body={
             date === today
-              ? `Press this and your world gets read: live searches across ${world.areas.length} area${world.areas.length === 1 ? "" : "s"}, then everything that cannot be stood behind is thrown away. It takes about a minute, and what comes back is yours to keep.`
+              ? "Today's issue hasn't been written yet."
               : "Pick another date from the back issues below."
           }
           action={
