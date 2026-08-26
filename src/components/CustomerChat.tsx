@@ -5,11 +5,11 @@ import { Star } from "./ui";
 import Said from "./Said";
 import { loadIssue, weekStartISO, type DailyItem } from "@/lib/daily";
 import {
-  forget,
   loadMessages,
   openThread,
   recent,
   remember,
+  startNewThread,
   type Msg,
 } from "@/lib/memory";
 import { askAI } from "@/lib/askAI";
@@ -227,21 +227,17 @@ export default function CustomerChat({
           </button>
         </div>
         {msgs.length > 0 && (
-          <button
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  "Clear this conversation? They will forget everything you have talked about.",
-                )
-              )
-                return;
-              setMsgs([]);
-              await forget(world.id, "customer");
-            }}
-            className="t-small mt-2 text-ink-3 transition hover:text-ink"
-          >
-            Start over
-          </button>
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={async () => {
+                setMsgs([]);
+                await startNewThread(world.id, "customer");
+              }}
+              className="t-small text-ink-3 transition hover:text-ink"
+            >
+              New chat
+            </button>
+          </div>
         )}
       </div>
     </div>

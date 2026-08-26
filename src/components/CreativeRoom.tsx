@@ -6,11 +6,11 @@ import type { Drop } from "@/lib/drops";
 import { askAI } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
 import {
-  forget,
   listThreads,
   loadMessages,
   openThread,
   readThread,
+  startNewThread,
   type ThreadRef,
   recent,
   remember,
@@ -159,8 +159,15 @@ export default function CreativeRoom({
   }, [world.id, drop.id]);
 
   useEffect(() => {
-    listThreads(world.id, "room")
-      .then((all) => setPast(all.filter((t) => t.dropId && t.dropId !== drop.id)))
+    /*
+      Everything except the conversation currently on screen. That includes
+      earlier threads for THIS drop, because "New chat" leaves the old one
+      behind rather than destroying it.
+    */
+    Promise.all([listThreads(world.id, "room"), openThread(world.id, "room", drop.id)])
+      .then(([all, current]) =>
+        setPast(all.filter((t) => t.dropId && t.id !== current)),
+      )
       .catch(() => setPast([]));
   }, [world.id, drop.id, msgs.length]);
 
@@ -176,12 +183,13 @@ export default function CreativeRoom({
 
   /** "Drop 03", falling back to the date if that drop is gone. */
   function labelFor(t: ThreadRef) {
-    const d = drops.find((x) => x.id === t.dropId);
-    if (d) return `Drop ${String(d.number).padStart(2, "0")}`;
-    return new Date(t.updatedAt).toLocaleDateString("en-US", {
+    const when = new Date(t.updatedAt).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     });
+    const d = drops.find((x) => x.id === t.dropId);
+    // The date is not decoration — one drop can hold several conversations.
+    return d ? `Drop ${String(d.number).padStart(2, "0")} · ${when}` : when;
   }
 
   async function send(text: string) {
@@ -378,21 +386,20 @@ export default function CreativeRoom({
           Send
         </button>
         {msgs.length > 0 && (
-          <button
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  "Clear this conversation? The Drop Director will forget what you have talked about for this drop.",
-                )
-              )
-                return;
-              setMsgs([]);
-              await forget(world.id, "room", drop.id);
-            }}
-            className="t-small mt-2 text-ink-3 transition hover:text-ink"
-          >
-            Start over
-          </button>
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={async () => {
+                setMsgs([]);
+                await startNewThread(world.id, "room", drop.id);
+                setPast(
+                  (await listThreads(world.id, "room")).filter((t) => t.dropId),
+                );
+              }}
+              className="t-small text-ink-3 transition hover:text-ink"
+            >
+              New chat
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -33,7 +33,13 @@ async function findThread(worldId: string, kind: "customer" | "room", dropId?: s
     .eq("world_id", worldId)
     .eq("kind", kind);
   q = dropId ? q.eq("drop_id", dropId) : q.is("drop_id", null);
-  const { data } = await q.limit(1);
+  /*
+    Newest wins. There can be more than one thread for the same drop now —
+    "New chat" opens a fresh one rather than deleting what came before — so
+    the current conversation is the most recently touched, and the older ones
+    stay readable under "past".
+  */
+  const { data } = await q.order("updated_at", { ascending: false }).limit(1);
   return (data?.[0]?.id as string | undefined) ?? null;
 }
 
@@ -136,6 +142,27 @@ export async function remember(threadId: string, msgs: Msg[]) {
   } catch {
     /* the conversation on screen is still correct */
   }
+}
+
+/**
+ * Put the current conversation away and start a clean one.
+ *
+ * Deliberately not a delete. "New chat" that quietly destroys the last one is
+ * a lie the moment there is a history to look back through — the old thread
+ * keeps its messages and simply stops being the newest.
+ */
+export async function startNewThread(
+  worldId: string,
+  kind: "customer" | "room",
+  dropId?: string,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("wb_conversations")
+    .insert({ world_id: worldId, kind, drop_id: dropId ?? null })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
 }
 
 export async function forget(worldId: string, kind: "customer" | "room", dropId?: string) {
