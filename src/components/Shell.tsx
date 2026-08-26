@@ -31,6 +31,7 @@ import Logo from "./Logo";
 const NAV = [
   { href: "/home", label: "home" },
   { href: "/daily", label: "world news", hint: "what's happening today" },
+  { href: "/web", label: "the web", hint: "everything in this world" },
   { href: "/studio", label: "world drops", hint: "drop studio" },
 ];
 
