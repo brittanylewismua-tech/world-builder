@@ -9,6 +9,8 @@ import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import {
   addExport,
+  briefing,
+  downloadDesigns,
   loadBriefs,
   loadWinners,
   perDay,
@@ -60,6 +62,9 @@ function WinnersBody({ world }: { world: World }) {
   const [said, setSaid] = useState("");
   /* null until an upload has reported back whether Etsy's key is in place. */
   const [keyed, setKeyed] = useState<boolean | null>(null);
+  /** Which keyword's briefing was just copied, so the button can say so. */
+  const [copied, setCopied] = useState("");
+  const [zipping, setZipping] = useState("");
   const pick = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -361,6 +366,53 @@ function WinnersBody({ world }: { world: World }) {
                     : showing[g.keyword]
                       ? "Hide patterns"
                       : "Show patterns"}
+              </button>
+              {/*
+                Two ways out of here and into wherever the seller designs.
+                The text is the briefing — patterns, Etsy's description of
+                each design, the numbers, the links — and pastes anywhere.
+                The archive is the artwork itself, for a chat that can look.
+              */}
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      briefing(
+                        world.name,
+                        g.keyword,
+                        g.list,
+                        briefs[g.keyword]?.brief ?? null,
+                      ),
+                    );
+                    setCopied(g.keyword);
+                    setTimeout(() => setCopied(""), 2500);
+                  } catch {
+                    setErr("Your browser would not let the page copy that.");
+                  }
+                }}
+                className="t-small shrink-0 text-ink-3 transition hover:text-ink"
+              >
+                {copied === g.keyword ? "Copied" : "Copy briefing"}
+              </button>
+              <button
+                onClick={async () => {
+                  setZipping(g.keyword);
+                  setErr("");
+                  try {
+                    await downloadDesigns(world, g.keyword);
+                  } catch (e) {
+                    report("winners", e, { worldId: world.id });
+                    setErr(
+                      e instanceof Error ? e.message : "That did not download.",
+                    );
+                  } finally {
+                    setZipping("");
+                  }
+                }}
+                className="t-small shrink-0 text-ink-3 transition hover:text-ink"
+                disabled={!!zipping}
+              >
+                {zipping === g.keyword ? "Zipping…" : "Download designs"}
               </button>
               <button
                 onClick={async () => {
