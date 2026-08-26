@@ -452,63 +452,73 @@ function WinnersBody({ world }: { world: World }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * One section of the brief: its name on the left, its findings on the right.
+ * ONE PATTERN AT A TIME.
  *
- * The name is a real heading at a real size. It was an eleven pixel caps
- * label, which made the section titles the smallest type in the panel —
- * smaller than the body text they were introducing — so nothing on the screen
- * announced itself and the eye had nowhere to land.
+ * Six patterns stacked in a panel is a wall of text sitting on top of a wall
+ * of pictures, and every layout attempt at it fought the same problem: too
+ * much at once, with nothing telling the eye where to start.
+ *
+ * A stepper solves it by not asking. One finding fills the box, the counter
+ * says how far through you are, and nothing else competes. The trade is that
+ * you cannot skim all six or compare two side by side — worth it at five or
+ * six findings, and it would not be at twenty.
+ *
+ * The box holds its height so the buttons do not jump between a short finding
+ * and a long one, which is the thing that makes a stepper feel broken.
  */
-function Section({
-  name,
-  lead = false,
-  quiet = false,
-  points,
-}: {
-  name: string;
-  /** The section the seller acts on. Bigger, and marked down the side. */
-  lead?: boolean;
-  /** Supporting detail. Deliberately recessive. */
-  quiet?: boolean;
-  points: BriefPoint[];
-}) {
-  if (!points.length) return null;
-  return (
-    <div className="grid gap-x-10 gap-y-3 border-t-2 border-black/10 py-7 first:border-t-0 first:pt-0 lg:grid-cols-[190px_minmax(0,1fr)]">
-      <h3
-        className={`shrink-0 leading-tight ${
-          lead ? "t-h2 text-ink" : "text-[17px] font-bold text-ink-2"
-        }`}
-      >
-        {name}
-      </h3>
+function Patterns({ points }: { points: BriefPoint[] }) {
+  const [at, setAt] = useState(0);
+  // A fresh read is a different set of findings; start at its beginning.
+  useEffect(() => setAt(0), [points]);
 
-      <ul className={`max-w-[62ch] ${lead ? "space-y-5" : "space-y-4"}`}>
-        {points.map((p, i) => (
-          <li
-            key={i}
-            className={lead ? "border-l-2 pl-4" : ""}
-            style={lead ? { borderColor: "var(--accent)" } : undefined}
-          >
-            <p
-              className={
-                lead
-                  ? "text-[17px] font-bold leading-snug text-ink"
-                  : "text-[15px] font-bold text-ink"
-              }
-            >
-              {p.heading}
-            </p>
-            <p
-              className={`mt-1 leading-relaxed ${
-                quiet ? "t-small text-ink-3" : "text-[15px] text-ink-2"
-              }`}
-            >
-              {p.body}
-            </p>
-          </li>
-        ))}
-      </ul>
+  if (!points.length) return null;
+  const p = points[Math.min(at, points.length - 1)];
+  const last = points.length - 1;
+
+  return (
+    <div className="mt-6 max-w-[64ch]">
+      <div
+        className="flex min-h-[168px] flex-col justify-center border-l-2 pl-5"
+        style={{ borderColor: "var(--accent)" }}
+      >
+        <p className="t-h3 leading-snug text-ink">{p.heading}</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-ink-2">{p.body}</p>
+      </div>
+
+      <div className="mt-5 flex items-center gap-3 border-t border-black/10 pt-3">
+        <span className="t-small text-ink-3">
+          {Math.min(at, last) + 1} of {points.length}
+        </span>
+
+        <span className="flex flex-1 gap-1.5" aria-hidden>
+          {points.map((_, i) => (
+            <span
+              key={i}
+              className="h-1 flex-1 rounded-full"
+              style={{
+                background: i <= at ? "var(--accent)" : "rgba(0,0,0,0.12)",
+              }}
+            />
+          ))}
+        </span>
+
+        <button
+          onClick={() => setAt((n) => Math.max(0, n - 1))}
+          className="btn btn-ghost"
+          disabled={at === 0}
+          aria-label="Previous pattern"
+        >
+          ←
+        </button>
+        <button
+          onClick={() => setAt((n) => Math.min(last, n + 1))}
+          className="btn btn-ghost"
+          disabled={at >= last}
+          aria-label="Next pattern"
+        >
+          →
+        </button>
+      </div>
     </div>
   );
 }
@@ -516,25 +526,12 @@ function Section({
 /**
  * ONE KEYWORD'S PATTERNS.
  *
- * Four earlier versions of this got it wrong in four ways, and the thread
- * through all of them was competition: too many things on screen at the same
- * visual weight, so the eye had nowhere to start.
+ * The box around the stepper. It carries only what the stepper cannot: which
+ * keyword and how many designs this was read from, whether the group has
+ * been re-imported since, and the way to run it again.
  *
- * A two-by-two grid of equal sections made the reader do the ranking. Holding
- * the text to a reading measure fixed the line length and left half the panel
- * empty. Two parallel columns filled the panel and gave the eye two competing
- * places to begin. And the section names, set as eleven pixel caps, were the
- * smallest type on a screen of fifteen pixel body text, so nothing announced
- * itself at all.
- *
- * So it is one path, not a composition. Two sections stack, each with its
- * name in a fixed column on the left and its findings on the right. The eye
- * runs down the left edge and stops where it likes.
- *
- * Opportunities come first, because that is the part the seller is here for,
- * and they carry the accent down their side. Patterns follow as the evidence
- * underneath. There is no fold in here — the Show patterns button in the
- * group header is the fold.
+ * There is no fold in here — the Show patterns button in the group header is
+ * the fold.
  */
 function BriefPanel({
   stored,
@@ -551,13 +548,11 @@ function BriefPanel({
    *  is no longer quite there. */
   stale: boolean;
 }) {
-  const b = stored.brief;
-
   return (
     <Card className="mt-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-3">
         <p className="t-small text-ink-3">
-          {stored.counted} designs under &ldquo;{keyword}&rdquo;
+          Patterns across {stored.counted} designs under &ldquo;{keyword}&rdquo;
           {stale && " · the group has changed since this was read"}
         </p>
         <button onClick={onRead} className="btn btn-ghost" disabled={busy}>
@@ -565,9 +560,7 @@ function BriefPanel({
         </button>
       </div>
 
-      <div className="mt-7">
-        <Section name="Patterns" lead points={b.patterns} />
-      </div>
+      <Patterns points={stored.brief.patterns} />
     </Card>
   );
 }
