@@ -28,8 +28,9 @@ import Logo from "./Logo";
  * bottom two are reference you visit occasionally, so they sit at the bottom,
  * quieter, and are not competing for the eye every time the page loads.
  */
+const HOME = { href: "/home", label: "home" };
+
 const NAV = [
-  { href: "/home", label: "home" },
   { href: "/daily", label: "world news", hint: "what's happening in your world" },
   { href: "/winners", label: "world winners", hint: "what's already selling" },
 ];
@@ -150,14 +151,35 @@ export default function Shell({
           <Logo height={22} />
         </Link>
 
+        <Link
+          href={HOME.href}
+          aria-current={pathname === HOME.href ? "page" : undefined}
+          className="mt-6 block rounded-lg px-3.5 py-2.5 text-[14px] font-bold transition"
+          style={
+            pathname === HOME.href
+              ? {
+                  background: rail === "accent" ? "#000" : theme.accent,
+                  color: rail === "accent" ? "#fff" : onAccent(theme.accent),
+                }
+              : {
+                  color: railDark
+                    ? "rgba(255,255,255,0.62)"
+                    : "rgba(0,0,0,0.68)",
+                }
+          }
+        >
+          {HOME.label}
+        </Link>
+
         {/*
           Filled, and filled with whatever the rail is not, so it stays the
           loudest thing on any of the four rail colours a seller can pick.
+          Directly under home, above everything you only read.
         */}
         <Link
           href={MAKE.href}
           aria-current={pathname === MAKE.href ? "page" : undefined}
-          className="mt-6 block rounded-lg px-3.5 py-3 text-[15px] font-bold shadow-[3px_3px_0_rgba(0,0,0,0.35)] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_rgba(0,0,0,0.35)]"
+          className="mt-2 block rounded-lg px-3.5 py-3 text-[15px] font-bold shadow-[3px_3px_0_rgba(0,0,0,0.35)] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_rgba(0,0,0,0.35)]"
           style={{
             background: rail === "accent" ? "#000" : theme.accent,
             color: rail === "accent" ? "#fff" : onAccent(theme.accent),
