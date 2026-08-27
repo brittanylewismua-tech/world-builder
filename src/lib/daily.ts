@@ -225,6 +225,20 @@ export function formatIssueDate(iso: string) {
   })}`;
 }
 
+/**
+ * When the next issue lands.
+ *
+ * An issue is filed under the Monday of its week, so the next one is simply
+ * seven days on. Worth saying out loud on the page: there is no refresh
+ * button any more, and without a date "once a week" leaves somebody
+ * wondering whether the paper is stuck.
+ */
+export function nextIssueDate(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + 7);
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+}
+
 export function greeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";

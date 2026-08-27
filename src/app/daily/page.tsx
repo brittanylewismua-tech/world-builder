@@ -10,6 +10,7 @@ import {
   generateIssue,
   hostOf,
   hideRest,
+  nextIssueDate,
   loadIssue,
   loadIssueDates,
   loadRest,
@@ -307,7 +308,12 @@ function DailyBody({ world }: { world: World }) {
       <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
           <span className="chip chip-solid">world news</span>
-          <span className="t-small text-ink-3">{formatIssueDate(date)}</span>
+          <span className="t-small text-ink-3">
+            {formatIssueDate(date)}{" "}
+            <span className="opacity-70">
+              (next issue drops {nextIssueDate(date)})
+            </span>
+          </span>
         </div>
         {/*
           "Obsessed with" claimed more than the evidence supports — a couple
@@ -624,7 +630,7 @@ function DailyBody({ world }: { world: World }) {
               */}
               {date === today && (
                 <p className="t-small mt-2 text-ink-3">
-                  Written once a week. The next issue is due Monday.
+                  Written once a week.
                 </p>
               )}
             </div>
