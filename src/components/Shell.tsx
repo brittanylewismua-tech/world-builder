@@ -172,7 +172,28 @@ export default function Shell({
         <Link
           href={MAKE.href}
           aria-current={pathname === MAKE.href ? "page" : undefined}
-          className="mt-10 block rounded-lg border-2 border-black bg-white px-3.5 py-3 text-[15px] font-bold text-black shadow-[3px_3px_0_#000] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#000]"
+          className="mt-20 block rounded-lg border-2 bg-white px-4 py-3.5 text-[15px] font-bold text-black transition hover:translate-x-[2px] hover:translate-y-[2px]"
+          style={{
+            /*
+              The depth has to be visible on the rail it is sitting on.
+
+              First attempt was a black border and a black shadow, which on a
+              black rail is a white pill with nothing around it — the raised
+              look existed only in the CSS. So the border and the shadow are
+              drawn in whatever the rail is not: the accent on a black or
+              white rail, black on an accent rail.
+            */
+            borderColor: rail === "accent" ? "#000" : theme.accent,
+            boxShadow: `4px 4px 0 ${rail === "accent" ? "#000" : theme.accent}`,
+          }}
+          onMouseDown={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow =
+              `2px 2px 0 ${rail === "accent" ? "#000" : theme.accent}`;
+          }}
+          onMouseUp={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow =
+              `4px 4px 0 ${rail === "accent" ? "#000" : theme.accent}`;
+          }}
         >
           {MAKE.label}
         </Link>
