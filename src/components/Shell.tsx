@@ -157,51 +157,7 @@ export default function Shell({
           <Logo height={22} />
         </Link>
 
-        {/*
-          The one thing you make, and it leads.
-
-          Not the accent colour: the rail can already BE the accent, the
-          active link is already the accent, and a third pink thing in a
-          column three items long is not emphasis. White with a hard border
-          and a shadow reads as raised on every rail a seller can choose, and
-          nothing else in here is raised.
-
-          It sits well clear of the logo so it does not read as part of the
-          lockup, and everything you only read sits underneath it.
-        */}
-        <Link
-          href={MAKE.href}
-          aria-current={pathname === MAKE.href ? "page" : undefined}
-          className="mt-20 block rounded-lg border-2 bg-white px-4 py-3.5 text-[15px] font-bold text-black transition hover:translate-x-[2px] hover:translate-y-[2px]"
-          style={{
-            /*
-              The depth has to be visible on the rail it is sitting on.
-
-              First attempt was a black border and a black shadow, which on a
-              black rail is a white pill with nothing around it — the raised
-              look existed only in the CSS. So the border and the shadow are
-              drawn in whatever the rail is not: the accent on a black or
-              white rail, black on an accent rail.
-            */
-            borderColor: rail === "accent" ? "#000" : theme.accent,
-            boxShadow: `4px 4px 0 ${rail === "accent" ? "#000" : theme.accent}`,
-          }}
-          onMouseDown={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow =
-              `2px 2px 0 ${rail === "accent" ? "#000" : theme.accent}`;
-          }}
-          onMouseUp={(e) => {
-            (e.currentTarget as HTMLElement).style.boxShadow =
-              `4px 4px 0 ${rail === "accent" ? "#000" : theme.accent}`;
-          }}
-        >
-          <span className="block">{MAKE.label}</span>
-          <span className="block text-[11px] font-semibold text-black/55">
-            {MAKE.hint}
-          </span>
-        </Link>
-
-        <nav className="mt-5 space-y-1">
+        <nav className="mt-8 space-y-1">
           {[HOME, ...NAV].map((n) => {
             const active = pathname === n.href;
             return (
@@ -232,6 +188,38 @@ export default function Shell({
             );
           })}
         </nav>
+
+        {/*
+          The one thing you make, sitting under everything you read.
+
+          Not the accent colour: the rail can already BE the accent and the
+          active link is already the accent, so a third pink thing in a short
+          column is camouflage, not emphasis. White, with its edge and its
+          shadow drawn in whatever the rail is not, so it reads as raised on
+          every rail a seller can choose. Nothing else in here is raised.
+        */}
+        <Link
+          href={MAKE.href}
+          aria-current={pathname === MAKE.href ? "page" : undefined}
+          className="mt-8 block rounded-lg border-2 bg-white px-4 py-3.5 text-[15px] font-bold text-black transition hover:translate-x-[2px] hover:translate-y-[2px]"
+          style={{
+            borderColor: rail === "accent" ? "#000" : theme.accent,
+            boxShadow: `4px 4px 0 ${rail === "accent" ? "#000" : theme.accent}`,
+          }}
+          onMouseDown={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow =
+              `2px 2px 0 ${rail === "accent" ? "#000" : theme.accent}`;
+          }}
+          onMouseUp={(e) => {
+            (e.currentTarget as HTMLElement).style.boxShadow =
+              `4px 4px 0 ${rail === "accent" ? "#000" : theme.accent}`;
+          }}
+        >
+          <span className="block">{MAKE.label}</span>
+          <span className="block text-[11px] font-semibold text-black/55">
+            {MAKE.hint}
+          </span>
+        </Link>
       </div>
 
       <div className="relative mt-auto pt-6">
