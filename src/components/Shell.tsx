@@ -50,7 +50,7 @@ const NAV: RailLink[] = [
  * home, and is a button — the only filled thing in the rail, which is how a
  * rail says "this one".
  */
-const MAKE = { href: "/studio", label: "world drops" };
+const MAKE = { href: "/studio", label: "world drops", hint: "drop studio" };
 
 const NAV_FOOT = [
   { href: "/history", label: "drop history" },
@@ -195,7 +195,10 @@ export default function Shell({
               `4px 4px 0 ${rail === "accent" ? "#000" : theme.accent}`;
           }}
         >
-          {MAKE.label}
+          <span className="block">{MAKE.label}</span>
+          <span className="block text-[11px] font-semibold text-black/55">
+            {MAKE.hint}
+          </span>
         </Link>
 
         <nav className="mt-5 space-y-1">
