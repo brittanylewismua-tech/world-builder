@@ -28,9 +28,15 @@ import Logo from "./Logo";
  * bottom two are reference you visit occasionally, so they sit at the bottom,
  * quieter, and are not competing for the eye every time the page loads.
  */
-const HOME = { href: "/home", label: "home" };
+interface RailLink {
+  href: string;
+  label: string;
+  hint?: string;
+}
 
-const NAV = [
+const HOME: RailLink = { href: "/home", label: "home" };
+
+const NAV: RailLink[] = [
   { href: "/daily", label: "world news", hint: "what's happening in your world" },
   { href: "/winners", label: "world winners", hint: "what's already selling" },
 ];
@@ -151,45 +157,28 @@ export default function Shell({
           <Logo height={22} />
         </Link>
 
-        <Link
-          href={HOME.href}
-          aria-current={pathname === HOME.href ? "page" : undefined}
-          className="mt-6 block rounded-lg px-3.5 py-2.5 text-[14px] font-bold transition"
-          style={
-            pathname === HOME.href
-              ? {
-                  background: rail === "accent" ? "#000" : theme.accent,
-                  color: rail === "accent" ? "#fff" : onAccent(theme.accent),
-                }
-              : {
-                  color: railDark
-                    ? "rgba(255,255,255,0.62)"
-                    : "rgba(0,0,0,0.68)",
-                }
-          }
-        >
-          {HOME.label}
-        </Link>
-
         {/*
-          Filled, and filled with whatever the rail is not, so it stays the
-          loudest thing on any of the four rail colours a seller can pick.
-          Directly under home, above everything you only read.
+          The one thing you make, and it leads.
+
+          Not the accent colour: the rail can already BE the accent, the
+          active link is already the accent, and a third pink thing in a
+          column three items long is not emphasis. White with a hard border
+          and a shadow reads as raised on every rail a seller can choose, and
+          nothing else in here is raised.
+
+          It sits well clear of the logo so it does not read as part of the
+          lockup, and everything you only read sits underneath it.
         */}
         <Link
           href={MAKE.href}
           aria-current={pathname === MAKE.href ? "page" : undefined}
-          className="mt-2 block rounded-lg px-3.5 py-3 text-[15px] font-bold shadow-[3px_3px_0_rgba(0,0,0,0.35)] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_rgba(0,0,0,0.35)]"
-          style={{
-            background: rail === "accent" ? "#000" : theme.accent,
-            color: rail === "accent" ? "#fff" : onAccent(theme.accent),
-          }}
+          className="mt-10 block rounded-lg border-2 border-black bg-white px-3.5 py-3 text-[15px] font-bold text-black shadow-[3px_3px_0_#000] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#000]"
         >
           {MAKE.label}
         </Link>
 
-        <nav className="mt-4 space-y-1">
-          {NAV.map((n) => {
+        <nav className="mt-5 space-y-1">
+          {[HOME, ...NAV].map((n) => {
             const active = pathname === n.href;
             return (
               <Link
