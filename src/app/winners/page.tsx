@@ -234,9 +234,9 @@ function WinnersBody({ world }: { world: World }) {
           )}
         </div>
         <h1 className="t-h1 mt-3 text-ink">
-          what already{" "}
+          what listings are{" "}
           <span className="italic" style={{ color: "var(--accent)" }}>
-            sold in your world
+            winning in your world
           </span>
         </h1>
         <span className="rule-accent mt-4" />
