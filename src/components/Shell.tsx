@@ -157,7 +157,7 @@ export default function Shell({
           <Logo height={22} />
         </Link>
 
-        <nav className="mt-8 space-y-1">
+        <nav className="mt-24 space-y-1">
           {[HOME, ...NAV].map((n) => {
             const active = pathname === n.href;
             return (
