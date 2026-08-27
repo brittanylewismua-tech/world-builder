@@ -33,8 +33,18 @@ const NAV = [
   { href: "/daily", label: "world news", hint: "what's happening today" },
   { href: "/web", label: "world web", hint: "trending in your world" },
   { href: "/winners", label: "world winners", hint: "what's already selling" },
-  { href: "/studio", label: "world drops", hint: "drop studio" },
 ];
+
+/**
+ * The drops are the work.
+ *
+ * Everything else in this rail is something you read; this is the thing you
+ * come here to make, and it was sitting fourth in a list of five looking
+ * exactly like the reading. So it comes out of the list, goes directly under
+ * home, and is a button — the only filled thing in the rail, which is how a
+ * rail says "this one".
+ */
+const MAKE = { href: "/studio", label: "world drops" };
 
 const NAV_FOOT = [
   { href: "/history", label: "drop history" },
@@ -59,6 +69,8 @@ export function Loading() {
           <Logo height={22} />
         </div>
         <div className="mt-6 space-y-2">
+          {/* The drops button, so the rail arrives the shape it will be. */}
+          <div className="h-12 rounded-lg bg-white/20" aria-hidden />
           {NAV.map((n) => (
             <div
               key={n.href}
@@ -139,7 +151,23 @@ export default function Shell({
           <Logo height={22} />
         </Link>
 
-        <nav className="mt-6 space-y-1">
+        {/*
+          Filled, and filled with whatever the rail is not, so it stays the
+          loudest thing on any of the four rail colours a seller can pick.
+        */}
+        <Link
+          href={MAKE.href}
+          aria-current={pathname === MAKE.href ? "page" : undefined}
+          className="mt-6 block rounded-lg px-3.5 py-3 text-[15px] font-bold shadow-[3px_3px_0_rgba(0,0,0,0.35)] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_rgba(0,0,0,0.35)]"
+          style={{
+            background: rail === "accent" ? "#000" : theme.accent,
+            color: rail === "accent" ? "#fff" : onAccent(theme.accent),
+          }}
+        >
+          {MAKE.label}
+        </Link>
+
+        <nav className="mt-4 space-y-1">
           {NAV.map((n) => {
             const active = pathname === n.href;
             return (
