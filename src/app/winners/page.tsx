@@ -224,7 +224,7 @@ function WinnersBody({ world }: { world: World }) {
     <Page width="full">
       {zoom && <Zoom w={zoom} onClose={() => setZoom(null)} />}
 
-      <header className="mb-8 border-b-2 border-black pb-5">
+      <header className="mb-12 border-b-2 border-black pb-6">
         <div className="flex items-baseline justify-between gap-4">
           <span className="chip chip-solid">world winners</span>
           {winners.length > 0 && (
@@ -258,7 +258,7 @@ function WinnersBody({ world }: { world: World }) {
       )}
 
       {/* ------------------------------------------------------- upload */}
-      <div className="mb-12 flex flex-wrap items-center gap-3">
+      <div className="mb-20 flex flex-wrap items-center gap-3">
         <input
           ref={pick}
           type="file"
@@ -306,9 +306,9 @@ function WinnersBody({ world }: { world: World }) {
         };
 
         return (
-          <section key={g.keyword} className="mb-16">
+          <section key={g.keyword} className="mb-28">
             {/* ------------------------------------------------ the header */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-black pb-2.5">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b-2 border-black pb-4">
               <button
                 onClick={() => toggle(g.keyword, i)}
                 aria-expanded={open}
@@ -463,7 +463,7 @@ function WinnersBody({ world }: { world: World }) {
               Small tiles need a way back to a big one, so the artwork opens.
             */}
             {open && (
-              <div className="mt-6 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="mt-8 grid gap-6 sm:grid-cols-3 lg:grid-cols-5">
                 {[...g.featured, ...g.rest].map((w) => (
                   <Tile
                     key={w.id}
@@ -591,7 +591,7 @@ function BriefPanel({
   const [copied, setCopied] = useState(false);
 
   return (
-    <Card className="mt-6">
+    <Card className="mt-8 mb-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-3">
         <p className="t-small text-ink-3">
           Patterns across {stored.counted} designs under &ldquo;{keyword}&rdquo;
@@ -772,7 +772,7 @@ function Tile({
         )}
       </button>
 
-      <figcaption className="p-3">
+      <figcaption className="p-4">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="numeral text-[1rem] text-ink">
             {w.sales.toLocaleString()}
