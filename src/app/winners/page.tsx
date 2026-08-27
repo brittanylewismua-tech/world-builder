@@ -370,11 +370,22 @@ function WinnersBody({ world }: { world: World }) {
                     : "Show patterns"}
               </button>
 
+              {/*
+                Said plainly, next to the button, because nothing here
+                refreshes on its own and a page of sales figures with no date
+                on it reads as live. These numbers are eRank's estimates from
+                the day the file was exported and they will sit there being
+                that day's numbers until another export replaces them.
+              */}
+              <span className="t-small shrink-0 text-ink-3">
+                Last updated {when(g.dated)}
+              </span>
+
               {/* Everything past here is reference and housekeeping. */}
               <span className="flex-1" />
 
               <span className="t-small shrink-0 text-ink-3">
-                {g.list.length} designs · {money(g.revenue)} · {when(g.dated)}
+                {g.list.length} designs · {money(g.revenue)}
               </span>
               {/*
                 A viewer rather than a download. Ten designs at a size where
