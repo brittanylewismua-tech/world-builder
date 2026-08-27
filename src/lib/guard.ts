@@ -47,8 +47,6 @@ export const DAILY_CAP = {
   /* One analysis per saved item. A busy research week is perhaps forty
      pieces, and this still leaves double that in a single day. */
   board: 80,
-  /* Reading the world is the expensive call. Twice is a grow and a retry. */
-  web: 2,
   /*
     Patterns are read one keyword at a time, at about three cents a read, and
     a world holds ten keywords. Somebody setting one up in an evening does ten
@@ -97,7 +95,6 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have reached today's limit. You can add areas yourself in the meantime.",
   board:
     "You have reached today's limit. Everything you saved is safe and still there.",
-  web: "The web has already grown today. There will be more tomorrow.",
   winners:
     "You have read patterns as many times as you can today. It resets tomorrow, and every brief you already have is still here.",
 };

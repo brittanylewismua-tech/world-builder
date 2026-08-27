@@ -9,8 +9,11 @@ import {
   formatIssueDate,
   generateIssue,
   hostOf,
+  hideRest,
   loadIssue,
   loadIssueDates,
+  loadRest,
+  type DailyRest,
   weekStartISO,
   type DailyItem,
 } from "@/lib/daily";
@@ -158,6 +161,9 @@ function DailyBody({ world }: { world: World }) {
   const [deriving, setDeriving] = useState(false);
   const [date, setDate] = useState(today);
   const [items, setItems] = useState<DailyItem[] | null>(null);
+  /* Everything the same reading found and the paper did not print. */
+  const [rest, setRest] = useState<DailyRest[]>([]);
+  const [restOpen, setRestOpen] = useState(false);
   const [dates, setDates] = useState<string[]>([]);
   const [researching, setResearching] = useState(false);
   const [err, setErr] = useState("");
@@ -193,9 +199,15 @@ function DailyBody({ world }: { world: World }) {
     async (d: string) => {
       setItems(null);
       setStandIn(null);
+      setRestOpen(false);
       setDate(d);
       try {
-        setItems(await loadIssue(world.id, d));
+        const [got, more] = await Promise.all([
+          loadIssue(world.id, d),
+          loadRest(world.id, d).catch(() => []),
+        ]);
+        setItems(got);
+        setRest(more);
       } catch (e) {
         setErr(e instanceof Error ? e.message : "Could not load that issue.");
         setItems([]);
@@ -218,6 +230,7 @@ function DailyBody({ world }: { world: World }) {
       setStandIn(null);
       try {
         setItems(await generateIssue(world, date, { append }));
+        setRest(await loadRest(world.id, date).catch(() => []));
         setDates(await loadIssueDates(world.id));
       } catch (e) {
         /*
@@ -471,6 +484,95 @@ function DailyBody({ world }: { world: World }) {
                     />
                   </div>
                 </Card>
+              </section>
+            )}
+
+            {/*
+              EVERYTHING ELSE THE READING FOUND.
+
+              The scout turns up forty things and the paper prints five. These
+              are the other thirty-five, kept rather than binned — which is
+              what World Web was built for, at the price of a second research
+              run every week. Same reading, same evidence rule, no extra cost.
+
+              Shut by default. It is a pile, and a pile belongs behind a door.
+            */}
+            {rest.length > 0 && (
+              <section className="mt-8 border-t-2 border-black/10 pt-5">
+                <button
+                  onClick={() => setRestOpen((v) => !v)}
+                  aria-expanded={restOpen}
+                  className="flex items-center gap-3 text-left"
+                >
+                  <span
+                    className="t-small text-ink-3 transition-transform"
+                    style={{ transform: restOpen ? "rotate(90deg)" : "none" }}
+                    aria-hidden
+                  >
+                    ▶
+                  </span>
+                  <span className="t-h3 text-ink">
+                    Everything else it found
+                  </span>
+                  <span className="t-small text-ink-3">{rest.length}</span>
+                </button>
+
+                {restOpen && (
+                  <ul className="mt-4 space-y-4">
+                    {rest.map((r) => (
+                      <li
+                        key={r.id}
+                        className="border-l-2 border-black/12 pl-4"
+                      >
+                        <p className="text-[15px] font-bold text-ink">
+                          {r.label}
+                        </p>
+                        {r.note && (
+                          <p className="t-small mt-0.5 text-ink-2">{r.note}</p>
+                        )}
+                        <blockquote className="mt-1.5 text-[14px] italic leading-relaxed text-ink-2">
+                          &ldquo;{r.quote}&rdquo;
+                        </blockquote>
+                        <div className="t-small mt-1.5 flex flex-wrap items-center gap-x-4 text-ink-3">
+                          <a
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="transition hover:text-ink"
+                          >
+                            {hostOf(r.url)} ↗
+                          </a>
+                          {nextDrop && (
+                            <button
+                              onClick={async () => {
+                                await saveSignalToBoard(world, nextDrop, {
+                                  headline: r.label,
+                                  body: `${r.note ?? ""}\n\n“${r.quote}”`.trim(),
+                                  url: r.url,
+                                });
+                                setRest((all) =>
+                                  all.filter((x) => x.id !== r.id),
+                                );
+                              }}
+                              className="transition hover:text-ink"
+                            >
+                              Save to my board
+                            </button>
+                          )}
+                          <button
+                            onClick={async () => {
+                              await hideRest(r.id);
+                              setRest((all) => all.filter((x) => x.id !== r.id));
+                            }}
+                            className="transition hover:text-ink"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
             )}
 

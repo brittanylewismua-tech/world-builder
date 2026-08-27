@@ -26,6 +26,40 @@ export interface DailyItem {
   sources: DailySource[];
 }
 
+/**
+ * Something the scout found and the paper did not print.
+ *
+ * Same reading, same evidence rule — an exact quote and a link a search
+ * actually returned. What it is not held to is being printable, which is the
+ * only reason it is here rather than in the issue.
+ */
+export interface DailyRest {
+  id: string;
+  label: string;
+  note: string | null;
+  quote: string;
+  url: string;
+}
+
+export async function loadRest(
+  worldId: string,
+  date: string,
+): Promise<DailyRest[]> {
+  const { data, error } = await supabase
+    .from("wb_daily_rest")
+    .select("id, label, note, quote, url")
+    .eq("world_id", worldId)
+    .eq("issue_date", date)
+    .eq("hidden", false)
+    .order("position");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as DailyRest[];
+}
+
+export async function hideRest(id: string) {
+  await supabase.from("wb_daily_rest").update({ hidden: true }).eq("id", id);
+}
+
 export function todayISO() {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -99,7 +133,10 @@ export async function generateIssue(
   date: string,
   { append = false }: { append?: boolean } = {},
 ): Promise<DailyItem[]> {
-  const j = await askAI<{ items: Omit<DailyItem, "id">[] }>("/api/world-daily", {
+  const j = await askAI<{
+    items: Omit<DailyItem, "id">[];
+    also?: Omit<DailyRest, "id">[];
+  }>("/api/world-daily", {
     worldName: world.name,
     areas: world.areas.map((a) => a.name),
     subNiches: world.subNiches.map((s) => s.keyword),
@@ -125,6 +162,11 @@ export async function generateIssue(
       .delete()
       .eq("world_id", world.id)
       .eq("issue_date", date);
+    await supabase
+      .from("wb_daily_rest")
+      .delete()
+      .eq("world_id", world.id)
+      .eq("issue_date", date);
   }
 
   const rows = j.items.map((it, i) => ({
@@ -141,6 +183,33 @@ export async function generateIssue(
 
   const { error } = await supabase.from("wb_daily_items").insert(rows);
   if (error) throw new Error(error.message);
+
+  /*
+    The rest is written alongside, and never at the cost of the issue: if it
+    fails to save, the paper the seller is waiting for still lands.
+  */
+  if (j.also?.length) {
+    let at = 0;
+    if (append) {
+      const { count } = await supabase
+        .from("wb_daily_rest")
+        .select("id", { count: "exact", head: true })
+        .eq("world_id", world.id)
+        .eq("issue_date", date);
+      at = count ?? 0;
+    }
+    await supabase.from("wb_daily_rest").insert(
+      j.also.map((r, i) => ({
+        world_id: world.id,
+        issue_date: date,
+        label: r.label,
+        note: r.note,
+        quote: r.quote,
+        url: r.url,
+        position: at + i,
+      })),
+    );
+  }
 
   return loadIssue(world.id, date);
 }

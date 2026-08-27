@@ -231,10 +231,56 @@ const PUBLISH_TOOL = {
           required: ["area", "kind", "headline", "body", "printable", "sources"],
         },
       },
+      /*
+        EVERYTHING ELSE THE SCOUT FOUND.
+
+        The reading turns up forty things and the issue prints five, and the
+        other thirty-five used to be thrown away — which is what World Web
+        was built to recover, at the price of a second research run every
+        week. It is cheaper and truer to keep them here: the model has
+        already read them, so listing them costs a few hundred output tokens
+        and no extra searching.
+
+        They are held to the same evidence rule as the issue. A quote and a
+        link that a search actually returned, or the entry does not exist.
+        What they are not held to is being publishable — that is the whole
+        point of the pile.
+      */
+      also: {
+        type: "array",
+        description:
+          "Everything else real you found and did not print. Not padding, not summaries — actual things, each with the words and the page they came from.",
+        items: {
+          type: "object",
+          properties: {
+            label: {
+              type: "string",
+              description: "The thing itself, short. A phrase goes in as the phrase.",
+            },
+            note: {
+              type: "string",
+              description: "One plain sentence saying what it is.",
+            },
+            quote: {
+              type: "string",
+              description: "The exact wording from the page, as written.",
+            },
+            url: { type: "string" },
+          },
+          required: ["label", "quote", "url"],
+        },
+      },
     },
     required: ["items"],
   },
 } as const;
+
+interface Rest {
+  label?: string;
+  note?: string;
+  quote?: string;
+  url?: string;
+}
 
 interface Body {
   worldName?: string;
@@ -300,7 +346,9 @@ Start on Reddit: "<area> reddit", "site:reddit.com <area>", and the subreddits t
 
 Search the way someone inside that culture talks, never the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which is exactly the material this seller cannot use. You are hunting for language and imagery.
 
-Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the test. Every item must change what somebody would print on a shirt.`;
+Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the test. Every item must change what somebody would print on a shirt.
+
+Then fill in "also" with everything else real you found and did not print — the phrases, moments, jokes and images that did not make the issue. Each one needs the exact words and the page they came from. This is not padding and not a summary: it is the rest of what you read, kept because the seller may see something in it that you did not. Twenty entries is a good week. Never invent one to lengthen the list, and never put anything in it you could not link to.`;
 
   /**
    * THE SECOND SWEEP.
@@ -512,7 +560,7 @@ ${field || "(nothing came back)"}`
 
       // The issue arrives as tool input, already structured. The old
       // text-parsing path stays as a fallback for a model answering in prose.
-      let parsed: { items?: Item[] } | null = null;
+      let parsed: { items?: Item[]; also?: Rest[] } | null = null;
 
       for (const block of res.content) {
         const b = block as unknown as {
@@ -521,7 +569,7 @@ ${field || "(nothing came back)"}`
           input?: unknown;
         };
         if (b.type === "tool_use" && b.name === "publish_issue") {
-          parsed = b.input as { items?: Item[] };
+          parsed = b.input as { items?: Item[]; also?: Rest[] };
           break;
         }
       }
@@ -556,7 +604,28 @@ ${field || "(nothing came back)"}`
         checks run here rather than in the prompt because a rule the code
         enforces is a rule, and a rule only written in prose is a suggestion.
       */
-      return (parsed?.items ?? [])
+      /*
+        The rest gets the same link check as the issue and nothing else. A
+        page no search returned is invented, whether it was going to be
+        printed or not.
+      */
+      const also = (parsed?.also ?? [])
+        .map((r) => ({
+          label: (r.label || "").trim(),
+          note: (r.note || "").trim(),
+          quote: (r.quote || "").trim(),
+          url: (r.url || "").trim(),
+        }))
+        .filter(
+          (r) =>
+            r.label &&
+            r.quote &&
+            r.url &&
+            seen.has(normalise(r.url)) &&
+            usableSource(r.url),
+        );
+
+      const items = (parsed?.items ?? [])
         .map((it) => ({
           area: (it.area || "").trim(),
           kind: (it.kind || "").trim().toLowerCase(),
@@ -576,6 +645,8 @@ ${field || "(nothing came back)"}`
           (it) =>
             it.headline && it.body && it.printable && it.sources.length > 0,
         );
+
+      return { items, also };
     }
 
     /*
@@ -592,22 +663,30 @@ ${field || "(nothing came back)"}`
       Only the third costs nothing extra in searches, and the first two only
       run again on a day that would otherwise have been empty.
     */
-    let items = await judge(notes, false);
+    let out = await judge(notes, false);
 
-    if (!items.length && TWO_STAGE) {
+    if (!out.items.length && TWO_STAGE) {
       notes = `${notes}\n\n${await sweep(widerPrompt)}`.trim();
-      items = await judge(notes, false);
+      out = await judge(notes, false);
     }
 
-    if (!items.length && TWO_STAGE) items = await judge(notes, true);
+    if (!out.items.length && TWO_STAGE) out = await judge(notes, true);
 
-    if (!items.length)
+    if (!out.items.length)
       return NextResponse.json(
         { error: "Today's read came back empty. Try again in a little while." },
         { status: 502 },
       );
 
-    return NextResponse.json({ items: items.slice(0, TARGET_ITEMS) });
+    /*
+      The issue is capped; the rest is not. Nothing the scout found is thrown
+      away any more — the five that pass the printable test are the paper, and
+      everything else real sits behind it.
+    */
+    return NextResponse.json({
+      items: out.items.slice(0, TARGET_ITEMS),
+      also: out.also,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Research failed." },
