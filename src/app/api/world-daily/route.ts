@@ -348,7 +348,9 @@ Search the way someone inside that culture talks, never the way a marketer or jo
 
 Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the test. Every item must change what somebody would print on a shirt.
 
-Then fill in "also" with everything else real you found and did not print — the phrases, moments, jokes and images that did not make the issue. Each one needs the exact words and the page they came from. This is not padding and not a summary: it is the rest of what you read, kept because the seller may see something in it that you did not. Fifteen to twenty entries is a good week. Keep each one tight — a short label, one sentence, the quote, the link — because a long one crowds out the next. Never invent one to lengthen the list, and never put anything in it you could not link to.`;
+Then fill in "also" with everything else real you found and did not print — the phrases, moments, jokes and images that did not make the issue. Each one needs the exact words and the page they came from. This is not padding and not a summary: it is the rest of what you read, kept because the seller may see something in it that you did not. This is the bulk of your output, not an afterthought. You read dozens of pages to write five items; almost everything you saw and passed over belongs here. If the notes contain thirty real quoted things and you printed five, this list has about twenty-five in it — coming back with seven means you threw away work the seller has already paid for.
+
+Keep each one tight so a long entry does not crowd out the next: a short label, one sentence, the quote, the link. Never invent one to lengthen the list, and never include anything you could not link to.`;
 
   /**
    * THE SECOND SWEEP.

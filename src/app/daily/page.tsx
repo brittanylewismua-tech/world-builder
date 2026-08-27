@@ -499,23 +499,45 @@ function DailyBody({ world }: { world: World }) {
             */}
             {rest.length > 0 && (
               <section className="mt-8 border-t-2 border-black/10 pt-5">
+                {/*
+                  This arrived as a grey line above the footer and was
+                  invisible — the page looked unchanged to somebody who had
+                  just paid for a research run. It is a section now, with the
+                  same eyebrow every other section on this page has, a real
+                  heading and a line saying what it is.
+                */}
+                <p className="eyebrow mb-3 text-ink-3">The rest of the read</p>
                 <button
                   onClick={() => setRestOpen((v) => !v)}
                   aria-expanded={restOpen}
-                  className="flex items-center gap-3 text-left"
+                  className="flex w-full items-center gap-3 text-left"
                 >
                   <span
-                    className="t-small text-ink-3 transition-transform"
+                    className="shrink-0 text-ink-3 transition-transform"
                     style={{ transform: restOpen ? "rotate(90deg)" : "none" }}
                     aria-hidden
                   >
                     ▶
                   </span>
-                  <span className="t-h3 text-ink">
+                  <span className="t-h2 text-ink">
                     Everything else it found
                   </span>
-                  <span className="t-small text-ink-3">{rest.length}</span>
+                  <span
+                    className="chip shrink-0"
+                    style={{
+                      background: "var(--accent)",
+                      borderColor: "var(--accent)",
+                      color: "#fff",
+                    }}
+                  >
+                    {rest.length}
+                  </span>
                 </button>
+                <p className="t-small mt-1.5 text-ink-2">
+                  Real things this week&rsquo;s reading turned up that did not
+                  make the paper. Not filtered for printability — that is your
+                  call.
+                </p>
 
                 {restOpen && (
                   <ul className="mt-4 space-y-4">
