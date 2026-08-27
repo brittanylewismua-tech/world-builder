@@ -74,6 +74,42 @@ NEVER
 - Never say the sample was small or that more data would help.
 - Never hedge with "consider", "you might want to", "it could be worth". Say the thing.`;
 
+/**
+ * THE READ ACROSS EVERY KEYWORD.
+ *
+ * The per-keyword read answers "what is working in this corner". This one
+ * answers the question no single corner can: what is true of the customer
+ * across all of them.
+ *
+ * It is given the best-selling design from each keyword — so it is looking at
+ * real artwork, not summarising summaries — plus whatever patterns have
+ * already been written for those keywords. Ten pictures instead of a hundred,
+ * which is what keeps it to a few cents and, more usefully, keeps it from
+ * drowning in one big keyword.
+ */
+const WORLD_SYSTEM = `You are looking at the top-selling design from each corner of one seller's customer world, and saying what is true across all of them.
+
+WHAT THE JOB IS, AND WHAT IT IS NOT
+Report what these corners have in common and where they pull apart. That is all. It is not your job to think of designs, name gaps, or say what is missing — the seller has somewhere else for that. If you catch yourself writing "nobody has done" or "there is room for", stop.
+
+WHAT YOU ARE LOOKING AT
+One product photograph per keyword, each the best seller under that search, with its numbers. Where a keyword already has patterns written for it, those are given too. Read the artwork: what is drawn, what is written, how it is laid out.
+
+WHAT TO WRITE
+Three to five things that hold across the world, strongest first. A good one names something two or more corners share that a person looking at any single corner would not have seen — a way of talking, a kind of image, a stance the customer keeps taking. Where corners genuinely disagree, that is worth one of them: this world buys one thing here and the opposite there.
+
+WRITE LIKE A PERSON, NOT A CRITIC
+Short, ordinary words. If it would look strange in a text message to a friend, do not use it. Banned: tableau, motif, device, mechanic, iconography, canon, lineage, reclamation, juxtapose, subvert, interrogate, recontextualise, visual language, semiotic.
+
+BACK IT UP
+Name the keywords. "Both the medusa and the feminist shirt winners put one woman's face dead centre" is a finding. "This world likes strong imagery" is a horoscope.
+
+NEVER
+- Never suggest a design, an idea or a subject to try.
+- Never write about fabric, fit, cut or mockup quality.
+- Never say the sample was small or that more keywords would help.
+- Never hedge. Say the thing.`;
+
 const TOOL = {
   name: "write_brief",
   description: "What is working in one keyword's proven designs.",
@@ -152,7 +188,7 @@ function pick(rows: Row[]) {
 }
 
 export async function POST(req: Request) {
-  let body: { worldId?: string; keyword?: string };
+  let body: { worldId?: string; keyword?: string; scope?: string };
   try {
     body = await req.json();
   } catch {
@@ -160,15 +196,15 @@ export async function POST(req: Request) {
   }
   const worldId = body.worldId;
   const keyword = body.keyword?.trim();
+  /* No keyword means the read across every corner of the world. */
+  const wholeWorld = body.scope === "world" || !keyword;
   if (!worldId)
     return NextResponse.json({ error: "No world given." }, { status: 400 });
-  if (!keyword)
-    return NextResponse.json({ error: "No keyword given." }, { status: 400 });
 
   const door = await ownerOf(req, worldId);
   if ("deny" in door) return door.deny;
 
-  const gate = await admit(req, "winners");
+  const gate = await admit(req, wholeWorld ? "world" : "winners");
   if ("deny" in gate) return gate.deny;
 
   if (!process.env.ANTHROPIC_API_KEY)
@@ -238,7 +274,37 @@ export async function POST(req: Request) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const started = Date.now();
 
+  /* Whatever has already been written about each corner, so the world read
+     stands on real findings as well as ten photographs. */
+  let written = "";
+  if (wholeWorld) {
+    const { data: briefs } = await db
+      .from("wb_winner_reads")
+      .select("keyword, brief, ran_at")
+      .eq("world_id", worldId)
+      .not("keyword", "is", null)
+      .order("ran_at", { ascending: false });
+
+    const seenKeyword = new Set<string>();
+    const lines: string[] = [];
+    for (const b of briefs ?? []) {
+      const k = b.keyword as string;
+      if (seenKeyword.has(k)) continue;
+      seenKeyword.add(k);
+      const points =
+        ((b.brief as { patterns?: { heading: string; body: string }[] })
+          ?.patterns ?? []);
+      if (!points.length) continue;
+      lines.push(
+        `"${k}": ${points.map((p) => `${p.heading} — ${p.body}`).join(" / ")}`,
+      );
+    }
+    if (lines.length)
+      written = `PATTERNS ALREADY WRITTEN FOR SOME CORNERS\n${lines.join("\n\n")}`;
+  }
+
   const content: Anthropic.ContentBlockParam[] = [];
+  if (written) content.push({ type: "text", text: written });
   if (context)
     content.push({
       type: "text",
@@ -257,7 +323,9 @@ export async function POST(req: Request) {
   });
   content.push({
     type: "text",
-    text: `Write the brief. Every one of these is winning the search "${keyword}", so this is one corner of the seller's world rather than all of it. Look at the artwork, not the shirts.`,
+    text: wholeWorld
+      ? "Write the brief. One design per corner of this world. Say what holds across them, and where they pull apart. Look at the artwork, not the shirts."
+      : `Write the brief. Every one of these is winning the search "${keyword}", so this is one corner of the seller's world rather than all of it. Look at the artwork, not the shirts.`,
   });
 
   try {
@@ -267,7 +335,7 @@ export async function POST(req: Request) {
       system: [
         {
           type: "text",
-          text: SYSTEM,
+          text: wholeWorld ? WORLD_SYSTEM : SYSTEM,
           cache_control: { type: "ephemeral", ttl: "1h" },
         } as unknown as Anthropic.TextBlockParam,
       ],
@@ -313,9 +381,19 @@ export async function POST(req: Request) {
 
     await db
       .from("wb_winner_reads")
-      .insert({ world_id: worldId, keyword, brief, counted: chosen.length });
+      .insert({
+        world_id: worldId,
+        // Null is the world: the read that belongs to no single corner.
+        keyword: wholeWorld ? null : keyword,
+        brief,
+        counted: chosen.length,
+      });
 
-    return NextResponse.json({ brief, counted: chosen.length, keyword });
+    return NextResponse.json({
+      brief,
+      counted: chosen.length,
+      keyword: wholeWorld ? null : keyword,
+    });
   } catch (e) {
     console.error("winners/read", e);
     return NextResponse.json(

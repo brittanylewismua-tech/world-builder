@@ -158,32 +158,53 @@ export interface StoredBrief {
  * back newest first, so the first one seen for a keyword is its current brief
  * and the rest are its history.
  */
-export async function loadBriefs(
-  worldId: string,
-): Promise<Record<string, StoredBrief>> {
+export async function loadBriefs(worldId: string): Promise<{
+  /** The read across every corner. Null keyword in the table. */
+  world: StoredBrief | null;
+  byKeyword: Record<string, StoredBrief>;
+}> {
   const { data } = await supabase
     .from("wb_winner_reads")
     .select("brief, counted, ran_at, keyword")
     .eq("world_id", worldId)
     .order("ran_at", { ascending: false });
 
-  const out: Record<string, StoredBrief> = {};
+  let world: StoredBrief | null = null;
+  const byKeyword: Record<string, StoredBrief> = {};
+
   for (const row of data ?? []) {
-    const k = row.keyword as string | null;
-    if (!k || out[k]) continue;
-    out[k] = {
+    const one: StoredBrief = {
       brief: row.brief as Brief,
       counted: Number(row.counted ?? 0),
       ranAt: row.ran_at as string,
     };
+    const k = row.keyword as string | null;
+    // Newest first, so the first of each kind seen is the current one.
+    if (!k) world ??= one;
+    else byKeyword[k] ??= one;
   }
-  return out;
+
+  return { world, byKeyword };
 }
 
 export async function readPatterns(world: World, keyword: string) {
   return askAI<{ brief: Brief; counted: number; keyword: string }>(
     "/api/winners/read",
     { worldId: world.id, keyword },
+    { timeoutMs: 240_000 },
+  );
+}
+
+/**
+ * The read across every corner at once.
+ *
+ * Once a week, because the wall only moves when an export is uploaded — a
+ * second press on the same Tuesday is reading the same world again.
+ */
+export async function readTheWorld(world: World) {
+  return askAI<{ brief: Brief; counted: number }>(
+    "/api/winners/read",
+    { worldId: world.id, scope: "world" },
     { timeoutMs: 240_000 },
   );
 }

@@ -74,6 +74,16 @@ export const DAILY_CAP = {
     the worst case anybody could contrive.
   */
   winners: 12,
+  /*
+    The read across every keyword at once — counted per WEEK, not per day.
+
+    It is the only thing in World Winners that spans the world rather than a
+    corner of it, and a world does not change between two presses on a
+    Tuesday: the wall only moves when an export is uploaded. Two, because the
+    allowance is spent before the work and a failed run would otherwise cost
+    the week.
+  */
+  world: 2,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -86,7 +96,7 @@ export type Route = keyof typeof DAILY_CAP;
  * something that needs four. Six a week is the issue plus five refreshes, and
  * it puts a real ceiling on the month instead of a ceiling on the morning.
  */
-const WEEKLY: ReadonlySet<Route> = new Set<Route>(["daily"]);
+const WEEKLY: ReadonlySet<Route> = new Set<Route>(["daily", "world"]);
 
 /*
   Hitting a limit is not a mistake and these should not read like a telling
@@ -110,6 +120,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have reached today's limit. Everything you saved is safe and still there.",
   winners:
     "You have read patterns as many times as you can today. It resets tomorrow, and every brief you already have is still here.",
+  world:
+    "You have already read across your whole world this week. It resets on Monday, and the read you have is still here.",
 };
 
 export interface Caller {

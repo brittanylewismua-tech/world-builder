@@ -15,6 +15,7 @@ import {
   perDay,
   readExport,
   readPatterns,
+  readTheWorld,
   removeKeyword,
   removeWinner,
   SOLD_AT_LEAST,
@@ -50,6 +51,9 @@ export default function WinnersPage() {
 function WinnersBody({ world }: { world: World }) {
   const [winners, setWinners] = useState<Winner[]>([]);
   const [briefs, setBriefs] = useState<Record<string, StoredBrief>>({});
+  /** The read across every corner, and whether it is on screen. */
+  const [worldBrief, setWorldBrief] = useState<StoredBrief | null>(null);
+  const [worldOpen, setWorldOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [uploading, setUploading] = useState("");
   /** The keyword currently being read, or "" when nothing is running. */
@@ -68,10 +72,11 @@ function WinnersBody({ world }: { world: World }) {
   const refresh = useCallback(async () => {
     const [w, b] = await Promise.all([
       loadWinners(world.id).catch(() => []),
-      loadBriefs(world.id).catch(() => ({})),
+      loadBriefs(world.id).catch(() => ({ world: null, byKeyword: {} })),
     ]);
     setWinners(w);
-    setBriefs(b);
+    setBriefs(b.byKeyword);
+    setWorldBrief(b.world);
     setReady(true);
   }, [world.id]);
 
@@ -116,6 +121,25 @@ function WinnersBody({ world }: { world: World }) {
     } finally {
       setUploading("");
       if (pick.current) pick.current.value = "";
+    }
+  }
+
+  /* The whole world. "*" marks it in the reading state. */
+  async function readWorld() {
+    setReading("*");
+    setErr("");
+    setSaid("");
+    try {
+      await readTheWorld(world);
+      await refresh();
+      setWorldOpen(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "That did not finish.";
+      if (!msg.toLowerCase().includes("limit"))
+        report("winners-read", e, { worldId: world.id, scope: "world" });
+      setErr(msg);
+    } finally {
+      setReading("");
     }
   }
 
@@ -284,6 +308,78 @@ function WinnersBody({ world }: { world: World }) {
           </span>
         )}
       </div>
+
+      {/*
+        THE READ ACROSS EVERY CORNER.
+
+        The wall already shows what sells across the whole world — this says
+        what is true of it. One design from each keyword, so it is looking at
+        real artwork rather than summarising summaries, and so one large
+        keyword cannot drown the rest.
+
+        Once a week. The wall only moves when an export is uploaded, so a
+        second press on the same day is reading the same world again.
+      */}
+      {reading === "*" && (
+        <Card className="mb-16 flex flex-col items-center py-12 text-center">
+          <img
+            src="/globe.png"
+            alt=""
+            className="globe-turn h-12 w-12 opacity-80"
+          />
+          <p className="t-h3 mt-4 text-ink">Reading across your world…</p>
+          <ReadingBar className="mt-4 max-w-xs" expect={40} />
+        </Card>
+      )}
+
+      {reading !== "*" && groups.length >= 2 && (
+        <Card className="mb-16">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b-2 border-black pb-4">
+            <button
+              onClick={() =>
+                worldBrief ? setWorldOpen((v) => !v) : readWorld()
+              }
+              aria-expanded={worldOpen}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            >
+              {worldBrief && (
+                <span
+                  className="shrink-0 text-ink-3 transition-transform"
+                  style={{ transform: worldOpen ? "rotate(90deg)" : "none" }}
+                  aria-hidden
+                >
+                  ▶
+                </span>
+              )}
+              <span className="t-h2 text-ink">Across your whole world</span>
+            </button>
+
+            {worldBrief && (
+              <span className="t-small shrink-0 text-ink-3">
+                Last read {when(worldBrief.ranAt)}
+              </span>
+            )}
+            <button
+              onClick={worldBrief ? () => readWorld() : () => readWorld()}
+              className="btn btn-ghost shrink-0"
+              disabled={!!reading}
+            >
+              {worldBrief ? "Read it again" : "Read my world"}
+            </button>
+          </div>
+
+          {!worldBrief && (
+            <p className="t-small mt-4 text-ink-2">
+              What holds true across all {groups.length} keywords, and where
+              they pull apart. Once a week.
+            </p>
+          )}
+
+          {worldBrief && worldOpen && (
+            <Patterns points={worldBrief.brief.patterns} />
+          )}
+        </Card>
+      )}
 
       {/* --------------------------------------------------------- wall */}
       {ready && !winners.length && (
