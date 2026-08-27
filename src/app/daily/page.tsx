@@ -394,13 +394,13 @@ function DailyBody({ world }: { world: World }) {
           */
           body={
             date === today
-              ? "Today's issue hasn't been written yet."
+              ? "This week's issue hasn't been written yet."
               : "Pick another date from the back issues below."
           }
           action={
             date === today ? (
               <button onClick={() => research()} className="btn btn-accent">
-                Read my world today
+                Read my world
               </button>
             ) : undefined
           }
@@ -609,18 +609,23 @@ function DailyBody({ world }: { world: World }) {
             */}
             <div className="mt-6 border-t border-black/10 pt-4">
               <p className="t-small text-ink-3">Not sales or demand data.</p>
+              {/*
+                ONCE A WEEK MEANS ONCE A WEEK.
+
+                There was a Refresh button on every issue, so the most
+                expensive call in the product — a scout reading eighty
+                thousand tokens and a judge writing twelve — was one click
+                away, any number of times. And it was dishonest: a world does
+                not turn over between two presses on a Tuesday, so a second
+                run mostly finds the same week again.
+
+                The week's issue is written once. After that the button is
+                gone and the page says when the next one is due.
+              */}
               {date === today && (
-                <div className="mt-3">
-                  <button
-                    onClick={() => research(true)}
-                    className="btn btn-ghost"
-                  >
-                    Refresh
-                  </button>
-                  <p className="t-small mt-1.5 text-ink-3">
-                    Updates every two to three days.
-                  </p>
-                </div>
+                <p className="t-small mt-2 text-ink-3">
+                  Written once a week. The next issue is due Monday.
+                </p>
               )}
             </div>
           </>

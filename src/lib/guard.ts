@@ -38,8 +38,21 @@ const KEY =
  * Set so that a heavy, genuine day of work never touches them.
  */
 export const DAILY_CAP = {
-  /* Counted per WEEK, not per day — see WEEKLY below. */
-  daily: 6,
+  /*
+    Counted per WEEK — see WEEKLY below — and the number is now what the
+    feature actually is. The issue is written once a week and there is no
+    refresh button any more, so a seller needs exactly one.
+
+    Two, not one, because the allowance is spent BEFORE the work: a run that
+    fails still costs a unit, and at one the first failure would leave
+    somebody with no paper until Monday.
+
+    This is the most expensive call in the product by a wide margin — a scout
+    reading eighty thousand tokens, then a judge writing twelve — at roughly
+    nineteen cents a run. Six a week was five dollars a month per seller for a
+    thing that changes weekly.
+  */
+  daily: 2,
   /* A real conversation is ten or fifteen turns. Thirty is a long session. */
   customer: 30,
   room: 30,
@@ -88,7 +101,7 @@ const WEEKLY: ReadonlySet<Route> = new Set<Route>(["daily"]);
 */
 const OUT_OF_BUDGET: Record<Route, string> = {
   daily:
-    "You have reached this week's limit for new research. It resets on Monday.",
+    "This week's issue has already been written. The next one is due Monday.",
   customer: "You have reached today's limit for this chat. It resets tomorrow.",
   room: "You have reached today's limit for this chat. It resets tomorrow.",
   areas:
