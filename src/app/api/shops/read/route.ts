@@ -110,6 +110,23 @@ const TOOL = {
   },
 } as const;
 
+/**
+ * WHATEVER SHAPE IT CAME BACK IN.
+ *
+ * A tool schema asks for an array and usually gets one, but not always: a
+ * single finding can arrive as a bare object, and a list can arrive as an
+ * object keyed "0", "1", "2". Calling .filter on either throws, and the whole
+ * read dies after the money has already been spent.
+ *
+ * So the shape is coerced rather than trusted. Losing a malformed entry is
+ * invisible; losing the entire brief is not.
+ */
+function asPoints(v: unknown): Record<string, unknown>[] {
+  if (Array.isArray(v)) return v as Record<string, unknown>[];
+  if (v && typeof v === "object") return Object.values(v as object);
+  return [];
+}
+
 interface Design {
   listing_id: number;
   title: string;
@@ -326,8 +343,8 @@ export async function POST(req: Request) {
         { status: 502 },
       );
 
-    const raw = call.input as { patterns?: Record<string, string>[] };
-    const patterns = (raw.patterns ?? [])
+    const raw = call.input as Record<string, unknown>;
+    const patterns = asPoints(raw.patterns)
       .filter((p) => p?.heading && p?.body)
       .map((p) => ({
         heading: String(p.heading).trim(),
