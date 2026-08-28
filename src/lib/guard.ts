@@ -84,6 +84,13 @@ export const DAILY_CAP = {
     the week.
   */
   world: 2,
+  /*
+    Reading a followed shop — the catalogue, or its buyers. Weekly, because a
+    shop's whole back catalogue does not change between Tuesday and Thursday.
+    Five shops with two reads each is ten reads a seller would ever want, and
+    they will not want them all in one week.
+  */
+  shops: 6,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -96,7 +103,7 @@ export type Route = keyof typeof DAILY_CAP;
  * something that needs four. Six a week is the issue plus five refreshes, and
  * it puts a real ceiling on the month instead of a ceiling on the morning.
  */
-const WEEKLY: ReadonlySet<Route> = new Set<Route>(["daily", "world"]);
+const WEEKLY: ReadonlySet<Route> = new Set<Route>(["daily", "world", "shops"]);
 
 /*
   Hitting a limit is not a mistake and these should not read like a telling
@@ -122,6 +129,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have read patterns as many times as you can today. It resets tomorrow, and every brief you already have is still here.",
   world:
     "You have already read across your whole world this week. It resets on Monday, and the read you have is still here.",
+  shops:
+    "You have read as many shops as you can this week. It resets on Monday, and every read you have is still here.",
 };
 
 export interface Caller {

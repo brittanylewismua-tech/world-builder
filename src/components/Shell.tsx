@@ -39,6 +39,7 @@ const HOME: RailLink = { href: "/home", label: "home" };
 const NAV: RailLink[] = [
   { href: "/daily", label: "world news", hint: "what's happening in your world" },
   { href: "/winners", label: "world winners", hint: "what's already selling" },
+  { href: "/shops", label: "world shops", hint: "who already built it" },
 ];
 
 /**

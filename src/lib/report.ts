@@ -28,6 +28,7 @@ export type Surface =
      reasons — a bad file against a model call — so they are counted apart. */
   | "winners"
   | "winners-read"
+  | "shops"
   | "studio"
   | "setup"
   | "auth";
