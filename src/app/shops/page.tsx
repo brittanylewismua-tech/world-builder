@@ -63,9 +63,7 @@ function ShopsBody({ world }: { world: World }) {
       const res = await addShop(world, value);
       setInput("");
       await refresh();
-      setSaid(
-        `${res.shopName} — ${res.designs} designs, ${res.withArtwork} with artwork.`,
-      );
+      setSaid(`${res.shopName} — ${res.designs} designs.`);
     } catch (e) {
       report("shops", e, { worldId: world.id });
       setErr(e instanceof Error ? e.message : "That shop did not come down.");
@@ -124,18 +122,15 @@ function ShopsBody({ world }: { world: World }) {
             alt=""
             className="globe-turn h-12 w-12 opacity-80"
           />
-          <p className="t-h3 mt-4 text-ink">Pulling the whole catalogue…</p>
+          <p className="t-h3 mt-4 text-ink">Getting their designs…</p>
           <ReadingBar className="mt-4 max-w-xs" expect={45} />
-          <p className="t-small mt-1.5 text-ink-3">
-            Every listing, not the first page.
-          </p>
         </Card>
       )}
 
       {ready && !shops.length && !adding && (
         <Empty
           title="No shops yet"
-          body="Find a shop already selling to the customer you are building for, and paste its address. The whole catalogue comes down with Etsy's own view and save counts on every design."
+          body="Find a shop already selling to the customer you are building for, and paste its address."
           action={
             <button onClick={() => box.current?.focus()} className="btn btn-accent">
               Paste a shop
@@ -320,10 +315,7 @@ function ShopBlock({
       {open && (
         <>
           <p className="t-small mt-6 text-ink-3">
-            Ranked by the share of people who saw it and saved it — Etsy&rsquo;s
-            own numbers, not estimates. Designs under {ENOUGH_VIEWS} views sit
-            at the bottom; a save rate needs traffic behind it to mean
-            anything.
+            Ranked by how many of the people who saw it went on to save it.
           </p>
           <div className="mt-4 grid gap-6 sm:grid-cols-3 lg:grid-cols-5">
             {loved.slice(0, 40).map((d) => (

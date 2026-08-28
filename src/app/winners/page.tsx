@@ -253,7 +253,7 @@ function WinnersBody({ world }: { world: World }) {
           <span className="chip chip-solid">world winners</span>
           {winners.length > 0 && (
             <span className="t-small text-ink-3">
-              {winners.length} designs · {withArt} with artwork
+              {winners.length} designs
             </span>
           )}
         </div>

@@ -30,7 +30,7 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
  */
 
 /** How many designs get looked at rather than merely listed. */
-const LOOK_AT = 40;
+const LOOK_AT = 24;
 
 /** Below this, a save rate is noise — one viewer and one save is 100%. */
 const ENOUGH_VIEWS = 150;
@@ -207,8 +207,17 @@ export async function POST(req: Request) {
       }\n\nTHE WHOLE CATALOGUE\n${lines.join("\n")}`,
     });
 
-    /* Layer two: the ones people actually saved, looked at properly. */
-    const looked = ranked.filter((d) => d.image_url).slice(0, LOOK_AT);
+    /*
+      Layer two: the ones people actually saved, looked at properly.
+
+      Only Etsy's own image host. Anthropic fetches these URLs itself, so one
+      address that does not resolve to an image fails the entire call — and a
+      whole read dying because of a single stale picture is not a trade worth
+      making.
+    */
+    const looked = ranked
+      .filter((d) => d.image_url && /^https:\/\/i\.etsystatic\.com\//.test(d.image_url))
+      .slice(0, LOOK_AT);
     content.push({
       type: "text",
       text: `\nTHE ${looked.length} DESIGNS THE HIGHEST SHARE OF VIEWERS SAVED — the artwork follows, best rate first.`,
@@ -343,9 +352,19 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ brief, kind });
   } catch (e) {
+    /*
+      Say what actually went wrong. "That did not finish" is honest and
+      useless: it hides whether Etsy refused, an image would not load, or the
+      request was too big, and every one of those wants a different fix.
+    */
+    const why = e instanceof Error ? e.message : "";
     console.error("shops/read", e);
     return NextResponse.json(
-      { error: "That did not finish. Try it again." },
+      {
+        error: why
+          ? `That did not finish — ${why.slice(0, 200)}`
+          : "That did not finish. Try it again.",
+      },
       { status: 500 },
     );
   }
