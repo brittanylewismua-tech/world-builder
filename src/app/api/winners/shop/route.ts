@@ -104,37 +104,70 @@ export async function GET(req: Request) {
   if (!shopId) return NextResponse.json(out);
 
   const listings = await ask(
-    `${BASE}/shops/${shopId}/listings/active?limit=2&includes=Images`,
+    `${BASE}/shops/${shopId}/listings/active?limit=6`,
     k,
   );
-  const one = (listings.json as { results?: Record<string, unknown>[] })
-    ?.results?.[0];
+  const rows =
+    (listings.json as { results?: Record<string, unknown>[] })?.results ?? [];
   out.activeListings = {
     status: listings.status,
     total: (listings.json as { count?: number })?.count,
-    fields: fields(one),
-    imageFields: fields(
-      (one?.images as Record<string, unknown>[] | undefined)?.[0],
-    ),
+    /* Field names told us `views` exists. This says whether it is populated
+       for a shop you do not own, or present and null — the difference
+       between real demand data and nothing. */
+    sample: rows.slice(0, 6).map((r) => ({
+      title: String(r.title ?? "").slice(0, 70),
+      views: r.views,
+      num_favorers: r.num_favorers,
+      price: (r.price as { amount?: number; divisor?: number })?.amount,
+      created: r.original_creation_timestamp,
+      tags: (r.tags as string[] | undefined)?.slice(0, 4),
+    })),
     body: listings.status === 200 ? undefined : listings.text.slice(0, 300),
   };
 
-  const reviews = await ask(`${BASE}/shops/${shopId}/reviews?limit=3`, k);
-  const review = (reviews.json as { results?: Record<string, unknown>[] })
-    ?.results?.[0];
+  /* Images came back empty on the shop endpoint, so try the dedicated one. */
+  const firstId = rows[0]?.listing_id;
+  if (firstId) {
+    const imgs = await ask(`${BASE}/listings/${firstId}/images`, k);
+    out.listingImages = {
+      status: imgs.status,
+      count: (imgs.json as { count?: number })?.count,
+      first: (
+        (imgs.json as { results?: Record<string, unknown>[] })?.results ?? []
+      )[0]?.url_570xN,
+    };
+  }
+
+  /*
+    THE YIELD QUESTION.
+
+    Most reviews are "great quality, fast shipping". The feature only exists
+    if enough of them say something about the buyer, the occasion or why the
+    design landed. So: pull a hundred, and count.
+  */
+  const reviews = await ask(`${BASE}/shops/${shopId}/reviews?limit=100`, k);
+  const all =
+    (reviews.json as { results?: Record<string, unknown>[] })?.results ?? [];
+  const texts = all
+    .map((r) => String(r.review ?? "").trim())
+    .filter(Boolean);
+
+  const tells =
+    /\b(gift|gifted|bought (?:it|this|them)? ?for|for my|my (?:mom|mother|sister|daughter|friend|wife|husband|partner|son|niece|coworker|boss|teacher)|birthday|christmas|graduation|wedding|anniversary|she loved|he loved|they loved|obsessed|perfect for|got so many compliments|everyone asked)\b/i;
+
   out.reviews = {
     status: reviews.status,
     total: (reviews.json as { count?: number })?.count,
-    fields: fields(review),
-    // One real review, to see whether the text is worth anything.
-    sample: review
-      ? {
-          rating: review.rating,
-          review: String(review.review ?? "").slice(0, 200),
-          listing_id: review.listing_id,
-          created_timestamp: review.created_timestamp,
-        }
-      : undefined,
+    pulled: texts.length,
+    /* Anything under sixty characters is almost always "love it, thanks". */
+    withSomethingToSay: texts.filter((t) => t.length >= 60).length,
+    aboutAPersonOrOccasion: texts.filter((t) => tells.test(t)).length,
+    longest: texts
+      .filter((t) => tells.test(t))
+      .sort((a, b) => b.length - a.length)
+      .slice(0, 8)
+      .map((t) => t.slice(0, 220)),
     body: reviews.status === 200 ? undefined : reviews.text.slice(0, 300),
   };
 
