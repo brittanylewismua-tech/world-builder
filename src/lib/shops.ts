@@ -13,7 +13,7 @@ import type { World } from "./world";
  *
  * That last part is what makes this different from World Winners. eRank
  * estimates sales from search data; this is measured. So the one number that
- * matters here — how many of the people who saw a design saved it — is real,
+ * matters here — how many of the people who saw a design favorited it — is real,
  * and it separates a design search delivered from a design somebody wanted.
  */
 
@@ -53,7 +53,12 @@ export function saveRate(d: ShopDesign) {
 
 export interface ShopPoint {
   heading: string;
+  /** One sentence. The claim. */
   body: string;
+  /** The evidence, a line each. Absent on briefs written before this. */
+  points?: string[];
+  /** Listing ids of designs that show the finding. */
+  examples?: number[];
   quote?: string;
 }
 

@@ -32,15 +32,15 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
 /** How many designs get looked at rather than merely listed. */
 const LOOK_AT = 24;
 
-/** Below this, a save rate is noise — one viewer and one save is 100%. */
+/** Below this, a favorite rate is noise — one viewer and one save is 100%. */
 const ENOUGH_VIEWS = 150;
 
 const CATALOGUE_SYSTEM = `You are looking at a print-on-demand shop that already sells to the customer another seller is trying to build a world around. Say what this shop is doing.
 
 WHAT YOU HAVE
-Every design in the shop as a title, with its tags and Etsy's own view and save counts. Then the artwork itself for the forty designs the highest share of viewers saved — the ones people actually wanted, as opposed to the ones search happened to deliver.
+Every design in the shop as a title, with its tags and Etsy's own view and favorite counts. Then the artwork itself for the forty designs the highest share of viewers favorited — the ones people actually wanted, as opposed to the ones search happened to deliver.
 
-Views and saves here are measured by Etsy, not estimated. Treat the save rate as the honest signal of whether a design landed, and views as how much traffic it got. Those are different things and a shop's biggest traffic-getter is often not its most loved design.
+Views and favorites here are measured by Etsy, not estimated. Treat the favorite rate as the honest signal of whether a design landed, and views as how much traffic it got. Those are different things and a shop's biggest traffic-getter is often not its most loved design.
 
 WHAT THE JOB IS, AND WHAT IT IS NOT
 Report what this shop does. It is not your job to suggest designs, name gaps, or say what is missing from their catalogue — a shop's absences are just what they chose not to sell. If you catch yourself writing "nobody has done" or "there is room for", stop.
@@ -48,15 +48,44 @@ Report what this shop does. It is not your job to suggest designs, name gaps, or
 WHAT TO WRITE
 Five to seven things about this shop, strongest first. Between them they should answer:
 - What this shop keeps doing. The move underneath the designs, not the words.
-- What their most-saved designs share that the rest of the catalogue does not. This is the most useful thing you can find, so work at it.
+- What their most-favorited designs share that the rest of the catalogue does not. This is the most useful thing you can find, so work at it.
 - Whether they have one idea worked many ways or genuinely range, and roughly how it splits.
 - Anything the numbers say plainly — a design pulling enormous traffic and few saves, a quiet one people love, a price that never moves.
+
+HOW EACH FINDING IS SHAPED
+Three parts, and keeping them apart is what makes this readable:
+- heading: the finding in a handful of plain words.
+- body: ONE short sentence saying what it is. Not a paragraph. If you are writing a third clause, it belongs in the lines below.
+- points: two to four short lines, one fact each — a number, a title, a thing you saw. Wrap the words that carry each line in **double asterisks**: "**18% favorited it** against 47% on the Medusa one".
+
+Do not repeat the heading in the body, and do not repeat the body in the points.
 
 WRITE LIKE A PERSON, NOT A CRITIC
 Short, ordinary words. If it would look strange in a text message to a friend, do not use it. Banned: tableau, motif, device, mechanic, iconography, canon, lineage, juxtapose, subvert, interrogate, recontextualise, visual language, semiotic.
 
 BACK IT UP
-Quote the titles. Give the numbers. "Their top-viewed sticker pulled 33,893 views and 18% saved it, while the Medusa one pulled 3,646 and 47% saved it" is a finding. "They have strong designs" is a horoscope.
+Quote the titles. Give the numbers. "Their top-viewed sticker pulled 33,893 views and 18% favorited it, while the Medusa one pulled 3,646 and 47% favorited it" is a finding. "They have strong designs" is a horoscope.
+
+USE ETSY'S WORDS, NOT YOURS
+A favorite is what Etsy calls it when somebody taps the heart. Say favorites and favorited. Never "saves" or "saved" — that is not a word the seller sees anywhere in their shop.
+
+Say the numbers the way a seller reads them: "293,297 views and 3% of them favorited it". No ratios, no percentages of percentages, no jargon.
+
+IGNORE THE SHOP'S FILING
+Titles are full of the seller's own internal codes — G1, G2, G8, GOOSE, colour abbreviations, SKU fragments. They mean something inside that shop and nothing to anybody else. Never quote them, never treat them as a pattern, and never build a finding on them. Describe what the design IS.
+
+SHOW YOUR WORK
+Every design you are shown arrives with its id in square brackets, like [4374285986]. When a finding is about how something looks, put the ids of one to three of those designs in "examples" and the seller will see the actual artwork beside your words. Only ids you were shown a picture of — never one you only saw a title for.
+
+DO NOT OVERCLAIM. THIS IS THE EASIEST WAY TO BE WRONG.
+You are shown the artwork for a couple of dozen designs out of hundreds, and most of those are the shop's hits. You have titles for the rest and titles do not tell you what a picture looks like.
+
+So: never write "every", "all", "always", "the whole shop" or "exclusively" about the catalogue unless the TITLES support it for every listing. Say "most of their most-favorited", "the bulk of the catalogue", "eight of the twenty-four I looked at" — count, and be honest about which set you counted.
+
+Bad: "Every single line is a small embroidered chest icon on a sweatshirt."
+Good: "Their most-favorited designs are almost all small embroidered chest icons, though the catalogue also runs to tumblers and blankets."
+
+If the hits and the ordinary listings disagree, that disagreement is one of your findings, not something to smooth over.
 
 NEVER
 - Never suggest a design, an idea or a subject to try.
@@ -78,6 +107,14 @@ Report what buyers said. Never suggest a design or a subject. Never write about 
 WHAT TO WRITE
 Four to six findings, strongest first. Every one carries a real quote, copied exactly from a review, and names the design it was about where that matters.
 
+HOW EACH FINDING IS SHAPED
+Three parts, and keeping them apart is what makes this readable:
+- heading: the finding in a handful of plain words.
+- body: ONE short sentence saying what it is. Not a paragraph. If you are writing a third clause, it belongs in the lines below.
+- points: two to four short lines, one fact each — how often it came up, which design, what kind of buyer. Wrap the words that carry each line in **double asterisks**: "**18% favorited it** against 47% on the Medusa one".
+
+Do not repeat the heading in the body, and do not repeat the body in the points.
+
 WRITE LIKE A PERSON
 Short, ordinary words. No jargon. Let the buyers do the talking — your sentence says what the pattern is, the quote proves it.
 
@@ -98,7 +135,34 @@ const TOOL = {
           type: "object",
           properties: {
             heading: { type: "string" },
-            body: { type: "string" },
+            body: {
+              type: "string",
+              description:
+                "ONE short sentence saying what the finding is. Not a paragraph.",
+            },
+            /*
+              The evidence, split up. A finding used to arrive as one block of
+              prose carrying the claim and four supporting facts at once,
+              which is accurate and unreadable. The claim goes in body; each
+              thing that backs it up gets its own line here.
+            */
+            points: {
+              type: "array",
+              description:
+                "Two to four short lines of evidence, each one fact. Wrap the words that carry it in **double asterisks**.",
+              items: { type: "string" },
+            },
+            /*
+              A finding about pictures should be able to show one. Every image
+              arrives labelled with its listing id in square brackets; naming
+              them here puts the actual artwork under the words.
+            */
+            examples: {
+              type: "array",
+              description:
+                "The listing ids, as numbers, of one to three designs shown to you that demonstrate this finding. Only ids you were actually shown a picture of.",
+              items: { type: "number" },
+            },
             /* Only the buyer read fills this: the words somebody wrote. */
             quote: { type: "string" },
           },
@@ -172,7 +236,7 @@ interface Design {
   tags: string[] | null;
 }
 
-/** The share of people who saw it and saved it. The one honest measure of
+/** The share of people who saw it and favorited it. The one honest measure of
  *  whether a design landed, separate from how much traffic it got. */
 function saveRate(d: Design) {
   return d.views >= ENOUGH_VIEWS ? d.favorers / d.views : 0;
@@ -245,7 +309,7 @@ export async function POST(req: Request) {
       .sort((a, b) => b.favorers - a.favorers)
       .map(
         (d) =>
-          `${d.title} — ${d.views.toLocaleString()} views, ${d.favorers.toLocaleString()} saved${
+          `${d.title} — ${d.views.toLocaleString()} views, ${d.favorers.toLocaleString()} favorited${
             d.views >= ENOUGH_VIEWS
               ? ` (${(100 * saveRate(d)).toFixed(0)}%)`
               : ""
@@ -267,23 +331,62 @@ export async function POST(req: Request) {
       whole read dying because of a single stale picture is not a trade worth
       making.
     */
-    const looked = ranked
-      .filter((d) => d.image_url && /^https:\/\/i\.etsystatic\.com\//.test(d.image_url))
-      .slice(0, LOOK_AT);
+    /*
+      TWO KINDS OF SAMPLE, BECAUSE ONE OF THEM LIES.
+
+      Showing only the most-favorited designs and asking what the shop does
+      produced "every single line is a small embroidered chest icon" about a
+      catalogue where that was not true. Of course it did: it had seen the
+      twenty-four most-loved and nothing else, and the most-loved of any shop
+      look alike.
+
+      So two thirds are the most-favorited and one third is an even walk through
+      the whole catalogue, and the prompt is told which is which. The first
+      answers what works; the second is the only thing that can contradict it.
+    */
+    const withArt = ranked.filter(
+      (d) => d.image_url && /^https:\/\/i\.etsystatic\.com\//.test(d.image_url),
+    );
+    const loved = withArt.slice(0, Math.round(LOOK_AT * 0.66));
+
+    const spreadPool = withArt.filter((d) => !loved.includes(d));
+    const want = LOOK_AT - loved.length;
+    const step = Math.max(1, Math.floor(spreadPool.length / Math.max(want, 1)));
+    const spread = Array.from({ length: want }, (_, i) => spreadPool[i * step])
+      .filter(Boolean);
+
+    const looked = loved;
     content.push({
       type: "text",
-      text: `\nTHE ${looked.length} DESIGNS THE HIGHEST SHARE OF VIEWERS SAVED — the artwork follows, best rate first.`,
+      text: `\nYou are shown ${looked.length + spread.length} of this shop's ${designs.length} designs as artwork. The rest you have only as titles.\n\nFIRST, THE ${looked.length} DESIGNS THE HIGHEST SHARE OF VIEWERS SAVED. These are not a fair sample of the shop — they are its hits, and a shop's hits resemble each other.`,
     });
     for (const d of looked) {
       content.push({
         type: "text",
-        text: `${d.title} — ${(100 * saveRate(d)).toFixed(0)}% of ${d.views.toLocaleString()} viewers saved it`,
+        text: `[${d.listing_id}] ${d.title} — ${(100 * saveRate(d)).toFixed(0)}% of ${d.views.toLocaleString()} viewers favorited it`,
       });
       content.push({
         type: "image",
         source: { type: "url", url: smaller(d.image_url as string) },
       } as Anthropic.ImageBlockParam);
     }
+    if (spread.length) {
+      content.push({
+        type: "text",
+        text: `\nAND ${spread.length} TAKEN EVENLY FROM THE REST OF THE CATALOGUE, popular to unpopular. These are the ordinary run of the shop. Where they differ from the hits above, say so — and never describe the catalogue as if it all looked like the hits.`,
+      });
+      for (const d of spread) {
+        content.push({
+          type: "text",
+          text: `[${d.listing_id}] ${d.title} — ${d.views.toLocaleString()} views, ${d.favorers.toLocaleString()} favorited`,
+        });
+        content.push({
+          type: "image",
+          source: { type: "url", url: smaller(d.image_url as string) },
+        } as Anthropic.ImageBlockParam);
+      }
+    }
+
     content.push({
       type: "text",
       text: "Write the brief. Look at the artwork, not the products it is printed on.",
@@ -378,6 +481,7 @@ export async function POST(req: Request) {
         { status: 502 },
       );
 
+    const known = new Set(designs.map((d) => d.listing_id));
     const raw = call.input as Record<string, unknown>;
     const patterns = asPoints(raw.patterns)
       .filter((p) => p?.heading && p?.body)
@@ -385,6 +489,20 @@ export async function POST(req: Request) {
         heading: String(p.heading).trim(),
         body: endWell(String(p.body).trim(), res.stop_reason),
         quote: p.quote ? String(p.quote).trim() : undefined,
+        points: Array.isArray(p.points)
+          ? (p.points as unknown[])
+              .map((x) => String(x).trim())
+              .filter(Boolean)
+              .slice(0, 5)
+          : undefined,
+        /* Only ids that are really in this shop — a made-up one would render
+           as a hole where a design should be. */
+        examples: Array.isArray(p.examples)
+          ? (p.examples as unknown[])
+              .map((x) => Number(x))
+              .filter((n) => Number.isFinite(n) && known.has(n))
+              .slice(0, 3)
+          : undefined,
       }));
 
     if (!patterns.length)

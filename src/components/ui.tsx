@@ -185,6 +185,30 @@ export function Empty({
   );
 }
 
+/**
+ * **Bold** inside a sentence, and nothing else.
+ *
+ * The reads are allowed to emphasise the words that carry the finding — a
+ * number, a phrase off a shirt — and nothing more. A full markdown renderer
+ * would be a dependency and a licence to produce headings and tables inside
+ * a card that was not designed for them.
+ */
+export function Rich({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+        part.startsWith("**") && part.endsWith("**") ? (
+          <strong key={i} className="font-bold text-ink">
+            {part.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 export function Divider() {
   return <hr className="my-6 border-0 border-t-2 border-black/10" />;
 }

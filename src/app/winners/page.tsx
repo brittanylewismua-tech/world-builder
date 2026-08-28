@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Shell from "@/components/Shell";
-import { Page, Card, Empty, ErrorNote } from "@/components/ui";
+import { Page, Card, Empty, ErrorNote, Rich } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
@@ -619,6 +619,26 @@ function Patterns({ points }: { points: BriefPoint[] }) {
       >
         <p className="t-h3 leading-snug text-ink">{p.heading}</p>
         <p className="mt-2 text-[15px] leading-relaxed text-ink-2">{p.body}</p>
+        {/* The evidence, a line each, rather than four facts in one breath. */}
+        {p.points && p.points.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {p.points.map((line, i) => (
+              <li
+                key={i}
+                className="t-small flex gap-2.5 leading-relaxed text-ink-2"
+              >
+                <span
+                  className="mt-[7px] h-1 w-1 shrink-0 rounded-full"
+                  style={{ background: "var(--accent)" }}
+                  aria-hidden
+                />
+                <span>
+                  <Rich text={line} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="mt-5 flex items-center gap-3 border-t border-black/10 pt-3">
@@ -777,7 +797,7 @@ function Zoom({ w, onClose }: { w: Winner; onClose: () => void }) {
           <span className="t-small text-ink-3">{w.ageDays} days</span>
           {w.hearts > 0 && (
             <span className="t-small text-ink-3">
-              {w.hearts.toLocaleString()} saved
+              {w.hearts.toLocaleString()} favorites
               {w.views ? ` · ${((100 * w.hearts) / w.views).toFixed(0)}% of views` : ""}
             </span>
           )}
@@ -880,7 +900,7 @@ function Tile({
         </div>
         <p className="t-small mt-0.5 text-ink-3">
           {w.ageDays} days
-          {w.hearts > 0 && ` · ${w.hearts.toLocaleString()} saved`}
+          {w.hearts > 0 && ` · ${w.hearts.toLocaleString()} favorited`}
         </p>
 
         <div className="t-small mt-2 flex items-center justify-between gap-2 text-ink-3">

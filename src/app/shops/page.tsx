@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Shell from "@/components/Shell";
-import { Page, Card, Empty, ErrorNote } from "@/components/ui";
+import { Page, Card, Empty, ErrorNote, Rich } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
@@ -173,12 +173,13 @@ function ShopBlock({
   const [busy, setBusy] = useState<"" | "patterns" | "buyers">("");
   const [showing, setShowing] = useState<"" | "patterns" | "buyers">("");
 
+  /* The love map needs these, and so do the thumbnails under a finding. */
   useEffect(() => {
-    if (!open || designs) return;
+    if ((!open && !showing) || designs) return;
     loadDesigns(shop.id)
       .then(setDesigns)
       .catch(() => setDesigns([]));
-  }, [open, designs, shop.id]);
+  }, [open, showing, designs, shop.id]);
 
   async function run(kind: "patterns" | "buyers") {
     setBusy(kind);
@@ -198,7 +199,7 @@ function ShopBlock({
   }
 
   /*
-    Ranked by the share of viewers who saved it, not by traffic. That is the
+    Ranked by the share of viewers who favorited it, not by traffic. That is the
     whole point of having Etsy's real numbers: a shop's biggest traffic
     getter is routinely not the design people wanted.
   */
@@ -309,13 +310,17 @@ function ShopBlock({
       )}
 
       {!busy && showing && reads[showing] && (
-        <Brief read={reads[showing] as ShopRead} onRead={() => run(showing)} />
+        <Brief
+          read={reads[showing] as ShopRead}
+          designs={designs ?? []}
+          onRead={() => run(showing)}
+        />
       )}
 
       {open && (
         <>
           <p className="t-small mt-6 text-ink-3">
-            Ranked by how many of the people who saw it went on to save it.
+            Ranked by how many of the people who saw it favorited it.
           </p>
           <div className="mt-4 grid gap-6 sm:grid-cols-3 lg:grid-cols-5">
             {loved.slice(0, 40).map((d) => (
@@ -344,11 +349,11 @@ function ShopBlock({
                         ? `${(100 * saveRate(d)).toFixed(0)}%`
                         : "—"}
                     </span>
-                    <span className="t-small text-ink-2">saved it</span>
+                    <span className="t-small text-ink-2">favorited it</span>
                   </p>
                   <p className="t-small mt-0.5 text-ink-3">
                     {d.views.toLocaleString()} views ·{" "}
-                    {d.favorers.toLocaleString()} saves
+                    {d.favorers.toLocaleString()} favorites
                   </p>
                   <p className="t-small mt-1.5 line-clamp-2 text-ink-2">
                     {d.title}
@@ -359,7 +364,7 @@ function ShopBlock({
           </div>
           {loved.length > 40 && (
             <p className="t-small mt-4 text-ink-3">
-              Showing the 40 best-saved of {loved.length}.
+              Showing the 40 most-favorited of {loved.length}.
             </p>
           )}
         </>
@@ -368,7 +373,15 @@ function ShopBlock({
   );
 }
 
-function Brief({ read, onRead }: { read: ShopRead; onRead: () => void }) {
+function Brief({
+  read,
+  designs,
+  onRead,
+}: {
+  read: ShopRead;
+  designs: ShopDesign[];
+  onRead: () => void;
+}) {
   const [at, setAt] = useState(0);
   useEffect(() => setAt(0), [read]);
 
@@ -399,6 +412,54 @@ function Brief({ read, onRead }: { read: ShopRead; onRead: () => void }) {
           <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
             {p.body}
           </p>
+          {/* The evidence, a line each. */}
+          {p.points && p.points.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {p.points.map((line, i) => (
+                <li
+                  key={i}
+                  className="t-small flex gap-2.5 leading-relaxed text-ink-2"
+                >
+                  <span
+                    className="mt-[7px] h-1 w-1 shrink-0 rounded-full"
+                    style={{ background: "var(--accent)" }}
+                    aria-hidden
+                  />
+                  <span>
+                    <Rich text={line} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/*
+            The designs the finding is about. A claim about how something
+            looks should be checkable by looking.
+          */}
+          {p.examples && p.examples.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {p.examples
+                .map((id) => designs.find((d) => d.listingId === id))
+                .filter((d): d is ShopDesign => !!d?.imageUrl)
+                .map((d) => (
+                  <a
+                    key={d.listingId}
+                    href={d.url ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={d.title}
+                  >
+                    <img
+                      src={d.imageUrl as string}
+                      alt={d.title}
+                      loading="lazy"
+                      className="h-20 w-20 rounded border border-black/15 object-cover transition hover:border-black"
+                    />
+                  </a>
+                ))}
+            </div>
+          )}
+
           {p.quote && (
             <blockquote className="mt-3 border-l-2 border-black/20 pl-3 text-[14px] italic leading-relaxed text-ink-2">
               &ldquo;{p.quote}&rdquo;

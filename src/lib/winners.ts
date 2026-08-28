@@ -129,7 +129,10 @@ export async function removeKeyword(worldId: string, keyword: string) {
 
 export interface BriefPoint {
   heading: string;
+  /** One sentence. The claim. */
   body: string;
+  /** The evidence, a line each. Absent on briefs written before this. */
+  points?: string[];
 }
 
 /**

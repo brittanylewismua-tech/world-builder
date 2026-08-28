@@ -96,7 +96,7 @@ function Designs() {
               </p>
               {w.hearts > 0 && (
                 <p className="text-[12px] leading-tight text-ink-3">
-                  {w.hearts.toLocaleString()} saved
+                  {w.hearts.toLocaleString()} favorites
                   {w.views
                     ? ` · ${((100 * w.hearts) / w.views).toFixed(0)}% of views`
                     : ""}

@@ -56,6 +56,14 @@ You are shown the seller's other keywords and the sub-niches of their world. Tho
 
 Use them only where this keyword's designs genuinely rub against them. If what is selling here is doing the same thing as another corner of their world, or pulling the opposite way, that is worth one pattern. If it says nothing about the rest of the world, say nothing about the rest of the world — you cannot see those other designs, only their names, so never describe or guess at what is selling under a keyword you have not been shown.
 
+HOW EACH FINDING IS SHAPED
+Three parts, and keeping them apart is what makes this readable:
+- heading: the finding in a handful of plain words.
+- body: ONE short sentence saying what it is. Not a paragraph. If you are writing a third clause, it belongs in the lines below.
+- points: two to four short lines, one fact each — a number, a title, a thing you saw. Wrap the words that carry each line in **double asterisks**: "**18% saved it** against 47% on the Medusa one".
+
+Do not repeat the heading in the body, and do not repeat the body in the points.
+
 WRITE LIKE A PERSON, NOT A CRITIC
 This is the rule most easily broken. Use short, ordinary words. If a word would look strange in a text message to a friend, do not use it. Banned outright: tableau, motif, device, mechanic, iconography, canon, lineage, reclamation, juxtapose, subvert, interrogate, recontextualise, visual language, design language, semiotic, framing device.
 
@@ -64,6 +72,9 @@ Good: "These flip who the bad guy was. 'They didn't burn witches, they burned wo
 
 Bad: "Portrait-plus-arc-of-text layout recurs across the set."
 Good: "Her face straight on, words curved around the top of it. Five of these ten do exactly that."
+
+USE ETSY'S WORDS, NOT YOURS
+A favorite is what Etsy calls it when somebody taps the heart. Say favorites and favorited, never "saves". And never quote a shop's internal variant codes — G1, G8, colour abbreviations — they mean nothing outside that seller's own filing.
 
 BACK IT UP
 Point at what you saw. "Four of these are rows of faces." "The top one is doing seven a day after 575 days." An observation with nothing behind it is a horoscope. Quote the words off the shirts when the words are the pattern.
@@ -98,6 +109,14 @@ One product photograph per keyword, each the best seller under that search, with
 WHAT TO WRITE
 Three to five things that hold across the world, strongest first. A good one names something two or more corners share that a person looking at any single corner would not have seen — a way of talking, a kind of image, a stance the customer keeps taking. Where corners genuinely disagree, that is worth one of them: this world buys one thing here and the opposite there.
 
+HOW EACH FINDING IS SHAPED
+Three parts, and keeping them apart is what makes this readable:
+- heading: the finding in a handful of plain words.
+- body: ONE short sentence saying what it is. Not a paragraph. If you are writing a third clause, it belongs in the lines below.
+- points: two to four short lines, one fact each — a number, a title, a thing you saw. Wrap the words that carry each line in **double asterisks**: "**18% saved it** against 47% on the Medusa one".
+
+Do not repeat the heading in the body, and do not repeat the body in the points.
+
 WRITE LIKE A PERSON, NOT A CRITIC
 Short, ordinary words. If it would look strange in a text message to a friend, do not use it. Banned: tableau, motif, device, mechanic, iconography, canon, lineage, reclamation, juxtapose, subvert, interrogate, recontextualise, visual language, semiotic.
 
@@ -124,7 +143,23 @@ const TOOL = {
           type: "object",
           properties: {
             heading: { type: "string" },
-            body: { type: "string" },
+            body: {
+              type: "string",
+              description:
+                "ONE short sentence saying what the finding is. Not a paragraph.",
+            },
+            /*
+              The evidence, split up. A finding used to arrive as one block of
+              prose carrying the claim and four supporting facts at once,
+              which is accurate and unreadable. The claim goes in body; each
+              thing that backs it up gets its own line here.
+            */
+            points: {
+              type: "array",
+              description:
+                "Two to four short lines of evidence, each one fact. Wrap the words that carry it in **double asterisks**.",
+              items: { type: "string" },
+            },
           },
           required: ["heading", "body"],
         },
@@ -219,7 +254,7 @@ function smaller(url: string) {
  * people fell for and a listing search happened to deliver, and it is the one
  * comparison in this data that the numbers alone will not hand you.
  */
-function saveRate(r: Row) {
+function favoriteRate(r: Row) {
   if (!r.views || !r.hearts) return "unknown";
   return `${((100 * r.hearts) / r.views).toFixed(1)}%`;
 }
@@ -366,7 +401,7 @@ export async function POST(req: Request) {
     const rate = (r.sales / Math.max(1, r.age_days)).toFixed(1);
     content.push({
       type: "text",
-      text: `— ${i + 1} — ${r.sales.toLocaleString()} sales · ${rate}/day · ${r.age_days} days listed · $${Number(r.price).toFixed(2)} · ${r.daily_views} views/day · saved by ${saveRate(r)} of the people who saw it${r.design ? `\nEtsy describes it: ${r.design}` : ""}`,
+      text: `— ${i + 1} — ${r.sales.toLocaleString()} sales · ${rate}/day · ${r.age_days} days listed · $${Number(r.price).toFixed(2)} · ${r.daily_views} views/day · favorited by ${favoriteRate(r)} of the people who saw it${r.design ? `\nEtsy describes it: ${r.design}` : ""}`,
     });
     content.push({
       type: "image",
@@ -421,6 +456,12 @@ export async function POST(req: Request) {
           heading: String(p.heading).trim(),
           // A tool call can be cut off mid sentence like any other reply.
           body: endWell(String(p.body).trim(), res.stop_reason),
+          points: Array.isArray(p.points)
+            ? (p.points as unknown[])
+                .map((x) => String(x).trim())
+                .filter(Boolean)
+                .slice(0, 5)
+            : undefined,
         }));
 
     const brief = { patterns: list("patterns") };
