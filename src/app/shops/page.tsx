@@ -6,6 +6,8 @@ import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote, Rich } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
 import { report } from "@/lib/report";
+import { saveSignalToBoard } from "@/lib/board";
+import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
 import type { World } from "@/lib/world";
 import {
   addShop,
@@ -23,6 +25,12 @@ import {
   type ShopRead,
 } from "@/lib/shops";
 
+const when = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+
 export default function ShopsPage() {
   return <Shell>{(world) => <ShopsBody world={world} />}</Shell>;
 }
@@ -37,7 +45,15 @@ function ShopsBody({ world }: { world: World }) {
   const [input, setInput] = useState("");
   const [err, setErr] = useState("");
   const [said, setSaid] = useState("");
+  /* Where a finding goes when the seller wants to keep it. */
+  const [drop, setDrop] = useState<Drop | null>(null);
   const box = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    syncSchedule(world)
+      .then((all) => setDrop(splitDrops(all).next))
+      .catch(() => setDrop(null));
+  }, [world]);
 
   const refresh = useCallback(async () => {
     const [s, r] = await Promise.all([
@@ -143,6 +159,7 @@ function ShopsBody({ world }: { world: World }) {
         <ShopBlock
           key={s.id}
           world={world}
+          drop={drop}
           shop={s}
           reads={reads[s.id] ?? {}}
           onChanged={refresh}
@@ -157,12 +174,14 @@ function ShopsBody({ world }: { world: World }) {
 
 function ShopBlock({
   world,
+  drop,
   shop,
   reads,
   onChanged,
   onError,
 }: {
   world: World;
+  drop: Drop | null;
   shop: Shop;
   reads: Partial<Record<"patterns" | "buyers", ShopRead>>;
   onChanged: () => void;
@@ -172,6 +191,14 @@ function ShopBlock({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<"" | "patterns" | "buyers">("");
   const [showing, setShowing] = useState<"" | "patterns" | "buyers">("");
+  const [pulling, setPulling] = useState(false);
+  const [all, setAll] = useState(false);
+  /*
+    Favourite rate is the default because it is the thing you cannot see on
+    Etsy. But a seller sometimes wants the plain hits, or what the shop has
+    put out lately, so the order is theirs to change.
+  */
+  const [order, setOrder] = useState<"rate" | "favorites" | "views">("rate");
 
   /* The love map needs these, and so do the thumbnails under a finding. */
   useEffect(() => {
@@ -204,7 +231,13 @@ function ShopBlock({
     getter is routinely not the design people wanted.
   */
   const loved = designs
-    ? [...designs].sort((a, b) => saveRate(b) - saveRate(a))
+    ? [...designs].sort((a, b) =>
+        order === "favorites"
+          ? b.favorers - a.favorers
+          : order === "views"
+            ? b.views - a.views
+            : saveRate(b) - saveRate(a),
+      )
     : [];
 
   return (
@@ -281,6 +314,35 @@ function ShopBlock({
             On Etsy ↗
           </a>
         )}
+        {/*
+          Views and favourites move. Re-pasting the address worked but
+          nobody would guess it, so the shop says when it was last pulled
+          and offers to do it again.
+        */}
+        <span className="t-small shrink-0 text-ink-3">
+          {when(shop.refreshedAt)}
+        </span>
+        <button
+          onClick={async () => {
+            setPulling(true);
+            onError("");
+            try {
+              await addShop(world, shop.name);
+              setDesigns(null);
+              await onChanged();
+            } catch (e) {
+              onError(
+                e instanceof Error ? e.message : "That did not refresh.",
+              );
+            } finally {
+              setPulling(false);
+            }
+          }}
+          className="t-small shrink-0 text-ink-3 transition hover:text-ink"
+          disabled={pulling}
+        >
+          {pulling ? "Refreshing…" : "Refresh"}
+        </button>
         <button
           onClick={async () => {
             if (!confirm(`Stop following ${shop.name}?`)) return;
@@ -313,17 +375,40 @@ function ShopBlock({
         <Brief
           read={reads[showing] as ShopRead}
           designs={designs ?? []}
+          drop={drop}
+          shopName={shop.name}
+          world={world}
           onRead={() => run(showing)}
         />
       )}
 
       {open && (
         <>
-          <p className="t-small mt-6 text-ink-3">
-            Ranked by how many of the people who saw it favorited it.
-          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p className="t-small text-ink-3">Order by</p>
+            {(
+              [
+                ["rate", "how often it's favorited"],
+                ["favorites", "most favorites"],
+                ["views", "most views"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setOrder(key)}
+                className="t-small transition"
+                style={
+                  order === key
+                    ? { color: "var(--accent)", fontWeight: 700 }
+                    : { color: "rgba(0,0,0,0.5)" }
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="mt-4 grid gap-6 sm:grid-cols-3 lg:grid-cols-5">
-            {loved.slice(0, 40).map((d) => (
+            {loved.slice(0, all ? loved.length : 40).map((d) => (
               <figure key={d.listingId} className="card overflow-hidden">
                 <a href={d.url ?? "#"} target="_blank" rel="noopener noreferrer">
                   {d.imageUrl ? (
@@ -363,9 +448,13 @@ function ShopBlock({
             ))}
           </div>
           {loved.length > 40 && (
-            <p className="t-small mt-4 text-ink-3">
-              Showing the 40 most-favorited of {loved.length}.
-            </p>
+            <div className="mt-6">
+              <button onClick={() => setAll((v) => !v)} className="btn btn-ghost">
+                {all
+                  ? "Show the first 40"
+                  : `Show all ${loved.length} designs`}
+              </button>
+            </div>
           )}
         </>
       )}
@@ -376,13 +465,20 @@ function ShopBlock({
 function Brief({
   read,
   designs,
+  drop,
+  shopName,
+  world,
   onRead,
 }: {
   read: ShopRead;
   designs: ShopDesign[];
+  drop: Drop | null;
+  shopName: string;
+  world: World;
   onRead: () => void;
 }) {
   const [at, setAt] = useState(0);
+  const [kept, setKept] = useState<Record<number, boolean>>({});
   useEffect(() => setAt(0), [read]);
 
   const points: ShopPoint[] = read.patterns;
@@ -482,6 +578,31 @@ function Brief({
               />
             ))}
           </span>
+          {/*
+            Everything else in this app feeds the drop board; this page was a
+            dead end. A finding is the seller's own note about what works, so
+            it can go straight to the drop they are building.
+          */}
+          {drop && (
+            <button
+              onClick={async () => {
+                if (kept[at]) return;
+                await saveSignalToBoard(world, drop, {
+                  headline: p.heading,
+                  body: [p.body, ...(p.points ?? [])]
+                    .join("\n")
+                    .replace(/\*\*/g, ""),
+                  url: designs.find((d) => d.listingId === p.examples?.[0])
+                    ?.url,
+                });
+                setKept((k) => ({ ...k, [at]: true }));
+              }}
+              className="btn btn-ghost"
+              title={`From ${shopName}`}
+            >
+              {kept[at] ? "Kept" : "Keep this"}
+            </button>
+          )}
           <button
             onClick={() => setAt((n) => Math.max(0, n - 1))}
             className="btn btn-ghost"

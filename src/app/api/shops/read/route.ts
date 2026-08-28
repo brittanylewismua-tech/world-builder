@@ -115,6 +115,12 @@ Three parts, and keeping them apart is what makes this readable:
 
 Do not repeat the heading in the body, and do not repeat the body in the points.
 
+SHOW THE DESIGN
+Each review arrives with the listing id of what it was written about, in square brackets. Put those ids in "examples" and the seller sees the artwork beside the words. Only ids you were actually given.
+
+USE ETSY'S WORDS
+A favorite is what Etsy calls it when somebody taps the heart. Never say "saves". And never quote a shop's internal variant codes — G1, G8, colour abbreviations — they are that seller's filing and mean nothing to anybody else.
+
 WRITE LIKE A PERSON
 Short, ordinary words. No jargon. Let the buyers do the talking — your sentence says what the pattern is, the quote proves it.
 
@@ -419,6 +425,7 @@ export async function POST(req: Request) {
     const useful = reviews
       .map((r) => ({
         text: (r.review ?? "").trim(),
+        id: r.listing_id,
         title: r.listing_id ? byListing.get(r.listing_id) : undefined,
       }))
       .filter((r) => r.text.length >= 60)
@@ -438,7 +445,7 @@ export async function POST(req: Request) {
       text: `SHOP: ${shop.shop_name}\n\n${useful.length} reviews that say something, each with the design it was written about.\n\n${useful
         .map(
           (r) =>
-            `${r.title ? `[on "${r.title.slice(0, 70)}"] ` : ""}${r.text.slice(0, 400)}`,
+            `${r.title ? `[${r.id}] on "${r.title.slice(0, 70)}" — ` : ""}${r.text.slice(0, 400)}`,
         )
         .join("\n\n")}`,
     });
