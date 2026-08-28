@@ -375,7 +375,12 @@ function ShopBlock({
     onError("");
     try {
       if (fresh) {
-        await addShop(world, shop.name);
+        /*
+          Best effort. If Etsy was already asked today the pull is refused,
+          and that is fine — the catalogue on file is current. It must not
+          stop the read the seller actually pressed.
+        */
+        await addShop(world, shop.name).catch(() => {});
         setDesigns(null);
       }
       await readShop(world, shop.id, kind);

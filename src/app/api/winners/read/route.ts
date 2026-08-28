@@ -291,6 +291,61 @@ export async function POST(req: Request) {
   const door = await ownerOf(req, worldId);
   if ("deny" in door) return door.deny;
 
+  const db = serviceDb();
+
+  /*
+    DO NOT PAY TWICE FOR THE SAME EVIDENCE.
+
+    A read of a keyword rests entirely on the designs sitting under it, and
+    those only move when an export is uploaded. So pressing Patterns again on
+    an untouched wall buys a differently worded version of the brief already
+    on screen, at full price.
+
+    The allowance above is the ceiling on the account; this is the thing that
+    stops the ordinary waste. It is checked BEFORE admit, which spends a unit
+    as it runs, so being told nothing has changed costs nothing.
+  */
+  /** Visible designs under this keyword, or across the world. */
+  const poolNow = async (newerThan?: string) => {
+    let q = db
+      .from("wb_winners")
+      .select("listing_id", { count: "exact", head: true })
+      .eq("world_id", worldId)
+      .eq("hidden", false);
+    if (!wholeWorld) q = q.eq("keyword", keyword as string);
+    if (newerThan) q = q.gt("refreshed_at", newerThan);
+    const { count } = await q;
+    return count ?? 0;
+  };
+
+  const { data: last } = await db
+    .from("wb_winner_reads")
+    .select("ran_at, pool")
+    .eq("world_id", worldId)
+    [wholeWorld ? "is" : "eq"]("keyword", wholeWorld ? null : keyword)
+    .order("ran_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const pool = await poolNow();
+
+  if (last?.ran_at && last.pool != null) {
+    /*
+      Two ways the evidence can move: an export brought designs in or
+      refreshed them, or the seller hid some and the wall got smaller.
+    */
+    const arrived = await poolNow(last.ran_at as string);
+    if (arrived === 0 && pool === Number(last.pool))
+      return NextResponse.json(
+        {
+          error: wholeWorld
+            ? "Nothing has changed across your world since this was read, so a second read would only reword the one you have. Upload a new export and it opens again."
+            : `Nothing has changed under “${keyword}” since this was read, so a second read would only reword the one you have. Upload a new export and it opens again.`,
+        },
+        { status: 429 },
+      );
+  }
+
   const gate = await admit(req, wholeWorld ? "world" : "winners");
   if ("deny" in gate) return gate.deny;
 
@@ -300,7 +355,6 @@ export async function POST(req: Request) {
       { status: 503 },
     );
 
-  const db = serviceDb();
   const { data } = await db
     .from("wb_winners")
     .select(
@@ -479,7 +533,10 @@ export async function POST(req: Request) {
         // Null is the world: the read that belongs to no single corner.
         keyword: wholeWorld ? null : keyword,
         brief,
+        /* How many were shown to the model — the seller sees this number. */
         counted: chosen.length,
+        /* How many were there to choose from — the staleness check. */
+        pool,
       });
 
     return NextResponse.json({

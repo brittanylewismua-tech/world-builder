@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { admit } from "@/lib/guard";
 
 export const runtime = "nodejs";
@@ -91,18 +92,11 @@ interface Body {
     note?: string | null;
     ai?: Record<string, unknown>;
   }[];
+  /** Which board, so a repeat read of an unchanged one can be refused. */
+  boardId?: string;
 }
 
 export async function POST(req: Request) {
-  const door = await admit(req, "board");
-  if ("deny" in door) return door.deny;
-
-  if (!process.env.ANTHROPIC_API_KEY)
-    return NextResponse.json(
-      { error: "This deployment is missing its ANTHROPIC_API_KEY." },
-      { status: 503 },
-    );
-
   let body: Body;
   try {
     body = await req.json();
@@ -115,6 +109,69 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Not enough on the board yet to find anything real." },
       { status: 400 },
+    );
+
+  /*
+    THE MOST EXPENSIVE BUTTON IN THE PRODUCT TO PRESS TWICE.
+
+    Every analysed item on the board goes into this call, so unlike the other
+    reads its price grows with the board — a forty-piece board is a large
+    prompt. And the answer is a function of the board alone: pressing it again
+    without having added anything buys a reworded copy of the findings already
+    on screen.
+
+    So the findings carry the size of the board they were read from. Add a
+    piece and it opens immediately; add nothing and it stays shut. That is a
+    truer rule than a cooldown, which would block the seller who genuinely
+    just saved six new things.
+
+    Checked BEFORE admit, which spends a unit of the allowance as it runs.
+  */
+  const boardId = body.boardId;
+  if (boardId) {
+    const auth = req.headers.get("authorization") ?? "";
+    const token = auth.toLowerCase().startsWith("bearer ")
+      ? auth.slice(7).trim()
+      : "";
+    if (token) {
+      /* The caller's own token, so row security still decides what they see. */
+      const asUser = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ??
+          "https://ywncfltxrnrchicjwcse.supabase.co",
+        process.env.NEXT_PUBLIC_SUPABASE_KEY ??
+          "sb_publishable_1dP18eUzIVckldFdIR2w7Q_6clKwTmu",
+        {
+          auth: { persistSession: false, autoRefreshToken: false },
+          global: { headers: { Authorization: `Bearer ${token}` } },
+        },
+      );
+      const { data: before } = await asUser
+        .from("wb_board_findings")
+        .select("covered")
+        .eq("board_id", boardId)
+        .not("covered", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (before && Number(before.covered) === items.length)
+        return NextResponse.json(
+          {
+            error:
+              "Nothing has been added to the board since this was last read, so a second look would only reword what is already here. Save something new and it opens again.",
+          },
+          { status: 429 },
+        );
+    }
+  }
+
+  const door = await admit(req, "board");
+  if ("deny" in door) return door.deny;
+
+  if (!process.env.ANTHROPIC_API_KEY)
+    return NextResponse.json(
+      { error: "This deployment is missing its ANTHROPIC_API_KEY." },
+      { status: 503 },
     );
 
   const valid = new Set(items.map((i) => i.id));

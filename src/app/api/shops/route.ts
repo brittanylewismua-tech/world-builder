@@ -77,12 +77,32 @@ export async function POST(req: Request) {
   const wanted = name.toLowerCase();
   const { data: held } = await db
     .from("wb_shops")
-    .select("id, shop_name")
+    .select("id, shop_name, refreshed_at")
     .eq("world_id", worldId);
-  const already = (held ?? []).some(
+  const mine = (held ?? []).find(
     (s) => (s.shop_name as string).toLowerCase() === wanted,
   );
+  const already = !!mine;
   const count = (held ?? []).length;
+
+  /*
+    Refreshing costs no money, but it is six calls against an Etsy key shared
+    by everyone using this app, and their daily quota is finite. Somebody
+    leaning on Refresh does not get better numbers — Etsy's counts barely
+    move inside a day — they just spend the quota that keeps the feature
+    working for everybody else.
+  */
+  if (already && mine?.refreshed_at) {
+    const pulled = new Date(mine.refreshed_at as string).getTime();
+    if (Date.now() - pulled < 20 * 60 * 60 * 1000)
+      return NextResponse.json(
+        {
+          error:
+            "This shop was pulled from Etsy today. Their views and favorites barely move inside a day, so it can be refreshed again tomorrow.",
+        },
+        { status: 429 },
+      );
+  }
 
   if (!already) {
     const gate = await admit(req, "shopAdds");

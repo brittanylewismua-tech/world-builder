@@ -591,6 +591,7 @@ export async function findPatterns(
   const { findings } = await askAI<{
     findings: { kind: "pattern" | "collision"; title: string; detail: string; itemIds: string[] }[];
   }>("/api/board/patterns", {
+    boardId: board.id,
     intention: board.intention,
     worldName: world.name,
     subNiches: world.subNiches.map((s) => s.keyword),
@@ -617,6 +618,9 @@ export async function findPatterns(
         title: f.title,
         detail: f.detail,
         item_ids: f.itemIds,
+        /* The size of the board this was read from, so a repeat press on an
+           unchanged board can be turned away before it costs anything. */
+        covered: analysed.length,
       })),
     )
     .select("id, kind, title, detail, item_ids, dismissed");
