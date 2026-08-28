@@ -688,6 +688,13 @@ function Brief({
   const [kept, setKept] = useState<Record<number, boolean>>({});
   useEffect(() => setAt(0), [read]);
 
+  /* Null once the week is up. Mirrors the same rule on the server. */
+  const opens = (() => {
+    const d = new Date(read.ranAt);
+    d.setDate(d.getDate() + 7);
+    return Date.now() < d.getTime() ? d : null;
+  })();
+
   const points: ShopPoint[] = read.patterns;
   if (!points.length) return null;
   const p = points[Math.min(at, points.length - 1)];
@@ -704,15 +711,23 @@ function Brief({
         </p>
         {/*
           Worth pressing when the shop has been publishing — it pulls their
-          latest listings and Etsy's newest numbers, then reads again.
+          latest listings and Etsy's newest numbers, then reads again. Closed
+          for a week afterwards, and the button says so rather than letting
+          somebody spend a read to be told no.
         */}
-        <button
-          onClick={onRead}
-          className="btn btn-ghost"
-          title="Pulls their newest listings and numbers, then reads the shop again"
-        >
-          Read again
-        </button>
+        {opens ? (
+          <span className="t-small text-ink-3">
+            Can be read again {when(opens.toISOString())}
+          </span>
+        ) : (
+          <button
+            onClick={onRead}
+            className="btn btn-ghost"
+            title="Pulls their newest listings and numbers, then reads the shop again"
+          >
+            Read again
+          </button>
+        )}
       </div>
 
       <div className="mt-6 max-w-[64ch]">

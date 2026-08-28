@@ -286,6 +286,48 @@ export async function POST(req: Request) {
   const door = await ownerOf(req, worldId);
   if ("deny" in door) return door.deny;
 
+  const db = serviceDb();
+
+  /*
+    ONE READ OF ONE SHOP PER WEEK.
+
+    The weekly allowance above is a ceiling on the account. This is the guard
+    that matters day to day, because the easiest way to spend real money here
+    for nothing is pressing Read again twice in a row on the same shop — the
+    catalogue has not moved, so the second brief costs the same and says the
+    same thing.
+
+    Deliberately checked BEFORE admit, which spends a unit as it runs: being
+    told to come back next week must not itself cost a read.
+  */
+  const { data: before } = await db
+    .from("wb_shop_reads")
+    .select("ran_at")
+    .eq("shop_id", shopId)
+    .eq("kind", kind)
+    .order("ran_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (before?.ran_at) {
+    const opens = new Date(before.ran_at as string);
+    opens.setDate(opens.getDate() + 7);
+    if (Date.now() < opens.getTime()) {
+      const day = (d: Date) =>
+        d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+      return NextResponse.json(
+        {
+          error: `You read this shop on ${day(
+            new Date(before.ran_at as string),
+          )}. You can read it again on ${day(
+            opens,
+          )} — a shop's catalogue does not change much inside a week, and the read you have is still on the page.`,
+        },
+        { status: 429 },
+      );
+    }
+  }
+
   const gate = await admit(req, "shops");
   if ("deny" in gate) return gate.deny;
 
@@ -295,7 +337,6 @@ export async function POST(req: Request) {
       { status: 503 },
     );
 
-  const db = serviceDb();
   const { data: shop } = await db
     .from("wb_shops")
     .select("id, etsy_shop_id, shop_name, listing_count, sold_count, review_count")
