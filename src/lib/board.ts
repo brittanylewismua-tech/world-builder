@@ -121,7 +121,23 @@ export interface Board {
   intention: string;
   items: BoardItem[];
   findings: Finding[];
+  /**
+   * How many pieces the board held the last time it was read, or null if it
+   * has never been read. Reading it again is worth paying for once a real
+   * batch of new work has landed on top of that — see NEW_BEFORE_REREAD.
+   */
+  covered: number | null;
 }
+
+/**
+ * How many new pieces have to arrive before the board is worth reading again.
+ *
+ * One or two more images do not change what the board is about, and this read
+ * is the most expensive one in the product — the whole board goes into it, so
+ * it gets dearer as the board grows. Ten is roughly a session's saving, which
+ * is the point at which the answer genuinely moves.
+ */
+export const NEW_BEFORE_REREAD = 10;
 
 const SIGNED_TTL = 60 * 60 * 8;
 
@@ -208,19 +224,33 @@ export async function openBoard(world: World, drop: Drop): Promise<Board> {
 
   const board = rows[0] as { id: string; drop_id: string; intention: string };
 
-  const [{ data: itemRows }, { data: findingRows }] = await Promise.all([
-    supabase
-      .from("wb_board_items")
-      .select(COLUMNS)
-      .eq("board_id", board.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("wb_board_findings")
-      .select("id, kind, title, detail, item_ids, dismissed")
-      .eq("board_id", board.id)
-      .eq("dismissed", false)
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: itemRows }, { data: findingRows }, { data: lastRead }] =
+    await Promise.all([
+      supabase
+        .from("wb_board_items")
+        .select(COLUMNS)
+        .eq("board_id", board.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("wb_board_findings")
+        .select("id, kind, title, detail, item_ids, dismissed")
+        .eq("board_id", board.id)
+        .eq("dismissed", false)
+        .order("created_at", { ascending: false }),
+      /*
+        Dismissed findings count here. Throwing away what a read said does
+        not mean the read never happened, and it must not become a way to
+        buy another one.
+      */
+      supabase
+        .from("wb_board_findings")
+        .select("covered")
+        .eq("board_id", board.id)
+        .not("covered", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   return {
     id: board.id,
@@ -242,6 +272,7 @@ export async function openBoard(world: World, drop: Drop): Promise<Board> {
       itemIds: f.item_ids ?? [],
       dismissed: f.dismissed,
     })),
+    covered: lastRead?.covered == null ? null : Number(lastRead.covered),
   };
 }
 

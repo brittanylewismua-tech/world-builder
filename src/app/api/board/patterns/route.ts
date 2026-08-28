@@ -120,13 +120,19 @@ export async function POST(req: Request) {
     without having added anything buys a reworded copy of the findings already
     on screen.
 
-    So the findings carry the size of the board they were read from. Add a
-    piece and it opens immediately; add nothing and it stays shut. That is a
-    truer rule than a cooldown, which would block the seller who genuinely
-    just saved six new things.
+    So the findings carry the size of the board they were read from, and the
+    board has to have grown by a real batch — ten pieces, roughly a session's
+    saving — before it is worth reading again. One or two more images do not
+    change what the board is about.
+
+    A batch, rather than a cooldown, because the rule should follow the work:
+    somebody who saves thirty things on Tuesday should not be told to wait,
+    and somebody who saves nothing all week should not be handed a free
+    reword on Monday.
 
     Checked BEFORE admit, which spends a unit of the allowance as it runs.
   */
+  const NEW_BEFORE_REREAD = 10;
   const boardId = body.boardId;
   if (boardId) {
     const auth = req.headers.get("authorization") ?? "";
@@ -154,14 +160,20 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle();
 
-      if (before && Number(before.covered) === items.length)
-        return NextResponse.json(
-          {
-            error:
-              "Nothing has been added to the board since this was last read, so a second look would only reword what is already here. Save something new and it opens again.",
-          },
-          { status: 429 },
-        );
+      if (before != null) {
+        const added = items.length - Number(before.covered);
+        if (added < NEW_BEFORE_REREAD) {
+          const left = NEW_BEFORE_REREAD - Math.max(0, added);
+          return NextResponse.json(
+            {
+              error: `This board has already been read. It opens again once ${left} more ${
+                left === 1 ? "piece is" : "pieces are"
+              } on it — a handful of new images would only reword what you already have.`,
+            },
+            { status: 429 },
+          );
+        }
+      }
     }
   }
 

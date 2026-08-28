@@ -17,6 +17,7 @@ import {
   setLane,
   dragLane,
   pullNewPins,
+  NEW_BEFORE_REREAD,
   SECTIONS,
   SECTION_NAME,
   type Board,
@@ -201,6 +202,17 @@ export default function ResearchBoard({
     );
 
   const onBoard = board.items.filter((i) => !i.later);
+
+  /*
+    The read only looks at pieces that have been analysed, so the button has
+    to count the same ones the server will. Offered once at four, and after
+    that only when a batch has landed on top of the last read.
+  */
+  const analysed = board.items.filter((i) => i.analyzedAt && !i.later).length;
+  const canRead =
+    board.covered == null
+      ? analysed >= 4
+      : analysed - board.covered >= NEW_BEFORE_REREAD;
   const unfiled = onBoard.filter((i) => i.sections.length === 0);
   const shown =
     only === null
@@ -293,7 +305,9 @@ export default function ResearchBoard({
     setErr("");
     try {
       const findings = await findPatterns(board, world);
-      setBoard((b) => (b ? { ...b, findings } : b));
+      /* Record what was read, so the button shuts until the board grows. */
+      const read = board.items.filter((i) => i.analyzedAt && !i.later).length;
+      setBoard((b) => (b ? { ...b, findings, covered: read } : b));
       setShowFindings(true);
     } catch (e) {
       report("board", e, { worldId: world.id, step: "patterns" });
@@ -494,21 +508,35 @@ export default function ResearchBoard({
               six paragraphs of prose above the images — on a page whose whole
               job is showing you what you saved.
             */}
-            {onBoard.length >= 4 && (
+            {board.findings.length > 0 && (
               <button
-                onClick={() =>
-                  board.findings.length ? setShowFindings((v) => !v) : look()
-                }
+                onClick={() => setShowFindings((v) => !v)}
+                disabled={thinking}
+                className="t-small font-semibold text-accent-ink underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
+              >
+                {showFindings
+                  ? "Hide patterns"
+                  : `${board.findings.length} patterns`}
+              </button>
+            )}
+
+            {/*
+              The read itself. Offered once on a board with something on it,
+              and then only when a real batch has arrived since — the whole
+              board goes into this call, so a press that cannot change the
+              answer is the most expensive nothing in the product.
+            */}
+            {canRead && (
+              <button
+                onClick={look}
                 disabled={thinking}
                 className="t-small font-semibold text-accent-ink underline underline-offset-4 transition hover:text-ink disabled:opacity-50"
               >
                 {thinking
                   ? "Looking…"
-                  : !board.findings.length
+                  : board.covered == null
                     ? "Find the patterns"
-                    : showFindings
-                      ? "Hide patterns"
-                      : `${board.findings.length} patterns`}
+                    : "Read the board again"}
               </button>
             )}
           </span>
