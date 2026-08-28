@@ -113,17 +113,52 @@ const TOOL = {
 /**
  * WHATEVER SHAPE IT CAME BACK IN.
  *
- * A tool schema asks for an array and usually gets one, but not always: a
- * single finding can arrive as a bare object, and a list can arrive as an
- * object keyed "0", "1", "2". Calling .filter on either throws, and the whole
- * read dies after the money has already been spent.
+ * A tool schema asks for an array of objects. What actually arrives varies,
+ * and each variant breaks a different way:
  *
- * So the shape is coerced rather than trusted. Losing a malformed entry is
- * invisible; losing the entire brief is not.
+ *   - the array, as asked
+ *   - a JSON STRING containing the whole answer, sometimes nested as
+ *     {"patterns": "{\"patterns\": [ ... ]}"}
+ *   - a single finding as a bare object
+ *   - the list as an object keyed "0", "1", "2"
+ *
+ * The string case is the nasty one: Object.values on a string returns its
+ * characters, so a perfectly good brief silently becomes two thousand
+ * one-letter entries, every one of which fails validation, and the seller is
+ * told nothing came back — after paying for a read that worked.
+ *
+ * So: parse strings, unwrap a nested key of the same name, and only then
+ * treat it as a list. Never call Object.values on a string.
  */
-function asPoints(v: unknown): Record<string, unknown>[] {
-  if (Array.isArray(v)) return v as Record<string, unknown>[];
-  if (v && typeof v === "object") return Object.values(v as object);
+function asPoints(v: unknown, key = "patterns"): Record<string, unknown>[] {
+  let seen = v;
+
+  for (let round = 0; round < 3; round++) {
+    if (typeof seen === "string") {
+      const text = seen.trim();
+      if (!text.startsWith("{") && !text.startsWith("[")) return [];
+      try {
+        seen = JSON.parse(text);
+      } catch {
+        return [];
+      }
+      continue;
+    }
+    if (
+      seen &&
+      typeof seen === "object" &&
+      !Array.isArray(seen) &&
+      key in (seen as Record<string, unknown>)
+    ) {
+      seen = (seen as Record<string, unknown>)[key];
+      continue;
+    }
+    break;
+  }
+
+  if (Array.isArray(seen)) return seen as Record<string, unknown>[];
+  if (seen && typeof seen === "object")
+    return Object.values(seen as object) as Record<string, unknown>[];
   return [];
 }
 
