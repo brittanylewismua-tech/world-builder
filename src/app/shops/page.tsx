@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Shell from "@/components/Shell";
-import { Page, Card, Empty, ErrorNote, Rich } from "@/components/ui";
+import { Page, Card, Empty, ErrorNote } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
 import { report } from "@/lib/report";
 import { saveFindingToBoard } from "@/lib/board";
@@ -30,6 +30,137 @@ const when = (iso: string) =>
     month: "short",
     day: "numeric",
   });
+
+/* ------------------------------------------------ naming a design in prose
+
+  The brief quotes designs by name — "Nurse Embroidered Sweatshirt leads the
+  shop with 293,297 views". A named design should be openable, because the
+  next thing a seller wants after reading a claim is to look at the thing.
+
+  Etsy titles are enormous and stuffed with keywords, so the model always
+  writes a shortened version — nearly always the opening words. So designs
+  are filed under their first three words, and a run of text that starts with
+  those three words is extended along the title for as far as it agrees.
+*/
+
+type Named = { words: string[]; url: string; title: string };
+export type TitleIndex = Map<string, Named[]>;
+
+const wordsIn = (s: string) => s.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+
+function titleIndex(designs: ShopDesign[]): TitleIndex {
+  const index: TitleIndex = new Map();
+  for (const d of designs) {
+    if (!d.url) continue;
+    const words = wordsIn(d.title);
+    if (words.length < 3) continue;
+    const key = words.slice(0, 3).join(" ");
+    const held = index.get(key);
+    /* Designs arrive most-favorited first, so the first one wins ties. */
+    if (held) held.push({ words, url: d.url, title: d.title });
+    else index.set(key, [{ words, url: d.url, title: d.title }]);
+  }
+  return index;
+}
+
+type Piece = { text: string; url?: string; title?: string };
+
+function linkTitles(text: string, index: TitleIndex): Piece[] {
+  const found = [...text.matchAll(/[A-Za-z0-9]+/g)];
+  if (found.length < 3) return [{ text }];
+  const tok = found.map((m) => ({
+    w: m[0].toLowerCase(),
+    from: m.index as number,
+    to: (m.index as number) + m[0].length,
+  }));
+
+  const out: Piece[] = [];
+  let cut = 0; // how much of the original string is already spent
+  let i = 0;
+
+  while (i + 2 < tok.length) {
+    const runners = index.get(
+      `${tok[i].w} ${tok[i + 1].w} ${tok[i + 2].w}`,
+    );
+    if (!runners) {
+      i++;
+      continue;
+    }
+
+    /* Take whichever design agrees with the line for longest. */
+    let best: Named | null = null;
+    let far = 0;
+    for (const cand of runners) {
+      let n = 3;
+      while (n < cand.words.length && tok[i + n]?.w === cand.words[n]) n++;
+      if (n > far) {
+        far = n;
+        best = cand;
+      }
+    }
+    if (!best) {
+      i++;
+      continue;
+    }
+
+    const from = tok[i].from;
+    const to = tok[i + far - 1].to;
+    /* Too short to be a name, or straddling a bold marker: leave it alone. */
+    if (to - from < 12) {
+      i++;
+      continue;
+    }
+
+    if (from > cut) out.push({ text: text.slice(cut, from) });
+    out.push({ text: text.slice(from, to), url: best.url, title: best.title });
+    cut = to;
+    i += far;
+  }
+
+  if (cut < text.length) out.push({ text: text.slice(cut) });
+  return out.length ? out : [{ text }];
+}
+
+/** A line of the brief: bold first, then any design named inside it. */
+function Line({ text, index }: { text: string; index: TitleIndex }) {
+  return (
+    <>
+      {text
+        .split(/(\*\*[^*]+\*\*)/g)
+        .filter(Boolean)
+        .map((run, i) => {
+          const strong = run.startsWith("**") && run.endsWith("**");
+          const inner = strong ? run.slice(2, -2) : run;
+          const body = linkTitles(inner, index).map((p, j) =>
+            p.url ? (
+              <a
+                key={j}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={p.title}
+                className="underline decoration-2 underline-offset-2 transition hover:opacity-70"
+                style={{ textDecorationColor: "var(--accent)" }}
+              >
+                {p.text}
+              </a>
+            ) : (
+              <span key={j}>{p.text}</span>
+            ),
+          );
+          return strong ? (
+            <strong key={i} className="font-bold text-ink">
+              {body}
+            </strong>
+          ) : (
+            <span key={i}>{body}</span>
+          );
+        })}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 
 export default function ShopsPage() {
   return <Shell>{(world) => <ShopsBody world={world} />}</Shell>;
@@ -208,10 +339,19 @@ function ShopBlock({
       .catch(() => setDesigns([]));
   }, [open, showing, designs, shop.id]);
 
-  async function run(kind: "patterns" | "buyers") {
+  /*
+    A second read only earns its cost if the evidence underneath it has
+    changed, so reading again pulls the catalogue down first. Etsy's numbers
+    move every day and the pull is free; it is the read that is rationed.
+  */
+  async function run(kind: "patterns" | "buyers", fresh = false) {
     setBusy(kind);
     onError("");
     try {
+      if (fresh) {
+        await addShop(world, shop.name);
+        setDesigns(null);
+      }
       await readShop(world, shop.id, kind);
       await onChanged();
       setShowing(kind);
@@ -230,6 +370,9 @@ function ShopBlock({
     whole point of having Etsy's real numbers: a shop's biggest traffic
     getter is routinely not the design people wanted.
   */
+  /* So the brief can turn a design it names into a link to that design. */
+  const named = useMemo(() => titleIndex(designs ?? []), [designs]);
+
   const loved = designs
     ? [...designs].sort((a, b) =>
         order === "favorites"
@@ -375,22 +518,29 @@ function ShopBlock({
         <Brief
           read={reads[showing] as ShopRead}
           designs={designs ?? []}
+          named={named}
           drop={drop}
           shopName={shop.name}
           world={world}
-          onRead={() => run(showing)}
+          onRead={() => run(showing, true)}
         />
       )}
 
       {open && (
         <>
+          {/*
+            These three are easy to confuse, so the words say plainly which
+            is a share and which are counts, and the big number on every card
+            changes with the choice. Sorting that appears to do nothing is
+            worse than no sorting.
+          */}
           <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
             <p className="t-small text-ink-3">Order by</p>
             {(
               [
-                ["rate", "how often it's favorited"],
-                ["favorites", "most favorites"],
-                ["views", "most views"],
+                ["rate", "% of viewers who favorited it"],
+                ["favorites", "total favorites"],
+                ["views", "total views"],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -407,6 +557,13 @@ function ShopBlock({
               </button>
             ))}
           </div>
+          <p className="t-small mt-2 max-w-[62ch] text-ink-3">
+            {order === "rate"
+              ? "Out of everyone who saw it. A design seen 300 times and favorited 60 times beats one seen 30,000 times and favorited 900 — the first one is what people actually wanted."
+              : order === "favorites"
+                ? "The plain count of hearts. Big numbers here usually mean the design got a lot of traffic, not that it landed."
+                : "How many times Etsy put it in front of someone. Traffic, not wanting."}
+          </p>
           <div className="mt-4 grid gap-6 sm:grid-cols-3 lg:grid-cols-5">
             {loved.slice(0, all ? loved.length : 40).map((d) => (
               <figure key={d.listingId} className="card overflow-hidden">
@@ -425,20 +582,42 @@ function ShopBlock({
                   )}
                 </a>
                 <figcaption className="p-4">
+                  {/* The number they sorted by leads; the others follow. */}
                   <p className="flex flex-wrap items-baseline gap-x-2">
                     <span
                       className="numeral text-[1rem]"
                       style={{ color: "var(--accent)" }}
                     >
-                      {d.views >= ENOUGH_VIEWS
-                        ? `${(100 * saveRate(d)).toFixed(0)}%`
-                        : "—"}
+                      {order === "favorites"
+                        ? d.favorers.toLocaleString()
+                        : order === "views"
+                          ? d.views.toLocaleString()
+                          : d.views >= ENOUGH_VIEWS
+                            ? `${(100 * saveRate(d)).toFixed(0)}%`
+                            : "—"}
                     </span>
-                    <span className="t-small text-ink-2">favorited it</span>
+                    <span className="t-small text-ink-2">
+                      {order === "favorites"
+                        ? "favorites"
+                        : order === "views"
+                          ? "views"
+                          : "favorited it"}
+                    </span>
                   </p>
                   <p className="t-small mt-0.5 text-ink-3">
-                    {d.views.toLocaleString()} views ·{" "}
-                    {d.favorers.toLocaleString()} favorites
+                    {order === "rate"
+                      ? `${d.views.toLocaleString()} views · ${d.favorers.toLocaleString()} favorites`
+                      : order === "favorites"
+                        ? `${d.views.toLocaleString()} views · ${
+                            d.views >= ENOUGH_VIEWS
+                              ? `${(100 * saveRate(d)).toFixed(0)}% favorited it`
+                              : "too few views to rate"
+                          }`
+                        : `${d.favorers.toLocaleString()} favorites · ${
+                            d.views >= ENOUGH_VIEWS
+                              ? `${(100 * saveRate(d)).toFixed(0)}% favorited it`
+                              : "too few views to rate"
+                          }`}
                   </p>
                   <p className="t-small mt-1.5 line-clamp-2 text-ink-2">
                     {d.title}
@@ -465,6 +644,7 @@ function ShopBlock({
 function Brief({
   read,
   designs,
+  named,
   drop,
   shopName,
   world,
@@ -472,6 +652,7 @@ function Brief({
 }: {
   read: ShopRead;
   designs: ShopDesign[];
+  named: TitleIndex;
   drop: Drop | null;
   shopName: string;
   world: World;
@@ -493,9 +674,18 @@ function Brief({
           {read.kind === "patterns"
             ? "What this shop keeps doing"
             : "What their buyers said"}
+          <span className="text-ink-3"> · read {when(read.ranAt)}</span>
         </p>
-        <button onClick={onRead} className="btn btn-ghost">
-          Refresh
+        {/*
+          Worth pressing when the shop has been publishing — it pulls their
+          latest listings and Etsy's newest numbers, then reads again.
+        */}
+        <button
+          onClick={onRead}
+          className="btn btn-ghost"
+          title="Pulls their newest listings and numbers, then reads the shop again"
+        >
+          Read again
         </button>
       </div>
 
@@ -506,7 +696,7 @@ function Brief({
         >
           <p className="t-h3 leading-snug text-ink">{p.heading}</p>
           <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
-            {p.body}
+            <Line text={p.body} index={named} />
           </p>
           {/* The evidence, a line each. */}
           {p.points && p.points.length > 0 && (
@@ -522,7 +712,7 @@ function Brief({
                     aria-hidden
                   />
                   <span>
-                    <Rich text={line} />
+                    <Line text={line} index={named} />
                   </span>
                 </li>
               ))}
