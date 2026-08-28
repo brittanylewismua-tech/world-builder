@@ -68,7 +68,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Not for you." }, { status: 401 });
 
   const db = serviceDb();
-  const week = weekStart();
+  /*
+    The schedule always means this week. A hand-run may name another —
+    which is how the job gets proved against a real world before a schedule
+    is ever pointed at it, and how a missed week gets backfilled.
+  */
+  const asked = url.searchParams.get("week");
+  const week = /^\d{4}-\d{2}-\d{2}$/.test(asked ?? "") ? asked! : weekStart();
   const only = url.searchParams.get("world");
   const limit = Number(url.searchParams.get("limit") ?? PER_RUN) || PER_RUN;
 
