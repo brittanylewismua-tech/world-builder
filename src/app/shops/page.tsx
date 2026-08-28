@@ -44,23 +44,45 @@ const when = (iso: string) =>
 */
 
 type Named = { words: string[]; url: string; title: string };
-export type TitleIndex = Map<string, Named[]>;
+/** Designs filed by their first three words, and again by their first two. */
+export type TitleIndex = { three: Map<string, Named[]>; two: Map<string, Named[]> };
 
 const wordsIn = (s: string) => s.toLowerCase().match(/[a-z0-9]+/g) ?? [];
 
 function titleIndex(designs: ShopDesign[]): TitleIndex {
-  const index: TitleIndex = new Map();
+  const three = new Map<string, Named[]>();
+  const two = new Map<string, Named[]>();
   for (const d of designs) {
     if (!d.url) continue;
     const words = wordsIn(d.title);
-    if (words.length < 3) continue;
-    const key = words.slice(0, 3).join(" ");
-    const held = index.get(key);
+    if (words.length < 2) continue;
+    const entry = { words, url: d.url, title: d.title };
     /* Designs arrive most-favorited first, so the first one wins ties. */
-    if (held) held.push({ words, url: d.url, title: d.title });
-    else index.set(key, [{ words, url: d.url, title: d.title }]);
+    const file = (map: Map<string, Named[]>, key: string) => {
+      const held = map.get(key);
+      if (held) held.push(entry);
+      else map.set(key, [entry]);
+    };
+    file(two, words.slice(0, 2).join(" "));
+    if (words.length >= 3) file(three, words.slice(0, 3).join(" "));
   }
-  return index;
+  return { three, two };
+}
+
+/*
+  Two words is far too loose to go hunting for inside a sentence — "ghost
+  sweatshirt" is ordinary English here. But the model puts the name of a
+  design in bold, so when a whole bold run is exactly the opening of a title,
+  two words is enough and "Auntie Sweatshirt" becomes a link.
+*/
+function boldIsATitle(text: string, index: TitleIndex): Named | null {
+  const words = wordsIn(text);
+  if (words.length < 2 || text.length < 12) return null;
+  for (const cand of index.two.get(`${words[0]} ${words[1]}`) ?? []) {
+    if (words.length > cand.words.length) continue;
+    if (words.every((w, i) => cand.words[i] === w)) return cand;
+  }
+  return null;
 }
 
 type Piece = { text: string; url?: string; title?: string };
@@ -79,7 +101,7 @@ function linkTitles(text: string, index: TitleIndex): Piece[] {
   let i = 0;
 
   while (i + 2 < tok.length) {
-    const runners = index.get(
+    const runners = index.three.get(
       `${tok[i].w} ${tok[i + 1].w} ${tok[i + 2].w}`,
     );
     if (!runners) {
@@ -131,7 +153,11 @@ function Line({ text, index }: { text: string; index: TitleIndex }) {
         .map((run, i) => {
           const strong = run.startsWith("**") && run.endsWith("**");
           const inner = strong ? run.slice(2, -2) : run;
-          const body = linkTitles(inner, index).map((p, j) =>
+          const whole = strong ? boldIsATitle(inner, index) : null;
+          const pieces: Piece[] = whole
+            ? [{ text: inner, url: whole.url, title: whole.title }]
+            : linkTitles(inner, index);
+          const body = pieces.map((p, j) =>
             p.url ? (
               <a
                 key={j}
