@@ -625,7 +625,7 @@ function Patterns({ points }: { points: BriefPoint[] }) {
             {p.points.map((line, i) => (
               <li
                 key={i}
-                className="t-small flex gap-2.5 leading-relaxed text-ink-2"
+                className="flex gap-2.5 text-[15px] leading-relaxed text-ink-2"
               >
                 <span
                   className="mt-[7px] h-1 w-1 shrink-0 rounded-full"

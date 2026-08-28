@@ -10,6 +10,14 @@ export const maxDuration = 300;
 const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
 
 /**
+ * The buyer read is pulling who-and-why out of a hundred and sixty short
+ * reviews. That is extraction, not judgement, and it has no pictures in it —
+ * the small model does it just as well for about a twelfth of the price.
+ * Looking at artwork stays on the big one.
+ */
+const TEXT_MODEL = process.env.WB_SCOUT || "claude-haiku-4-5-20251001";
+
+/**
  * READING A SHOP THAT ALREADY BUILT THIS WORLD.
  *
  * Two reads, deliberately kept apart, because they rest on different
@@ -30,7 +38,17 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
  */
 
 /** How many designs get looked at rather than merely listed. */
-const LOOK_AT = 24;
+const LOOK_AT = 16;
+
+/*
+  Etsy serves a fixed set of widths and the choice is a straight trade of
+  pennies against legibility. The hits carry words on them and have to be
+  readable, so they come at 570. The spread sample only has to answer "does
+  the rest of the shop look like the hits", which a 300 pixel thumbnail
+  settles at a third of the tokens.
+*/
+const BIG = "il_570xN.";
+const SMALL = "il_300x300.";
 
 /** Below this, a favorite rate is noise — one viewer and one save is 100%. */
 const ENOUGH_VIEWS = 150;
@@ -248,8 +266,8 @@ function saveRate(d: Design) {
   return d.views >= ENOUGH_VIEWS ? d.favorers / d.views : 0;
 }
 
-function smaller(url: string) {
-  return url.replace(/il_(fullxfull|\d+x[N\d]+)\./i, "il_570xN.");
+function sized(url: string, size: string) {
+  return url.replace(/il_(fullxfull|\d+x[N\d]+)\./i, size);
 }
 
 export async function POST(req: Request) {
@@ -311,8 +329,15 @@ export async function POST(req: Request) {
       Possum" needs no picture to be understood.
     */
     const ranked = [...designs].sort((a, b) => saveRate(b) - saveRate(a));
-    const lines = [...designs]
-      .sort((a, b) => b.favorers - a.favorers)
+    /*
+      The whole catalogue as text is thirteen thousand tokens on a big shop,
+      and the tail of it is listings nobody has ever seen. Two hundred covers
+      everything with any traffic on it; the rest is counted rather than
+      listed, which is honest and four cents cheaper.
+    */
+    const ordered = [...designs].sort((a, b) => b.favorers - a.favorers);
+    const lines = ordered
+      .slice(0, 200)
       .map(
         (d) =>
           `${d.title} — ${d.views.toLocaleString()} views, ${d.favorers.toLocaleString()} favorited${
@@ -326,7 +351,11 @@ export async function POST(req: Request) {
       type: "text",
       text: `SHOP: ${shop.shop_name} — ${shop.listing_count ?? designs.length} active listings${
         shop.sold_count ? `, ${shop.sold_count.toLocaleString()} sales all time` : ""
-      }\n\nTHE WHOLE CATALOGUE\n${lines.join("\n")}`,
+      }\n\nTHE CATALOGUE${
+        ordered.length > 200
+          ? ` — the ${lines.length} with the most favorites, out of ${ordered.length}. The other ${ordered.length - 200} have almost no traffic between them.`
+          : ""
+      }\n${lines.join("\n")}`,
     });
 
     /*
@@ -373,7 +402,7 @@ export async function POST(req: Request) {
       });
       content.push({
         type: "image",
-        source: { type: "url", url: smaller(d.image_url as string) },
+        source: { type: "url", url: sized(d.image_url as string, BIG) },
       } as Anthropic.ImageBlockParam);
     }
     if (spread.length) {
@@ -388,7 +417,7 @@ export async function POST(req: Request) {
         });
         content.push({
           type: "image",
-          source: { type: "url", url: smaller(d.image_url as string) },
+          source: { type: "url", url: sized(d.image_url as string, SMALL) },
         } as Anthropic.ImageBlockParam);
       }
     }
@@ -456,8 +485,24 @@ export async function POST(req: Request) {
   }
 
   try {
+    /*
+      Cache everything, not just the system prompt.
+
+      Fifty thousand tokens of catalogue and artwork get rebuilt identically
+      on every re-read of the same shop, and re-reads are common — a refresh
+      after an export, a second look an hour later. Marking the last block
+      caches the lot for an hour, so the next read of that shop pays a tenth
+      for its input.
+    */
+    const last = content[content.length - 1] as unknown as Record<
+      string,
+      unknown
+    >;
+    last.cache_control = { type: "ephemeral", ttl: "1h" };
+
+    const model = kind === "buyers" ? TEXT_MODEL : MODEL;
     const res = await client.messages.create({
-      model: MODEL,
+      model,
       max_tokens: 3000,
       system: [
         {
@@ -472,7 +517,7 @@ export async function POST(req: Request) {
     });
 
     meter("shops", door.userId, {
-      model: MODEL,
+      model,
       input_tokens: res.usage.input_tokens,
       output_tokens: res.usage.output_tokens,
       cache_read_input_tokens: res.usage.cache_read_input_tokens,
