@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit, endWell, meter, ownerOf } from "@/lib/guard";
+import { admit, endWell, meter, ownerOf, refund } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 
 export const runtime = "nodejs";
@@ -349,11 +349,23 @@ export async function POST(req: Request) {
   const gate = await admit(req, wholeWorld ? "world" : "winners");
   if ("deny" in gate) return gate.deny;
 
-  if (!process.env.ANTHROPIC_API_KEY)
+  /*
+    Nothing is charged for work that did not happen. The unit is reserved
+    before the call so the check can be atomic; every exit that hands back
+    no result returns it.
+  */
+  let delivered = false;
+  const settle = async () => {
+    if (!delivered) await refund(gate.caller, wholeWorld ? "world" : "winners");
+  };
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    await settle();
     return NextResponse.json(
       { error: "This deployment is missing its ANTHROPIC_API_KEY." },
       { status: 503 },
     );
+  }
 
   const { data } = await db
     .from("wb_winners")
@@ -403,7 +415,8 @@ export async function POST(req: Request) {
   const rows = (data ?? []) as Row[];
   const chosen = pick(rows);
 
-  if (chosen.length < 3)
+  if (chosen.length < 3) {
+    await settle();
     return NextResponse.json(
       {
         error:
@@ -411,6 +424,7 @@ export async function POST(req: Request) {
       },
       { status: 400 },
     );
+  }
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const started = Date.now();
@@ -539,6 +553,7 @@ export async function POST(req: Request) {
         pool,
       });
 
+    delivered = true;
     return NextResponse.json({
       brief,
       counted: chosen.length,
@@ -550,5 +565,7 @@ export async function POST(req: Request) {
       { error: "That did not finish. Try it again." },
       { status: 500 },
     );
+  } finally {
+    await settle();
   }
 }

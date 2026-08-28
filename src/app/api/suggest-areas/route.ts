@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit, meter } from "@/lib/guard";
+import { admit, meter, refund } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -69,25 +69,40 @@ export async function POST(req: Request) {
   const door = await admit(req, "areas");
   if ("deny" in door) return door.deny;
 
-  if (!process.env.ANTHROPIC_API_KEY)
+  /*
+    Nothing is charged for work that did not happen. The unit is reserved
+    before the call so the check can be atomic; every exit that hands back
+    no result returns it.
+  */
+  let delivered = false;
+  const settle = async () => {
+    if (!delivered) await refund(door.caller, "areas");
+  };
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    await settle();
     return NextResponse.json(
       { error: "This deployment is missing its ANTHROPIC_API_KEY." },
       { status: 503 },
     );
+  }
 
   let body: Body;
   try {
     body = await req.json();
   } catch {
+    await settle();
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
 
   const keywords = (body.subNiches ?? []).filter(Boolean);
-  if (keywords.length < 2)
+  if (keywords.length < 2) {
+    await settle();
     return NextResponse.json(
       { error: "Add a few validated keywords first and I can read them." },
       { status: 400 },
     );
+  }
 
   const existing = (body.existing ?? []).filter(Boolean);
 
@@ -145,11 +160,14 @@ Name the areas of this customer's world worth reading every morning.`;
       .filter((a, i, all) => all.indexOf(a) === i)
       .slice(0, 8);
 
+    delivered = true;
     return NextResponse.json({ areas });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Could not read your keywords." },
       { status: 500 },
     );
+  } finally {
+    await settle();
   }
 }

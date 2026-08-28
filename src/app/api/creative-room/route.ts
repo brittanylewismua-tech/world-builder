@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit, endWell, meter } from "@/lib/guard";
+import { admit, endWell, meter, refund } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -108,7 +108,18 @@ export async function POST(req: Request) {
   const door = await admit(req, "room");
   if ("deny" in door) return door.deny;
 
+  /*
+    Nothing is charged for work that did not happen. The unit is reserved
+    before the call so the check can be atomic; every exit that hands back
+    no result returns it.
+  */
+  let delivered = false;
+  const settle = async () => {
+    if (!delivered) await refund(door.caller, "room");
+  };
+
   if (!process.env.ANTHROPIC_API_KEY) {
+    await settle();
     return NextResponse.json(
       {
         error:
@@ -126,12 +137,15 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
+    await settle();
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
 
   const messages = body.messages ?? [];
-  if (!messages.length)
+  if (!messages.length) {
+    await settle();
     return NextResponse.json({ error: "Nothing to say." }, { status: 400 });
+  }
 
   /*
     THE BOARD IS SHOWN ONCE, AT THE FRONT.
@@ -219,11 +233,14 @@ export async function POST(req: Request) {
         .trim(),
       res.stop_reason,
     );
+    delivered = true;
     return NextResponse.json({ text });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "The Creative Room failed." },
       { status: 500 },
     );
+  } finally {
+    await settle();
   }
 }

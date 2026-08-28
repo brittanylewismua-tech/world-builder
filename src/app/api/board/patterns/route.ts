@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { admit, meter } from "@/lib/guard";
+import { admit, meter, refund } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -182,11 +182,23 @@ export async function POST(req: Request) {
   const door = await admit(req, "board");
   if ("deny" in door) return door.deny;
 
-  if (!process.env.ANTHROPIC_API_KEY)
+  /*
+    Nothing is charged for work that did not happen. The unit is reserved
+    before the call so the check can be atomic; every exit that hands back
+    no result returns it.
+  */
+  let delivered = false;
+  const settle = async () => {
+    if (!delivered) await refund(door.caller, "board");
+  };
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    await settle();
     return NextResponse.json(
       { error: "This deployment is missing its ANTHROPIC_API_KEY." },
       { status: 503 },
     );
+  }
 
   const valid = new Set(items.map((i) => i.id));
 
@@ -266,15 +278,19 @@ export async function POST(req: Request) {
             itemIds: (f.itemIds ?? []).filter((id) => valid.has(id)),
           }))
           .filter((f) => f.title && f.itemIds.length >= 2);
+        delivered = true;
         return NextResponse.json({ findings });
       }
     }
 
+    delivered = true;
     return NextResponse.json({ findings: [] });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Could not read the board." },
       { status: 500 },
     );
+  } finally {
+    await settle();
   }
 }

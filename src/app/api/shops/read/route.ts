@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit, endWell, meter, ownerOf } from "@/lib/guard";
+import { admit, endWell, meter, ownerOf, refund } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 import { etsyKey, reviewsFor } from "@/lib/etsy";
 import { ENOUGH_VIEWS } from "@/lib/limits";
@@ -331,11 +331,23 @@ export async function POST(req: Request) {
   const gate = await admit(req, "shops");
   if ("deny" in gate) return gate.deny;
 
-  if (!process.env.ANTHROPIC_API_KEY)
+  /*
+    Nothing is charged for work that did not happen. The unit is reserved
+    before the call so the check can be atomic; every exit that hands back
+    no result returns it.
+  */
+  let delivered = false;
+  const settle = async () => {
+    if (!delivered) await refund(gate.caller, "shops");
+  };
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    await settle();
     return NextResponse.json(
       { error: "This deployment is missing its ANTHROPIC_API_KEY." },
       { status: 503 },
     );
+  }
 
   const { data: shop } = await db
     .from("wb_shops")
@@ -344,8 +356,10 @@ export async function POST(req: Request) {
     .eq("world_id", worldId)
     .maybeSingle();
 
-  if (!shop)
+  if (!shop) {
+    await settle();
     return NextResponse.json({ error: "No such shop." }, { status: 404 });
+  }
 
   const { data: designRows } = await db
     .from("wb_shop_designs")
@@ -353,11 +367,13 @@ export async function POST(req: Request) {
     .eq("shop_id", shopId);
 
   const designs = (designRows ?? []) as Design[];
-  if (designs.length < 5)
+  if (designs.length < 5) {
+    await settle();
     return NextResponse.json(
       { error: "There is not enough of this shop to read." },
       { status: 400 },
     );
+  }
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const started = Date.now();
@@ -469,16 +485,19 @@ export async function POST(req: Request) {
     });
   } else {
     const key = etsyKey();
-    if (!key)
+    if (!key) {
+      await settle();
       return NextResponse.json(
         { error: "This deployment has no Etsy key." },
         { status: 503 },
       );
+    }
 
     let reviews;
     try {
       reviews = await reviewsFor(shop.etsy_shop_id as number, key, 400);
     } catch (e) {
+      await settle();
       return NextResponse.json(
         { error: e instanceof Error ? e.message : "Etsy did not answer." },
         { status: 502 },
@@ -501,7 +520,8 @@ export async function POST(req: Request) {
       .filter((r) => r.text.length >= 60)
       .slice(0, 160);
 
-    if (useful.length < 8)
+    if (useful.length < 8) {
+      await settle();
       return NextResponse.json(
         {
           error:
@@ -509,6 +529,7 @@ export async function POST(req: Request) {
         },
         { status: 400 },
       );
+    }
 
     content.push({
       type: "text",
@@ -613,6 +634,7 @@ export async function POST(req: Request) {
       counted: kind === "patterns" ? designs.length : patterns.length,
     });
 
+    delivered = true;
     return NextResponse.json({ brief, kind });
   } catch (e) {
     /*
@@ -630,5 +652,7 @@ export async function POST(req: Request) {
       },
       { status: 500 },
     );
+  } finally {
+    await settle();
   }
 }

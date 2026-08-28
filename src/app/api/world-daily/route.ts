@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit, meter } from "@/lib/guard";
+import { admit, meter, refund } from "@/lib/guard";
 import { normalise, usableSource } from "@/lib/sources";
 
 export const runtime = "nodejs";
@@ -301,7 +301,22 @@ export async function POST(req: Request) {
   */
   const { caller } = door;
 
+  /*
+    NOTHING IS CHARGED FOR AN ISSUE THAT NEVER ARRIVED.
+
+    The unit is reserved before the work, because that is what makes the
+    check atomic. Every path out of here that does not hand back an issue
+    gives it straight back — a timeout, a missing key, an empty read. The
+    weekly cap used to be two so that a failure had a spare to fall back on;
+    it is one now, because a failure no longer costs anything.
+  */
+  let delivered = false;
+  const settle = async () => {
+    if (!delivered) await refund(caller, "daily");
+  };
+
   if (!process.env.ANTHROPIC_API_KEY) {
+    await settle();
     return NextResponse.json(
       {
         error:
@@ -315,15 +330,18 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
+    await settle();
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
 
   const areas = (body.areas ?? []).filter(Boolean);
-  if (!areas.length)
+  if (!areas.length) {
+    await settle();
     return NextResponse.json(
       { error: "Add at least one active world area in your World Profile." },
       { status: 400 },
     );
+  }
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -692,6 +710,7 @@ ${field || "(nothing came back)"}`
       away any more — the five that pass the printable test are the paper, and
       everything else real sits behind it.
     */
+    delivered = true;
     return NextResponse.json({
       items: out.items.slice(0, TARGET_ITEMS),
       also: out.also,
@@ -701,5 +720,7 @@ ${field || "(nothing came back)"}`
       { error: e instanceof Error ? e.message : "Research failed." },
       { status: 500 },
     );
+  } finally {
+    await settle();
   }
 }

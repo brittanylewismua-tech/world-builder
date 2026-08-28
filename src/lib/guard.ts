@@ -43,16 +43,21 @@ export const DAILY_CAP = {
     feature actually is. The issue is written once a week and there is no
     refresh button any more, so a seller needs exactly one.
 
-    Two, not one, because the allowance is spent BEFORE the work: a run that
-    fails still costs a unit, and at one the first failure would leave
+    One. It was two, as a spare — the allowance is spent before the work, so
+    a run that failed still cost a unit and at one a single timeout left
     somebody with no paper until Monday.
+
+    That spare was a workaround for a bug, and the bug is fixed: every path
+    out of the route that does not hand back an issue returns the unit. A
+    failure now costs nothing, so the cap can finally say what the feature
+    actually is. One issue a week.
 
     This is the most expensive call in the product by a wide margin — a scout
     reading eighty thousand tokens, then a judge writing twelve — at roughly
     nineteen cents a run. Six a week was five dollars a month per seller for a
     thing that changes weekly.
   */
-  daily: 2,
+  daily: 1,
   /* A real conversation is ten or fifteen turns. Thirty is a long session. */
   customer: 30,
   room: 30,
@@ -218,6 +223,38 @@ export async function admit(
     };
 
   return { caller: { userId: data.user.id, token } };
+}
+
+/**
+ * Give the allowance back when the work did not happen.
+ *
+ * The unit is reserved before the call, because that is the only way the
+ * check can be atomic. The cost of that was real: a timeout, a model error
+ * or an answer that came back unreadable still spent one of a seller's two
+ * issues for the week — and the cap was two rather than one precisely to
+ * carry a spare for it. A spare is a workaround for a bug.
+ *
+ * So nothing is charged for work that produced nothing. Called on every
+ * failure path after admit(): the model erroring, the answer being
+ * unparseable, the run finding nothing to say.
+ *
+ * Runs as the caller through their own token, same as the spend. Errors are
+ * swallowed — a refund that fails must not turn one failure into two.
+ */
+export async function refund(caller: Caller, route: Route) {
+  if (!caller.token) return; // the cron job has no allowance to return
+  try {
+    const supabase = createClient(URL, KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${caller.token}` } },
+    });
+    await supabase.rpc("wb_refund", {
+      k: route,
+      weekly: WEEKLY.has(route),
+    });
+  } catch {
+    /* Never let bookkeeping turn a failure into a worse one. */
+  }
 }
 
 /* ------------------------------------------------------------------ */
