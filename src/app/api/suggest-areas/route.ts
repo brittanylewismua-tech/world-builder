@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit } from "@/lib/guard";
+import { admit, meter } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -99,11 +99,21 @@ Name the areas of this customer's world worth reading every morning.`;
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const began = Date.now();
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 800,
       system: SYSTEM,
       messages: [{ role: "user", content: prompt }],
+    });
+
+    /* Every model call in the app lands in the same ledger, or the cost
+       dashboard is blind exactly where the volume is. */
+    meter("areas", door.caller.userId, {
+      model: MODEL,
+      ...res.usage,
+      ms: Date.now() - began,
+      worldId: null,
     });
 
     const text = res.content

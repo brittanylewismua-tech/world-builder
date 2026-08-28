@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { admit } from "@/lib/guard";
+import { admit, meter } from "@/lib/guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -82,6 +82,8 @@ const TOOL = {
 } as const;
 
 interface Body {
+  /* Attribution only — which world this spend belongs to. */
+  worldId?: string;
   intention?: string;
   worldName?: string;
   subNiches?: string[];
@@ -229,6 +231,7 @@ export async function POST(req: Request) {
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const began = Date.now();
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: 2500,
@@ -236,6 +239,15 @@ export async function POST(req: Request) {
       tools: [TOOL as unknown as Anthropic.Tool],
       tool_choice: { type: "tool", name: "record" },
       messages: [{ role: "user", content: prompt }],
+    });
+
+    /* Every model call in the app lands in the same ledger, or the cost
+       dashboard is blind exactly where the volume is. */
+    meter("board", door.caller.userId, {
+      model: MODEL,
+      ...res.usage,
+      ms: Date.now() - began,
+      worldId: body.worldId ?? null,
     });
 
     for (const block of res.content) {

@@ -572,7 +572,10 @@ async function forVision(src: string): Promise<string | null> {
  * the row and pattern detection reads it back, so a board with sixty images
  * costs sixty vision calls over a whole week and nothing thereafter.
  */
-export async function analyzeItem(item: BoardItem): Promise<BoardItem> {
+export async function analyzeItem(
+  item: BoardItem,
+  worldId?: string,
+): Promise<BoardItem> {
   if (item.analyzedAt) return item;
 
   const image = item.kind === "image" && item.src ? await forVision(item.src) : null;
@@ -581,6 +584,7 @@ export async function analyzeItem(item: BoardItem): Promise<BoardItem> {
     ai: Record<string, unknown>;
     section: Section | null;
   }>("/api/board/analyze", {
+    worldId,
     kind: item.kind,
     body: item.body,
     note: item.note,
@@ -623,6 +627,7 @@ export async function findPatterns(
     findings: { kind: "pattern" | "collision"; title: string; detail: string; itemIds: string[] }[];
   }>("/api/board/patterns", {
     boardId: board.id,
+    worldId: world.id,
     intention: board.intention,
     worldName: world.name,
     subNiches: world.subNiches.map((s) => s.keyword),

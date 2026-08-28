@@ -159,7 +159,7 @@ export default function ResearchBoard({
     const pending = board.items.find((i) => !i.analyzedAt);
     if (!pending) return;
     let alive = true;
-    analyzeItem(pending)
+    analyzeItem(pending, world.id)
       .then((updated) => {
         if (!alive) return;
         setBoard((b) =>
