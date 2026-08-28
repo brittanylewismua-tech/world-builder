@@ -7,6 +7,7 @@ import {
   findShop,
   imagesFor,
   shopNameFrom,
+  unescapeHtml,
 } from "@/lib/etsy";
 
 export const runtime = "nodejs";
@@ -145,7 +146,7 @@ export async function POST(req: Request) {
       world_id: worldId,
       shop_id: saved.id,
       listing_id: l.listing_id,
-      title: l.title ?? "",
+      title: unescapeHtml(l.title ?? ""),
       url: l.url ?? `https://www.etsy.com/listing/${l.listing_id}`,
       image_url: pic?.url ?? null,
       views: l.views ?? 0,

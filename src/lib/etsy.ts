@@ -160,6 +160,23 @@ export async function imagesFor(
   return found;
 }
 
+/**
+ * Etsy hands titles back HTML-escaped, so "Don't yell at me" arrives as
+ * "Don&#39;t yell at me" and renders that way on screen. React will not
+ * decode it — quite rightly — so it is decoded once on the way in.
+ */
+export function unescapeHtml(s: string) {
+  return s
+    .replace(/&#0?39;|&apos;|&#x27;/gi, "'")
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    // Ampersand last, or it would re-break everything decoded above.
+    .replace(/&amp;/gi, "&");
+}
+
 export interface EtsyReview {
   listing_id?: number;
   rating?: number;
