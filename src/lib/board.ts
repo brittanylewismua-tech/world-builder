@@ -289,6 +289,36 @@ export async function saveSignalToBoard(
 }
 
 /**
+ * A WRITTEN FINDING, ONTO THE BOARD.
+ *
+ * Not the same job as saveSignalToBoard, which files a link. A finding about
+ * a shop went in as a link and the board rendered exactly what a link is: a
+ * grey box saying "etsy.com" with the whole finding crushed into a four-word
+ * caption underneath. Useless, and rightly complained about.
+ *
+ * A finding is words, so it goes in as words — a text item, which the board
+ * already renders as a readable quote card. The shop it came from goes in the
+ * note, where a short line belongs, and it lands in the bestsellers lane
+ * because that is what it is: evidence about somebody else's shop, never to
+ * be read back to the seller as her own taste.
+ */
+export async function saveFindingToBoard(
+  world: World,
+  drop: Drop,
+  finding: { headline: string; body: string; source: string },
+) {
+  const board = await openBoard(world, drop);
+  return insert({
+    world_id: world.id,
+    board_id: board.id,
+    kind: "text",
+    body: `${finding.headline} — ${finding.body}`.slice(0, 600),
+    note: finding.source.slice(0, 120),
+    sections: ["market"] as Section[],
+  });
+}
+
+/**
  * A cheap glance at a board for Home — how much is on it and how many
  * findings are waiting. Deliberately does not create the board or sign any
  * image URLs; Home should never pay for a board nobody has opened.

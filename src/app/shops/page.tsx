@@ -6,7 +6,7 @@ import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote, Rich } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
 import { report } from "@/lib/report";
-import { saveSignalToBoard } from "@/lib/board";
+import { saveFindingToBoard } from "@/lib/board";
 import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
 import type { World } from "@/lib/world";
 import {
@@ -587,20 +587,17 @@ function Brief({
             <button
               onClick={async () => {
                 if (kept[at]) return;
-                await saveSignalToBoard(world, drop, {
+                await saveFindingToBoard(world, drop, {
                   headline: p.heading,
-                  body: [p.body, ...(p.points ?? [])]
-                    .join("\n")
-                    .replace(/\*\*/g, ""),
-                  url: designs.find((d) => d.listingId === p.examples?.[0])
-                    ?.url,
+                  body: p.body.replace(/\*\*/g, ""),
+                  source: `From ${shopName}`,
                 });
                 setKept((k) => ({ ...k, [at]: true }));
               }}
               className="btn btn-ghost"
               title={`From ${shopName}`}
             >
-              {kept[at] ? "Kept" : "Keep this"}
+              {kept[at] ? `Kept → Drop ${drop.number}` : "Keep this"}
             </button>
           )}
           <button

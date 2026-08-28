@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ownerOf } from "@/lib/guard";
+import { admit, ownerOf } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 import {
   allListings,
@@ -66,12 +66,30 @@ export async function POST(req: Request) {
 
   const db = serviceDb();
 
-  const { count } = await db
-    .from("wb_shops")
-    .select("id", { count: "exact", head: true })
-    .eq("world_id", worldId);
+  /*
+    Is this a shop already followed, or a new one?
 
-  if ((count ?? 0) >= MOST_SHOPS)
+    A refresh must be free — the numbers move and somebody should be able to
+    pull the latest whenever they like. Only a genuinely new shop spends from
+    the week's five, which is what stops delete-and-re-add being a way round
+    the limit.
+  */
+  const wanted = name.toLowerCase();
+  const { data: held } = await db
+    .from("wb_shops")
+    .select("id, shop_name")
+    .eq("world_id", worldId);
+  const already = (held ?? []).some(
+    (s) => (s.shop_name as string).toLowerCase() === wanted,
+  );
+  const count = (held ?? []).length;
+
+  if (!already) {
+    const gate = await admit(req, "shopAdds");
+    if ("deny" in gate) return gate.deny;
+  }
+
+  if (!already && count >= MOST_SHOPS)
     return NextResponse.json(
       {
         error: `You are following ${MOST_SHOPS} shops, which is the limit. Remove one to make room.`,

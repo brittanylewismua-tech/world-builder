@@ -91,6 +91,17 @@ export const DAILY_CAP = {
     they will not want them all in one week.
   */
   shops: 6,
+  /*
+    Following a NEW shop. Counted per week, and a refresh of a shop already
+    followed does not count.
+
+    Five held at once was never the real limit — somebody could remove one and
+    add another all afternoon, and hold five while cycling through fifty. This
+    is the honest lock: five new shops a week, and deleting to make room costs
+    one of them. It also matches what following a shop is for. Reading five
+    catalogues properly is a week's study, not an afternoon's browsing.
+  */
+  shopAdds: 5,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -103,7 +114,12 @@ export type Route = keyof typeof DAILY_CAP;
  * something that needs four. Six a week is the issue plus five refreshes, and
  * it puts a real ceiling on the month instead of a ceiling on the morning.
  */
-const WEEKLY: ReadonlySet<Route> = new Set<Route>(["daily", "world", "shops"]);
+const WEEKLY: ReadonlySet<Route> = new Set<Route>([
+  "daily",
+  "world",
+  "shops",
+  "shopAdds",
+]);
 
 /*
   Hitting a limit is not a mistake and these should not read like a telling
@@ -131,6 +147,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have already read across your whole world this week. It resets on Monday, and the read you have is still here.",
   shops:
     "You have read as many shops as you can this week. It resets on Monday, and every read you have is still here.",
+  shopAdds:
+    "You have followed five new shops this week, which is the limit. It resets on Monday. The shops you are already following are unaffected, and refreshing one does not count.",
 };
 
 export interface Caller {
