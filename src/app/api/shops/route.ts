@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { admit, ownerOf } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
+import { MOST_SHOPS } from "@/lib/limits";
 import {
   allListings,
   etsyKey,
@@ -28,9 +29,6 @@ export const maxDuration = 300;
  * No AI here at all. This is fetching, and it costs nothing.
  */
 
-/** Five. Reading five catalogues properly is an afternoon; twenty is a list
- *  nobody opens. */
-const MOST_SHOPS = 5;
 
 export async function POST(req: Request) {
   let body: { worldId?: string; input?: string };

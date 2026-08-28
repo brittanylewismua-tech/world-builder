@@ -17,8 +17,9 @@ import type { World } from "./world";
  * and it separates a design search delivered from a design somebody wanted.
  */
 
-/** Five. Reading five catalogues properly is an afternoon's study. */
-export const MOST_SHOPS = 5;
+/* One copy of each, shared with the routes that enforce them. */
+import { ENOUGH_VIEWS, MOST_SHOPS } from "./limits";
+export { ENOUGH_VIEWS, MOST_SHOPS };
 
 export interface Shop {
   id: string;
@@ -43,9 +44,6 @@ export interface ShopDesign {
   favorers: number;
   price: number | null;
 }
-
-/** Below this many views a save rate is noise: one viewer, one save, 100%. */
-export const ENOUGH_VIEWS = 150;
 
 export function saveRate(d: ShopDesign) {
   return d.views >= ENOUGH_VIEWS ? d.favorers / d.views : 0;

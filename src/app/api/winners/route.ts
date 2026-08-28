@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ownerOf } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
+import { MOST_KEYWORDS } from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -41,7 +42,6 @@ export const maxDuration = 300;
  * worlds.
  */
 const MOST_PER_KEYWORD = 10;
-const MOST_KEYWORDS = 10;
 
 const ETSY_BATCH = "https://openapi.etsy.com/v3/application/listings/batch";
 

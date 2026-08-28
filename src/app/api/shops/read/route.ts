@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { admit, endWell, meter, ownerOf } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 import { etsyKey, reviewsFor } from "@/lib/etsy";
+import { ENOUGH_VIEWS } from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -51,7 +52,6 @@ const BIG = "il_570xN.";
 const SMALL = "il_300x300.";
 
 /** Below this, a favorite rate is noise — one viewer and one save is 100%. */
-const ENOUGH_VIEWS = 150;
 
 const CATALOGUE_SYSTEM = `You are looking at a print-on-demand shop that already sells to the customer another seller is trying to build a world around. Say what this shop is doing.
 
