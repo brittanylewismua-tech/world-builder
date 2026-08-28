@@ -1,8 +1,21 @@
 "use client";
 
 import { supabase } from "./supabase";
-import { AFFINITY_QUESTIONS, type World } from "./world";
-import { formatDropDate, type Drop } from "./drops";
+import { type World } from "./world";
+import { type Drop } from "./drops";
+/*
+  The pure assembly moved to worldContext.ts so the scheduled writer can
+  build the same briefing without a browser session. One copy of the prose,
+  two callers.
+*/
+import {
+  alreadyReported,
+  connection,
+  dropStory,
+  SIGNAL_DAYS,
+  SIGNAL_MAX,
+  worldOpening,
+} from "./worldContext";
 
 /**
  * ONE MEMORY, SHARED BY EVERY ROOM
@@ -27,11 +40,7 @@ import { formatDropDate, type Drop } from "./drops";
  * the most recent and most relevant slice, not the archive.
  */
 
-/** How far back the shared memory reaches. */
-const SIGNAL_DAYS = 4;
-const SIGNAL_MAX = 14;
 const CROSS_TALK = 6;
-const DROP_HISTORY = 4;
 const BOARD_ITEMS = 14;
 
 /* ------------------------------------------------------------------ */
@@ -186,61 +195,8 @@ async function boardNotes(dropId: string) {
   return lines;
 }
 
-/** What has actually been released, and how the current board is going. */
-function dropStory(world: World, drops: Drop[], current?: Drop | null) {
-  const lines: string[] = [];
-  const frozen = drops.filter((d) => d.frozenAt).slice(0, DROP_HISTORY);
 
-  if (current)
-    lines.push(
-      `[drop_record] Current board: DROP ${String(current.number).padStart(2, "0")}, publishing ${formatDropDate(current.publishDate)}, ${current.items.length} of ${world.slotsPerDrop} slots filled.`,
-    );
 
-  if (frozen.length)
-    lines.push(
-      `[drop_record] Released so far: ${frozen
-        .map(
-          (d) =>
-            `DROP ${String(d.number).padStart(2, "0")} (${formatDropDate(d.publishDate)}, ${d.items.length} designs)`,
-        )
-        .join(" · ")}.`,
-    );
-
-  return lines;
-}
-
-/** How the seller says they relate to this customer. Reflection, not a score. */
-function connection(world: World) {
-  const answered = AFFINITY_QUESTIONS.filter(
-    (q) => world.affinity[q.key] !== null,
-  );
-  if (!answered.length) return [];
-  return [
-    `[seller_reflection] How strongly the seller says they relate to this customer, on a 1–10 scale they answered in words: ${answered
-      .map((q) => `${q.question} ${world.affinity[q.key]}`)
-      .join(" · ")}.`,
-  ];
-}
-
-/**
- * WHERE EVERYTHING CAME FROM
- *
- * Every room shares one memory, which means every room is one careless
- * sentence away from turning a saved design reference into proof that
- * something sells, or a simulated customer into a market. The tags below
- * travel with the context so the model can tell evidence from inspiration
- * without having to guess, and the rules are stated once rather than
- * re-litigated in five different system prompts.
- */
-const SOURCE_KEY = `HOW TO WEIGH WHAT FOLLOWS
-Each line is tagged with where it came from. These tags are the difference between evidence and inspiration, and you must never quietly upgrade one into the other.
-- [seller_validated_keyword] a search term the seller checked in eRank. Real demand evidence for that exact phrase and nothing more. It says nothing about designs, styles, or what will sell.
-- [visual_calibration_reference] a design the seller saved because they like its style. Taste, not demand. Never proof anything sells, and never described closely enough that it could be remade.
-- [world_signal] something a live web search verified as real and current in this world. True, but not demand data and not a product instruction.
-- [research_board_item] something the seller collected while researching. Raw material they happened to notice. Unverified.
-- [customer_simulation] words from the simulated customer. One plausible person, extrapolated from research. Never evidence about a market.
-- [seller_reflection] the seller's private answers about their own connection to this world. Never quote it back and never treat it as a verdict.
-- [drop_record] what has been uploaded and released. A record of what was made. No sales or performance figures exist anywhere in this software, so never imply you can see how anything did.`;
 
 /* ------------------------------------------------------------------ */
 /* the whole picture                                                   */
@@ -267,34 +223,13 @@ export async function buildWorldContext(
     boardFor ? boardNotes(boardFor) : Promise.resolve([]),
   ]);
 
-  const lines: string[] = [
-    SOURCE_KEY,
-    "",
-    `THE WORLD: ${world.name}`,
-    `[seller_validated_keyword] ${world.subNiches.map((s) => s.keyword).join(" · ") || "none recorded"}.`,
-    `Parts of this world being watched: ${world.areas.map((a) => a.name).join(" · ") || "none yet"}.`,
-  ];
-
-  if (world.visualReferences.length)
-    lines.push(
-      `[visual_calibration_reference] ${world.visualReferences.length} designs on file showing the creative style the seller likes.`,
-    );
+  const lines: string[] = worldOpening(world);
 
   lines.push(...connection(world));
   lines.push(...dropStory(world, drops, currentDrop));
   lines.push(...board);
 
-  if (signals.length) {
-    lines.push(
-      "",
-      room === "daily"
-        ? `ALREADY REPORTED IN THE LAST ${SIGNAL_DAYS} DAYS — do not report any of these again, and do not report a near-duplicate. Find something new, or return fewer items.`
-        : `RECENTLY IN THIS WORLD'S DAILY PAPER — real things the seller has been reading about. You can refer to them naturally.`,
-      ...signals.map(
-        (s) => `- [world_signal] [${s.issue_date}] ${s.headline}`,
-      ),
-    );
-  }
+  lines.push(...alreadyReported(signals, room === "daily" ? "daily" : "other"));
 
   if (other.length) {
     lines.push(

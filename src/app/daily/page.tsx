@@ -1,13 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote, Dots } from "@/components/ui";
 import {
   formatIssueDate,
-  generateIssue,
   hostOf,
   hideRest,
   nextIssueDate,
@@ -23,9 +22,6 @@ import { saveSignalToBoard } from "@/lib/board";
 import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
-import { report } from "@/lib/report";
-import { LimitReached } from "@/lib/askAI";
-import ReadingBar from "@/components/ReadingBar";
 
 /*
   There is no label on a card any more.
@@ -166,11 +162,9 @@ function DailyBody({ world }: { world: World }) {
   const [rest, setRest] = useState<DailyRest[]>([]);
   const [restOpen, setRestOpen] = useState(false);
   const [dates, setDates] = useState<string[]>([]);
-  const [researching, setResearching] = useState(false);
   const [err, setErr] = useState("");
   const [nextDrop, setNextDrop] = useState<Drop | null>(null);
   /** Set when what is on screen is an older issue standing in for today's. */
-  const [standIn, setStandIn] = useState<string | null>(null);
   const [kept, setKept] = useState<Record<string, "saving" | "kept" | "failed">>({});
 
   // Which board a kept signal lands on: next week's, because that is the one
@@ -199,8 +193,7 @@ function DailyBody({ world }: { world: World }) {
   const open = useCallback(
     async (d: string) => {
       setItems(null);
-      setStandIn(null);
-      setRestOpen(false);
+        setRestOpen(false);
       setDate(d);
       try {
         const [got, more] = await Promise.all([
@@ -224,53 +217,6 @@ function DailyBody({ world }: { world: World }) {
     open(today);
   }, [world.id, today, open]);
 
-  const research = useCallback(
-    async (append = false) => {
-      setResearching(true);
-      setErr("");
-      setStandIn(null);
-      try {
-        setItems(await generateIssue(world, date, { append }));
-        setRest(await loadRest(world.id, date).catch(() => []));
-        setDates(await loadIssueDates(world.id));
-      } catch (e) {
-        /*
-          A limit is not a failure. Say it plainly and leave the page alone —
-          no error report, and no hunting for an older issue to stand in,
-          because nothing went wrong with the issue that is already here.
-        */
-        if (e instanceof LimitReached) {
-          setErr(e.message);
-          setResearching(false);
-          return;
-        }
-        report("daily", e, { worldId: world.id, date, append });
-        setErr(e instanceof Error ? e.message : "Research failed.");
-        /*
-          A failed search used to leave the seller with a blank page, which
-          reads as the product being broken. Yesterday's paper is still real
-          and still useful — show it, clearly labelled as not today's, rather
-          than showing nothing.
-        */
-        try {
-          const back = (await loadIssueDates(world.id)).filter((d) => d !== date);
-          if (back.length) {
-            const fallbackDate = back[0];
-            const older = await loadIssue(world.id, fallbackDate);
-            if (older.length) {
-              setItems(older);
-              setStandIn(fallbackDate);
-            }
-          }
-        } catch {
-          // Nothing to fall back to; the empty state explains itself.
-        }
-      } finally {
-        setResearching(false);
-      }
-    },
-    [world, date],
-  );
 
   const noAreas = world.areas.length === 0;
 
@@ -332,23 +278,6 @@ function DailyBody({ world }: { world: World }) {
 
       {err && <ErrorNote>{err}</ErrorNote>}
 
-      {standIn && (
-        <div className="mb-5 rounded-xl border border-black/15 bg-white px-4 py-3">
-          <p className="t-small text-ink-2">
-            Showing{" "}
-            <span className="font-semibold text-ink">
-              {formatIssueDate(standIn)}
-            </span>
-            .{" "}
-            <button
-              onClick={() => research()}
-              className="font-semibold text-ink underline underline-offset-2"
-            >
-              Try this week again
-            </button>
-          </p>
-        </div>
-      )}
 
       {noAreas && (
         <Empty
@@ -371,49 +300,27 @@ function DailyBody({ world }: { world: World }) {
         />
       )}
 
-      {researching && (
-        <Card className="flex flex-col items-center py-14 text-center">
-          <img src="/globe.png" alt="" className="globe-turn h-14 w-14 opacity-80" />
-          <p className="t-h3 mt-5 text-ink">Reading your world…</p>
-          <ReadingBar className="mt-4 max-w-xs" />
-          {/*
-            How long, and nothing else. The old line walked the seller through
-            the machinery — how many areas were being searched, what was being
-            discarded — which is both none of their business and quietly
-            damaging: describing the work as "searching a few places" invites
-            them to think they could just do that themselves.
-          */}
-          <p className="t-small mt-1.5 text-ink-3">About a minute.</p>
-        </Card>
-      )}
 
-      {!researching && items?.length === 0 && !noAreas && (
+      {/*
+        Nothing here starts work. The paper is written ahead of the week by
+        the scheduled job, so this state is only ever "it has not landed
+        yet" — which resolves itself within the hour and needs no button.
+        There is deliberately nothing to press and nothing to wait on.
+      */}
+      {items?.length === 0 && !noAreas && (
         <Empty
           title={
-            date === today ? "Ready when you are" : "No issue on that date"
+            date === today ? "Still being written" : "No issue on that date"
           }
-          /*
-            What they get, not how it is made. The previous version described
-            the pipeline — how many areas, what gets discarded, how long it
-            takes — which reads as a tool explaining its own effort rather
-            than a paper worth opening.
-          */
           body={
             date === today
-              ? "This week's issue hasn't been written yet."
+              ? "This week's issue is on its way and will be here shortly."
               : "Pick another date from the back issues below."
-          }
-          action={
-            date === today ? (
-              <button onClick={() => research()} className="btn btn-accent">
-                Read my world
-              </button>
-            ) : undefined
           }
         />
       )}
 
-      {!researching && items && items.length > 0 && (() => {
+      {items && items.length > 0 && (() => {
         /*
           Five equally large cards read as a research dump and take ten
           minutes. A paper has a front page: one lead with room to breathe,
