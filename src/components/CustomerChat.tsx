@@ -17,6 +17,14 @@ import {
 } from "@/lib/memory";
 import { askAI, LimitReached } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
+import {
+  asPrompt,
+  buildCustomer,
+  cornerFor,
+  loadCustomer,
+  type CustomerProfile,
+} from "@/lib/customer";
+import { openBoard } from "@/lib/board";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
@@ -59,10 +67,18 @@ function fourOf(list: string[]) {
 export default function CustomerChat({
   world,
   drop,
+  /**
+   * Which drop is beside this chat — the one being built, or the one being
+   * researched. It decides which corner of the world the customer answers
+   * from, so the seller never has to operate a control: the page they are on
+   * already knows.
+   */
+  looking = "the drop being built",
 }: {
   world: World;
   /** The drop being built. She is shown its designs, nothing else. */
   drop?: Drop;
+  looking?: "the drop being built" | "next week's research";
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
@@ -74,6 +90,14 @@ export default function CustomerChat({
   const [daily, setDaily] = useState<DailyItem[]>([]);
   const [ready, setReady] = useState(false);
   const [starters] = useState(() => fourOf(PROMPTS));
+  /*
+    The person, written down once and read back verbatim. Without this the
+    model reinvented somebody every message out of a world name and a dozen
+    keywords, and settled on the safest average human it could construct.
+  */
+  const [who, setWho] = useState<CustomerProfile | null>(null);
+  /* What this particular drop is about, in the seller's own words. */
+  const [intention, setIntention] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
   /*
@@ -136,19 +160,70 @@ export default function CustomerChat({
       .catch(() => setDaily([]));
   }, [world.id]);
 
+  /*
+    WORKED OUT ONCE, THEN KEPT.
+
+    A world with nobody in it yet gets its person built on first open, from
+    what actually sold and what shops serving this world are loved for. It is
+    one call, it happens quietly while the seller reads the opening prompts,
+    and it never runs again unless they ask for it.
+  */
+  const [meeting, setMeeting] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    loadCustomer(world.id)
+      .then(async (got) => {
+        if (!alive) return;
+        if (got?.person?.name) return setWho(got);
+        setMeeting(true);
+        try {
+          await buildCustomer(world.id);
+          const built = await loadCustomer(world.id);
+          if (alive) setWho(built);
+        } catch {
+          /* No profile is survivable — the chat still has the world. */
+        } finally {
+          if (alive) setMeeting(false);
+        }
+      })
+      .catch(() => setWho(null));
+    return () => {
+      alive = false;
+    };
+  }, [world.id]);
+
+  useEffect(() => {
+    if (!drop) return setIntention("");
+    openBoard(world, drop)
+      .then((b) => setIntention(b.intention ?? ""))
+      .catch(() => setIntention(""));
+  }, [world, drop]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, busy]);
 
   async function context() {
     const shared = await buildWorldContext(world, { room: "customer" });
-    if (!daily.length) return shared;
     return [
+      /*
+        The person comes FIRST and the world second. A model reads the top of
+        its context hardest, and who it is matters more than what it knows.
+      */
+      who ? asPrompt(who) : "",
+      who ? "" : "",
       shared,
-      "",
-      "IN TODAY'S PAPER — you would plausibly know about these:",
-      ...daily.map((d) => `- ${d.headline}. ${d.body}`),
-    ].join("\n");
+      cornerFor(drop, intention, looking),
+      ...(daily.length
+        ? [
+            "",
+            "IN THIS WEEK'S PAPER — you would plausibly know about these:",
+            ...daily.map((d) => `- ${d.headline}. ${d.body}`),
+          ]
+        : []),
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   async function deliver(all: Msg[]) {
@@ -197,6 +272,15 @@ export default function CustomerChat({
       <div className="flex items-center gap-2 border-b-2 border-black px-4 py-3">
         <Star size={9} className="text-accent" />
         <span className="eyebrow">your customer</span>
+        {who?.person?.name && !meeting && (
+          <span className="t-small text-ink-3">
+            {who.person.name}
+            {who.person.age ? `, ${who.person.age}` : ""}
+          </span>
+        )}
+        {meeting && (
+          <span className="t-small text-ink-3">working out who they are…</span>
+        )}
         {earlier.length > 0 && (
           <button
             onClick={() => setShowEarlier((v) => !v)}

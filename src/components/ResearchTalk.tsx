@@ -80,7 +80,16 @@ export default function ResearchTalk({
         />
       </div>
       <div className={`min-h-0 flex-1 ${who === "customer" ? "" : "hidden"}`}>
-        <CustomerChat world={world} drop={drop} />
+        <CustomerChat
+          world={world}
+          drop={drop}
+          /*
+            The board panel means next week; the build tab means this week.
+            Same person either way — this only says which part of their world
+            is in front of them.
+          */
+          looking={pins.length ? "next week's research" : "the drop being built"}
+        />
       </div>
     </div>
   );

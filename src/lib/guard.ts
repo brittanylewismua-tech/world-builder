@@ -124,6 +124,15 @@ export const DAILY_CAP = {
     catalogues properly is a week's study, not an afternoon's browsing.
   */
   shopAdds: 5,
+  /*
+    Working out who lives in this world. Once per world, per week.
+
+    It is not a thing anybody presses repeatedly — the answer only moves when
+    the evidence under it moves, which happens on the timescale of uploads and
+    drops, not minutes. Two a week covers a seller who reshapes their world
+    and wants the person rebuilt on top of it.
+  */
+  avatar: 2,
 } as const;
 
 export type Route = keyof typeof DAILY_CAP;
@@ -141,6 +150,7 @@ const WEEKLY: ReadonlySet<Route> = new Set<Route>([
   "world",
   "shops",
   "shopAdds",
+  "avatar",
 ]);
 
 /*
@@ -171,6 +181,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have read as many shops as you can this week. It resets on Monday, and every read you have is still here.",
   shopAdds:
     "You have followed five new shops this week, which is the limit. It resets on Monday. The shops you are already following are unaffected, and refreshing one does not count.",
+  avatar:
+    "Your customer has already been worked out twice this week. It resets on Monday, and the person you have is still here.",
 };
 
 export interface Caller {
