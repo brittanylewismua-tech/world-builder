@@ -263,7 +263,7 @@ export default function CreativeRoom({
             onClick={() => setShowPast((v) => !v)}
             className="t-small ml-2 shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink"
           >
-            past
+            Earlier chats
           </button>
         )}
       </div>

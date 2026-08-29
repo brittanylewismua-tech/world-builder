@@ -5,12 +5,15 @@ import { Star } from "./ui";
 import Said from "./Said";
 import { loadIssue, weekStartISO, type DailyItem } from "@/lib/daily";
 import {
+  listThreads,
   loadMessages,
   openThread,
+  readThread,
   recent,
   remember,
   startNewThread,
   type Msg,
+  type ThreadRef,
 } from "@/lib/memory";
 import { askAI, LimitReached } from "@/lib/askAI";
 import { buildWorldContext } from "@/lib/context";
@@ -72,6 +75,53 @@ export default function CustomerChat({
   const [ready, setReady] = useState(false);
   const [starters] = useState(() => fourOf(PROMPTS));
   const endRef = useRef<HTMLDivElement>(null);
+
+  /*
+    EVERY CONVERSATION YOU HAVE HAD WITH THIS PERSON.
+
+    "New chat" already archived the old thread rather than destroying it —
+    there was simply no door back to it, so every previous conversation was
+    silently buried the moment a new one started. The Director had this and
+    the customer did not.
+
+    `earlier` is the list; `viewing` is an older one being read, and while it
+    is open the composer stands down. You do not add to a conversation you
+    finished last Tuesday.
+  */
+  const [earlier, setEarlier] = useState<ThreadRef[]>([]);
+  const [showEarlier, setShowEarlier] = useState(false);
+  const [viewing, setViewing] = useState<ThreadRef | null>(null);
+  const [viewMsgs, setViewMsgs] = useState<Msg[]>([]);
+
+  const refreshEarlier = async () => {
+    try {
+      const [all, current] = await Promise.all([
+        listThreads(world.id, "customer"),
+        openThread(world.id, "customer"),
+      ]);
+      setEarlier(all.filter((t) => t.id !== current));
+    } catch {
+      setEarlier([]);
+    }
+  };
+
+  useEffect(() => {
+    refreshEarlier();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [world.id, msgs.length]);
+
+  async function openEarlier(t: ThreadRef) {
+    setShowEarlier(false);
+    setViewing(t);
+    setViewMsgs(await readThread(t.id).catch(() => []));
+  }
+
+  /** A conversation is named by when it happened. There is nothing else. */
+  const whenOf = (t: ThreadRef) =>
+    new Date(t.updatedAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
 
   useEffect(() => {
     loadMessages(world.id, "customer")
@@ -147,13 +197,49 @@ export default function CustomerChat({
       <div className="flex items-center gap-2 border-b-2 border-black px-4 py-3">
         <Star size={9} className="text-accent" />
         <span className="eyebrow">your customer</span>
-        <span className="ml-auto text-[11px] text-ink-3">
-          one plausible person
-        </span>
+        {earlier.length > 0 && (
+          <button
+            onClick={() => setShowEarlier((v) => !v)}
+            className="t-small ml-auto shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink"
+          >
+            Earlier chats
+          </button>
+        )}
       </div>
 
+      {showEarlier && (
+        <div className="border-b border-black/12 bg-black/[0.02] px-3 py-2">
+          {earlier.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => openEarlier(t)}
+              className="block w-full rounded-lg px-2 py-1.5 text-left text-[13px] text-ink-2 transition hover:bg-black/[0.05] hover:text-ink"
+            >
+              {whenOf(t)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {viewing && (
+        <div className="flex items-center gap-2 border-b border-black/12 bg-black/[0.02] px-4 py-2">
+          <span className="t-small font-semibold text-ink">
+            {whenOf(viewing)}
+          </span>
+          <button
+            onClick={() => {
+              setViewing(null);
+              setViewMsgs([]);
+            }}
+            className="t-small ml-auto text-ink-3 underline underline-offset-2 transition hover:text-ink"
+          >
+            Back to now
+          </button>
+        </div>
+      )}
+
       <div className="min-h-[300px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {ready && msgs.length === 0 && (
+        {ready && !viewing && msgs.length === 0 && (
           <>
             <p className="t-small text-ink-3">
               One person who lives in this world. They can see the designs in
@@ -173,7 +259,7 @@ export default function CustomerChat({
           </>
         )}
 
-        {msgs.map((m, i) =>
+        {(viewing ? viewMsgs : msgs).map((m, i) =>
           m.role === "user" ? (
             <p
               key={i}
@@ -220,6 +306,12 @@ export default function CustomerChat({
         <div ref={endRef} />
       </div>
 
+      {/*
+        Reading an old conversation is reading, not continuing. The composer
+        goes away rather than sitting there inviting a reply that would land
+        in a different thread than the one on screen.
+      */}
+      {!viewing && (
       <div className="border-t border-black/12 p-3">
         <div className="flex gap-2">
           <input
@@ -243,6 +335,7 @@ export default function CustomerChat({
               onClick={async () => {
                 setMsgs([]);
                 await startNewThread(world.id, "customer");
+                await refreshEarlier();
               }}
               className="t-small text-ink-3 transition hover:text-ink"
             >
@@ -251,6 +344,7 @@ export default function CustomerChat({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

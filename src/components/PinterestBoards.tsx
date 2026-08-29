@@ -158,6 +158,37 @@ export default function PinterestBoards({ world }: { world: World }) {
     }
   }
 
+  /*
+    Choosing a board was a one-way door — there was no way to stop one
+    feeding a world short of disconnecting Pinterest altogether. The pins
+    already brought in stay: they are research the seller has collected and
+    sorted, and unfollowing a source is not the same wish as throwing that
+    away.
+  */
+  async function stopUsing(board: Board) {
+    if (
+      !confirm(
+        `Stop pulling from “${board.name}”?\n\nThe pins already on your research board stay where they are. Nothing on Pinterest changes.`,
+      )
+    )
+      return;
+    setBusy(board.id);
+    setErr("");
+    try {
+      await call("/api/pinterest/drop", { worldId: world.id, boardId: board.id });
+      setDone((d) => {
+        const next = { ...d };
+        delete next[board.id];
+        return next;
+      });
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not stop that board.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function bring(board: Board, destination: Destination) {
     setBusy(board.id);
     setErr("");
@@ -338,6 +369,18 @@ export default function PinterestBoards({ world }: { world: World }) {
                     ? "Get new pins"
                     : "Bring it in"}
               </button>
+
+              {/* Only a board that is actually feeding this world can stop. */}
+              {b.pulled && (
+                <button
+                  onClick={() => stopUsing(b)}
+                  disabled={busy !== null}
+                  title="Stop pulling from this board. The pins you already have stay."
+                  className="t-small shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink disabled:opacity-50"
+                >
+                  Stop using
+                </button>
+              )}
             </div>
 
             {choosing === b.id && (

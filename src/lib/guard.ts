@@ -62,9 +62,19 @@ export const DAILY_CAP = {
   customer: 30,
   room: 30,
   areas: 5,
-  /* One analysis per saved item. A busy research week is perhaps forty
-     pieces, and this still leaves double that in a single day. */
-  board: 80,
+  /*
+    One analysis per saved item, at about a penny each.
+
+    Eighty was written for a seller adding pieces by hand. Importing a
+    Pinterest board brings fifty at once, and the real days on record are 218
+    and 171 — so roughly half of those items were refused and quietly went
+    unanalysed, which silently weakens the pattern read that depends on them.
+
+    A ceiling that is regularly hit is not a ceiling, it is a bug. Two
+    hundred covers a genuine multi-board import day and still caps the worst
+    case at about two dollars.
+  */
+  board: 200,
   /*
     Patterns are read one keyword at a time, at about three cents a read, and
     a world holds ten keywords. Somebody setting one up in an evening does ten
@@ -90,12 +100,19 @@ export const DAILY_CAP = {
   */
   world: 2,
   /*
-    Reading a followed shop — the catalogue, or its buyers. Weekly, because a
-    shop's whole back catalogue does not change between Tuesday and Thursday.
-    Five shops with two reads each is ten reads a seller would ever want, and
-    they will not want them all in one week.
+    Reading a followed shop — the catalogue, or its buyers.
+
+    This was six, directly under a comment saying five shops with two reads
+    each is TEN. The number contradicted the sentence above it, and it cut a
+    seller off four reads short of using the feature as designed — which is
+    exactly what it did, in front of an audience.
+
+    A shop can only be read once a week per kind now, and a world holds five
+    shops, so ten is the real ceiling whatever this says. Twelve leaves room
+    for a shop swapped mid-week without the cap becoming the thing that
+    decides. The per-shop lock is the guard; this is only a backstop.
   */
-  shops: 6,
+  shops: 12,
   /*
     Following a NEW shop. Counted per week, and a refresh of a shop already
     followed does not count.
