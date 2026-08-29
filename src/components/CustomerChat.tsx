@@ -202,7 +202,7 @@ export default function CustomerChat({
             onClick={() => setShowEarlier((v) => !v)}
             className="t-small ml-auto shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink"
           >
-            Earlier chats
+            Past chats
           </button>
         )}
       </div>
