@@ -83,16 +83,24 @@ async function run(req: Request) {
     .select("id, name")
     .eq("user_id", uid);
 
+  /*
+    Storage lists one level at a time, so the tree gets walked rather than
+    guessed at. A hardcoded list of folder names missed the drop mockups,
+    which sit one level deeper under a folder per drop — and a reset that
+    silently leaves files behind is worse than one that refuses.
+  */
   const files: string[] = [];
-  /* Storage lists one folder at a time, so walk the account's own tree. */
-  for (const sub of ["", "banner", "board", "calibration", "drops", "mockups", "wallpaper", "refs"]) {
-    const path = sub ? `${uid}/${sub}` : uid;
+  async function walk(path: string, depth = 0) {
+    if (depth > 4) return;
     const { data } = await db.storage.from(BUCKET).list(path, { limit: 1000 });
     for (const f of data ?? []) {
-      /* A folder comes back with no id; only real objects have one. */
-      if (f.id) files.push(`${path}/${f.name}`);
+      const full = `${path}/${f.name}`;
+      /* Only real objects carry an id; anything else is a folder. */
+      if (f.id) files.push(full);
+      else await walk(full, depth + 1);
     }
   }
+  await walk(uid);
 
   if (!forReal)
     return NextResponse.json({
