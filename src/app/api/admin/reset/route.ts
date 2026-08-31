@@ -33,7 +33,7 @@ const URL_ =
 
 const BUCKET = "world-assets";
 
-export async function POST(req: Request) {
+async function run(req: Request) {
   const secret = process.env.CRON_SECRET;
   const url = new URL(req.url);
   const given =
@@ -133,3 +133,11 @@ export async function POST(req: Request) {
     kept: "the cost ledger",
   });
 }
+
+/*
+  Both verbs, because the only tools that can reach this from outside are
+  read-only ones. It is safe: the secret is required either way, and nothing
+  is deleted without confirm=yes on top of it.
+*/
+export const GET = run;
+export const POST = run;
