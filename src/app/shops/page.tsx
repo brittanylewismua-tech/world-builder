@@ -404,6 +404,21 @@ function ShopBlock({
   /* So the brief can turn a design it names into a link to that design. */
   const named = useMemo(() => titleIndex(designs ?? []), [designs]);
 
+  /*
+    How much of this shop is even about the world being built. Etsy shops are
+    almost never one world, and knowing a shop is a fifth yours is the thing
+    that tells a seller whether it is worth following at all.
+  */
+  const split = useMemo(() => {
+    if (!designs?.length) return null;
+    const n = { core: 0, near: 0, other: 0 };
+    for (const d of designs) {
+      const b = d.relevance ?? "near";
+      n[b as "core" | "near" | "other"]++;
+    }
+    return n.core || n.other ? n : null;
+  }, [designs]);
+
   const loved = designs
     ? [...designs].sort((a, b) =>
         order === "favorites"
@@ -478,6 +493,23 @@ function ShopBlock({
             ? ` · ${shop.reviewCount.toLocaleString()} reviews`
             : ""}
         </span>
+        {/*
+          How much of this shop is even yours. Etsy shops are almost never
+          one world, and a shop that is a fifth yours is a different
+          proposition from one that is all of it.
+        */}
+        {split && (
+          <span
+            className="t-small shrink-0 text-ink-3"
+            title={`${split.core} in your world · ${split.near} next door · ${split.other} about something else`}
+          >
+            {Math.round(
+              (100 * (split.core + split.near)) /
+                (split.core + split.near + split.other),
+            )}
+            % in your world
+          </span>
+        )}
         {shop.url && (
           <a
             href={shop.url}

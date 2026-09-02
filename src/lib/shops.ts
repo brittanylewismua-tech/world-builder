@@ -36,6 +36,8 @@ export interface Shop {
 }
 
 export interface ShopDesign {
+  /** core in your world, near next door, other unrelated. Null until read. */
+  relevance?: "core" | "near" | "other" | null;
   listingId: number;
   title: string;
   url: string | null;
@@ -93,7 +95,7 @@ export async function loadShops(worldId: string): Promise<Shop[]> {
 export async function loadDesigns(shopId: string): Promise<ShopDesign[]> {
   const { data, error } = await supabase
     .from("wb_shop_designs")
-    .select("listing_id, title, url, image_url, views, favorers, price")
+    .select("listing_id, title, url, image_url, views, favorers, price, relevance")
     .eq("shop_id", shopId)
     .order("favorers", { ascending: false });
   if (error) throw new Error(error.message);
@@ -105,6 +107,7 @@ export async function loadDesigns(shopId: string): Promise<ShopDesign[]> {
     views: Number(r.views ?? 0),
     favorers: Number(r.favorers ?? 0),
     price: r.price == null ? null : Number(r.price),
+    relevance: (r.relevance as ShopDesign["relevance"]) ?? null,
   }));
 }
 
@@ -150,7 +153,12 @@ export async function readShop(
   shopId: string,
   kind: "patterns" | "buyers",
 ) {
-  return askAI<{ brief: { patterns: ShopPoint[] }; kind: string }>(
+  return askAI<{
+    brief: { patterns: ShopPoint[] };
+    kind: string;
+    /** How much of this shop is even about the world being built. */
+    split?: { core: number; near: number; other: number };
+  }>(
     "/api/shops/read",
     { worldId: world.id, shopId, kind },
     { timeoutMs: 240_000 },

@@ -4,6 +4,12 @@ import { admit, endWell, meter, ownerOf, refund } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 import { etsyKey, reviewsFor } from "@/lib/etsy";
 import { ENOUGH_VIEWS } from "@/lib/limits";
+import {
+  sortAgainstWorld,
+  worldBrief,
+  worldSignature,
+  type Bucket,
+} from "@/lib/sortShop";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -258,6 +264,8 @@ interface Design {
   favorers: number;
   price: number | null;
   tags: string[] | null;
+  /** Where this sits relative to the world being built. Null until sorted. */
+  relevance: Bucket | null;
 }
 
 /** The share of people who saw it and favorited it. The one honest measure of
@@ -351,7 +359,7 @@ export async function POST(req: Request) {
 
   const { data: shop } = await db
     .from("wb_shops")
-    .select("id, etsy_shop_id, shop_name, listing_count, sold_count, review_count")
+    .select("id, etsy_shop_id, shop_name, listing_count, sold_count, review_count, sorted_sig")
     .eq("id", shopId)
     .eq("world_id", worldId)
     .maybeSingle();
@@ -363,10 +371,34 @@ export async function POST(req: Request) {
 
   const { data: designRows } = await db
     .from("wb_shop_designs")
-    .select("listing_id, title, image_url, views, favorers, price, tags")
+    .select("listing_id, title, image_url, views, favorers, price, tags, relevance")
     .eq("shop_id", shopId);
 
   const designs = (designRows ?? []) as Design[];
+
+  /*
+    WHICH OF THIS SHOP IS EVEN ABOUT THE WORLD BEING BUILT.
+
+    Shops are almost never one world. Sampling by favorite rate across the
+    whole catalogue meant whichever corner performed best won the sample —
+    on a shop that is 22% feminist and 17% libraries, with libraries
+    favoriting higher, the seller got a brief about libraries.
+
+    So the catalogue is sorted first: in the world, next door, or elsewhere.
+    Sorted once per shop per shape of world, on titles and tags alone, which
+    is cheap enough to run across five hundred listings and precise enough
+    because Etsy titles are written to be searched.
+  */
+  const [{ data: worldRow }, { data: nicheRows }, { data: areaRows }] =
+    await Promise.all([
+      db.from("wb_worlds").select("name").eq("id", worldId).maybeSingle(),
+      db.from("wb_sub_niches").select("keyword").eq("world_id", worldId),
+      db.from("wb_areas").select("name").eq("world_id", worldId),
+    ]);
+  const keywords = (nicheRows ?? []).map((n) => n.keyword as string);
+  const areaNames = (areaRows ?? []).map((a) => a.name as string);
+  const worldName = (worldRow?.name as string) ?? "";
+  const signature = worldSignature(worldName, keywords, areaNames);
   if (designs.length < 5) {
     await settle();
     return NextResponse.json(
@@ -379,20 +411,74 @@ export async function POST(req: Request) {
   const started = Date.now();
   const content: Anthropic.ContentBlockParam[] = [];
 
+  /*
+    Sort the catalogue against the world, unless it already has been for this
+    shape of world. Cheap — titles and tags on the small model — and both
+    reads share the result, so it happens once per shop rather than twice.
+  */
+  const alreadySorted =
+    shop.sorted_sig === signature && designs.every((d) => d.relevance);
+
+  if (!alreadySorted) {
+    const sorted = await sortAgainstWorld(
+      client,
+      designs,
+      worldBrief(worldName, keywords, areaNames),
+      (u, model, ms) =>
+        meter("shops", gate.caller.userId, { model, ...u, ms, worldId }),
+    );
+    /* One statement per bucket rather than five hundred row updates. */
+    for (const bucket of ["core", "near", "other"] as Bucket[]) {
+      const ids = [...sorted.entries()]
+        .filter(([, v]) => v === bucket)
+        .map(([id]) => id);
+      for (let at = 0; at < ids.length; at += 200)
+        await db
+          .from("wb_shop_designs")
+          .update({ relevance: bucket })
+          .eq("shop_id", shopId)
+          .in("listing_id", ids.slice(at, at + 200));
+    }
+    await db
+      .from("wb_shops")
+      .update({ sorted_sig: signature, sorted_at: new Date().toISOString() })
+      .eq("id", shopId);
+    for (const d of designs) {
+      const got = sorted.get(String(d.listing_id));
+      /* Unsorted is treated as next door — the forgiving side, so a sorting
+         miss can never quietly hide a shop's best work. */
+      d.relevance = got ?? "near";
+    }
+  }
+
+  /*
+    What the seller actually came for. "near" is included on purpose: a
+    feminist world's customer also buys LGBTQ and protest work, and cutting
+    to the exact centre throws away the most useful adjacent material in the
+    shop. Only the genuinely unrelated is set aside.
+  */
+  const bucketOf = (d: Design): Bucket => d.relevance ?? "near";
+  const inWorld = designs.filter((d) => bucketOf(d) !== "other");
+  const split = {
+    core: designs.filter((d) => bucketOf(d) === "core").length,
+    near: designs.filter((d) => bucketOf(d) === "near").length,
+    other: designs.filter((d) => bucketOf(d) === "other").length,
+  };
+
   if (kind === "patterns") {
     /*
       Layer one: the whole catalogue as text. Free, and on a shop like this
       the title is very nearly the design — "The Horrors Persist but So Do I
       Possum" needs no picture to be understood.
     */
-    const ranked = [...designs].sort((a, b) => saveRate(b) - saveRate(a));
+    const ranked = [...inWorld].sort((a, b) => saveRate(b) - saveRate(a));
     /*
       The whole catalogue as text is thirteen thousand tokens on a big shop,
       and the tail of it is listings nobody has ever seen. Two hundred covers
       everything with any traffic on it; the rest is counted rather than
       listed, which is honest and four cents cheaper.
     */
-    const ordered = [...designs].sort((a, b) => b.favorers - a.favorers);
+    const ordered = [...inWorld].sort((a, b) => b.favorers - a.favorers);
     const lines = ordered
       .slice(0, 200)
       .map(
@@ -408,7 +494,16 @@ export async function POST(req: Request) {
       type: "text",
       text: `SHOP: ${shop.shop_name} — ${shop.listing_count ?? designs.length} active listings${
         shop.sold_count ? `, ${shop.sold_count.toLocaleString()} sales all time` : ""
-      }\n\nTHE CATALOGUE${
+      }
+
+${worldBrief(worldName, keywords, areaNames)}
+
+THIS SHOP IS BROADER THAN THAT WORLD, AND YOU ARE ONLY BEING SHOWN THE PART THAT TOUCHES IT.
+Of ${designs.length} designs pulled, ${split.core} are squarely in this world, ${split.near} are next door — the same customer, a neighbouring cause — and ${split.other} are about something else entirely and have been left out.
+
+Report on this shop AS IT RELATES TO THIS WORLD. The ${split.other} set aside are not your subject and must not appear in any finding. Do not write about what else the shop sells.
+
+Next door counts. Where a neighbouring cause is doing something the core work is not, that is worth saying — the seller wants the neighbourhood, not only the exact centre.\n\nTHE CATALOGUE${
         ordered.length > 200
           ? ` — the ${lines.length} with the most favorites, out of ${ordered.length}. The other ${ordered.length - 200} have almost no traffic between them.`
           : ""
@@ -439,9 +534,20 @@ export async function POST(req: Request) {
     const withArt = ranked.filter(
       (d) => d.image_url && /^https:\/\/i\.etsystatic\.com\//.test(d.image_url),
     );
-    const loved = withArt.slice(0, Math.round(LOOK_AT * 0.66));
+    /*
+      Pictures are the expensive part, so they go to the middle of the world
+      first. Two thirds of the looking is spent on core designs and the rest
+      falls through to next door — which means a shop with only a handful of
+      core designs still gets looked at properly rather than sampled from a
+      near-empty pool.
+    */
+    const byBucket = [
+      ...withArt.filter((d) => bucketOf(d) === "core"),
+      ...withArt.filter((d) => bucketOf(d) !== "core"),
+    ];
+    const loved = byBucket.slice(0, Math.round(LOOK_AT * 0.66));
 
-    const spreadPool = withArt.filter((d) => !loved.includes(d));
+    const spreadPool = byBucket.filter((d) => !loved.includes(d));
     const want = LOOK_AT - loved.length;
     const step = Math.max(1, Math.floor(spreadPool.length / Math.max(want, 1)));
     const spread = Array.from({ length: want }, (_, i) => spreadPool[i * step])
@@ -510,15 +616,34 @@ export async function POST(req: Request) {
       occasion or a reason, and the model's attention is better spent on the
       half that does.
     */
-    const byListing = new Map(designs.map((d) => [d.listing_id, d.title]));
+    /*
+      A review only counts if it was written about a design in this world.
+      Somebody delighted with a library tote is a real customer of the shop
+      and a stranger to the seller — and on a broad shop those reviews
+      outnumber the ones that matter.
+
+      A review whose listing is not in the pulled catalogue at all is kept:
+      the pull is capped, so an unknown listing is more likely to be one we
+      never fetched than one that was set aside.
+    */
+    const known = new Map(designs.map((d) => [d.listing_id, d]));
     const useful = reviews
-      .map((r) => ({
-        text: (r.review ?? "").trim(),
-        id: r.listing_id,
-        title: r.listing_id ? byListing.get(r.listing_id) : undefined,
-      }))
-      .filter((r) => r.text.length >= 60)
+      .map((r) => {
+        const d = r.listing_id ? known.get(r.listing_id) : undefined;
+        return {
+          text: (r.review ?? "").trim(),
+          id: r.listing_id,
+          title: d?.title,
+          bucket: d ? bucketOf(d) : ("near" as Bucket),
+        };
+      })
+      .filter((r) => r.text.length >= 60 && r.bucket !== "other")
       .slice(0, 160);
+
+    const setAside = reviews.filter((r) => {
+      const d = r.listing_id ? known.get(r.listing_id) : undefined;
+      return d && bucketOf(d) === "other" && (r.review ?? "").trim().length >= 60;
+    }).length;
 
     if (useful.length < 8) {
       await settle();
@@ -533,7 +658,17 @@ export async function POST(req: Request) {
 
     content.push({
       type: "text",
-      text: `SHOP: ${shop.shop_name}\n\n${useful.length} reviews that say something, each with the design it was written about.\n\n${useful
+      text: `SHOP: ${shop.shop_name}
+
+${worldBrief(worldName, keywords, areaNames)}
+
+These reviews are only the ones written about designs in that world or next door to it.${
+        setAside
+          ? ` Another ${setAside} reviews about unrelated parts of this shop have been left out — those buyers are not this seller's customer.`
+          : ""
+      }
+
+${useful.length} reviews that say something, each with the design it was written about.\n\n${useful
         .map(
           (r) =>
             `${r.title ? `[${r.id}] on "${r.title.slice(0, 70)}" — ` : ""}${r.text.slice(0, 400)}`,
