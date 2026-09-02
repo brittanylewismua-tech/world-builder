@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { WorldProvider } from "@/lib/useWorld";
 import Boundary from "@/components/Boundary";
+import Admitted from "@/components/Admitted";
 import "./globals.css";
 
 /*
@@ -63,7 +64,16 @@ export default function RootLayout({
       */}
       <body className="overflow-x-hidden antialiased">
         <Boundary>
-          <WorldProvider>{children}</WorldProvider>
+          {/*
+            One choke point for both ways in. A check on the sign-up form
+            would only close the email door — Google sign-in makes the
+            account inside Supabase, outside this app entirely — so the door
+            sits between a session and the app, which both routes pass
+            through. It lets the sign-in screens themselves alone.
+          */}
+          <Admitted>
+            <WorldProvider>{children}</WorldProvider>
+          </Admitted>
         </Boundary>
       </body>
     </html>
