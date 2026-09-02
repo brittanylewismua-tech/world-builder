@@ -259,6 +259,23 @@ export default function Login() {
           The same account you use for the rest of the Goldie Suite.
         </p>
 
+        {/*
+          Said before the account exists, not buried in a footer afterwards.
+          Somebody agreeing to terms should be able to read them at the moment
+          they agree, without signing in first.
+        */}
+        <p className="mt-4 text-[12.5px] leading-relaxed text-white/40">
+          By continuing you agree to the{" "}
+          <a href="/terms" className="underline underline-offset-4 hover:text-white/70">
+            Terms
+          </a>{" "}
+          and the{" "}
+          <a href="/privacy" className="underline underline-offset-4 hover:text-white/70">
+            Privacy Policy
+          </a>
+          .
+        </p>
+
         {err && (
           <p className="mt-4 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-[13px] leading-relaxed text-white">
             {err}

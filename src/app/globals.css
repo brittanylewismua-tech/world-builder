@@ -394,3 +394,24 @@ body {
 .lane-1 { background: #fbf8f4; }
 .lane-2 { background: #f6f8f9; }
 .lane-3 { background: #fdf5f9; }
+
+/* ------------------------------------------------------------------ */
+/* the legal pages                                                     */
+/*
+  Set to be read, not to be skipped. A policy in grey six-point type is
+  a page nobody opens, and an unread policy protects nobody — least of
+  all the person who wrote it.
+*/
+.legal p + p { margin-top: 0.75rem; }
+.legal ul {
+  margin: 0.75rem 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+.legal li { margin-bottom: 0.5rem; }
+.legal a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal a:hover { opacity: 0.7; }
+.legal strong { color: var(--ink); font-weight: 700; }

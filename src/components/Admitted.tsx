@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Logo from "./Logo";
 
@@ -22,7 +23,18 @@ import Logo from "./Logo";
  * door closes behind them, not in front of them — nobody who was already
  * using the app is ever asked for a code.
  */
+/*
+  Pages the door never stands in front of.
+
+  The code screen links to the terms and the privacy policy, so a person
+  deciding whether to hand over an email has to be able to read them without
+  being past the door first — otherwise the links go in a circle. Sign-in and
+  account recovery are open for the same reason.
+*/
+const ALWAYS_OPEN = ["/terms", "/privacy", "/login", "/reset"];
+
 export default function Admitted({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
   /* null while we do not yet know; the app never flashes before the check. */
   const [inside, setInside] = useState<boolean | null>(null);
   const [code, setCode] = useState("");
@@ -66,6 +78,7 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
     }
   }
 
+  if (ALWAYS_OPEN.some((p) => path?.startsWith(p))) return <>{children}</>;
   if (inside === null) return null;
   if (inside) return <>{children}</>;
 
@@ -96,15 +109,29 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
           {busy ? "Checking…" : "Enter"}
         </button>
 
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut();
-            window.location.href = "/login";
-          }}
-          className="t-small mt-6 text-ink-3 underline underline-offset-4 transition hover:text-ink"
-        >
-          Sign out
-        </button>
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = "/login";
+            }}
+            className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
+          >
+            Sign out
+          </button>
+          <a
+            href="/terms"
+            className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
+          >
+            Terms
+          </a>
+          <a
+            href="/privacy"
+            className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
+          >
+            Privacy
+          </a>
+        </div>
       </div>
     </main>
   );

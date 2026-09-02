@@ -271,6 +271,16 @@ export default function Shell({
           >
             sign out
           </button>
+          {/* Reachable from inside the app, and quiet enough not to compete. */}
+          <p className="mt-2 text-[11px] opacity-35">
+            <Link href="/terms" className="transition hover:opacity-100">
+              terms
+            </Link>
+            {" · "}
+            <Link href="/privacy" className="transition hover:opacity-100">
+              privacy
+            </Link>
+          </p>
         </div>
       </div>
     </div>
