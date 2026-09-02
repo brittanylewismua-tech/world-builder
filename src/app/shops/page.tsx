@@ -257,9 +257,9 @@ function ShopsBody({ world }: { world: World }) {
           )}
         </div>
         <h1 className="t-h1 mt-3 text-ink">
-          who already{" "}
+          shops already{" "}
           <span className="italic" style={{ color: "var(--accent)" }}>
-            built your world
+            selling to your customer
           </span>
         </h1>
         <span className="rule-accent mt-4" />
