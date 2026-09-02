@@ -7,7 +7,7 @@ import type { World } from "./world";
 /**
  * WORLD SHOPS.
  *
- * Shops that have already built the world the seller is building. They find
+ * Shops already selling to the customer this seller is building for. They find
  * one, paste its address, and the whole catalogue comes down through Etsy's
  * API — every active listing with Etsy's own view and save counts.
  *
