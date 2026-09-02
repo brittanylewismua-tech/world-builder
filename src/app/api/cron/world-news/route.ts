@@ -36,9 +36,17 @@ export const maxDuration = 300;
 const PER_RUN = 4;
 
 /**
- * A world that fails this many times in one week stops being retried until
- * the next one. Almost always it is a world with nothing to watch yet, and
- * hammering it hourly for six days helps nobody.
+ * A world that fails this many times running stops being retried, so a
+ * permanently unwritable world is not hammered hourly for six days.
+ *
+ * BUT GIVING UP MUST NOT BE PERMANENT. The usual reason a world cannot be
+ * written is that it has nothing to watch yet — and that is exactly the kind
+ * of thing a seller fixes ten minutes later. A world that failed six times
+ * with no areas, then had areas added, would otherwise sit empty until the
+ * following Monday having already been fixed.
+ *
+ * So the counter is only respected while the world has not changed since the
+ * last attempt. Touch the world and it gets its retries back.
  */
 const GIVE_UP_AFTER = 6;
 
@@ -78,11 +86,38 @@ export async function GET(req: Request) {
 
   const { data: attempts } = await db
     .from("wb_daily_attempts")
-    .select("world_id, tries")
+    .select("world_id, tries, last_tried")
     .eq("issue_date", week);
   const tried = new Map(
-    (attempts ?? []).map((r) => [r.world_id as string, Number(r.tries)]),
+    (attempts ?? []).map((r) => [
+      r.world_id as string,
+      { n: Number(r.tries), at: r.last_tried as string },
+    ]),
   );
+
+  /*
+    A world edited since it last failed gets a clean slate. Adding the areas
+    that were missing is the fix, and the software should notice rather than
+    make somebody wait out a week for a problem they already solved.
+  */
+  const { data: touched } = await db
+    .from("wb_areas")
+    .select("world_id, created_at");
+  const newestArea = new Map<string, string>();
+  for (const a of touched ?? []) {
+    const id = a.world_id as string;
+    const at = a.created_at as string;
+    if (!newestArea.has(id) || at > (newestArea.get(id) as string))
+      newestArea.set(id, at);
+  }
+
+  const givenUp = (id: string) => {
+    const t = tried.get(id);
+    if (!t || t.n < GIVE_UP_AFTER) return false;
+    const changed = newestArea.get(id);
+    /* Changed since the last failure? Then those failures are stale. */
+    return !(changed && changed > t.at);
+  };
 
   /* A paused world is not being worked on; it does not need a paper. */
   let q = db.from("wb_worlds").select("id, name, user_id").neq("paused", true);
@@ -92,9 +127,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
 
   const waiting = (worlds ?? []).filter(
-    (w) =>
-      !done.has(w.id as string) &&
-      (only !== null || (tried.get(w.id as string) ?? 0) < GIVE_UP_AFTER),
+    (w) => !done.has(w.id as string) && (only !== null || !givenUp(w.id as string)),
   );
 
   const report: { world: string; wrote?: number; skipped?: string; error?: string }[] = [];
@@ -111,7 +144,7 @@ export async function GET(req: Request) {
         {
           world_id: worldId,
           issue_date: week,
-          tries: (tried.get(worldId) ?? 0) + 1,
+          tries: (tried.get(worldId)?.n ?? 0) + 1,
           last_error: why.slice(0, 300),
           last_tried: new Date().toISOString(),
         },
