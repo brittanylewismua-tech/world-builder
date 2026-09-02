@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWorld } from "@/lib/useWorld";
 import { createWorld, deriveAreas } from "@/lib/api";
+import { startFirstIssue } from "@/lib/daily";
 import { worldActions } from "@/lib/worldActions";
 import {
   hasDemandFloor,
@@ -189,6 +190,12 @@ function SetupBody({
           world.subNiches.map((n) => n.keyword),
         );
       }
+      /*
+        The paper starts writing now rather than at the next scheduled hour,
+        so the first thing this seller reads is an issue and not an apology.
+        Not awaited — it runs on while they carry on into the app.
+      */
+      startFirstIssue(world.id);
       setSaving(false);
       onDone();
       return;

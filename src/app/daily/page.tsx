@@ -12,6 +12,7 @@ import {
   nextIssueDate,
   loadIssue,
   loadIssueDates,
+  startFirstIssue,
   loadRest,
   type DailyRest,
   weekStartISO,
@@ -217,6 +218,35 @@ function DailyBody({ world }: { world: World }) {
     open(today);
   }, [world.id, today, open]);
 
+  /*
+    THE BACKSTOP.
+
+    Setup starts the first issue, and the hourly schedule catches anything it
+    misses — but a world made before either existed, or one whose write was
+    interrupted, would sit on "still being written" until the next hour. So
+    an empty current week starts one itself and then watches for it, without
+    a spinner and without anything to press. The seller is not waiting on
+    this; they are reading a page that fills itself in.
+  */
+  useEffect(() => {
+    if (date !== today || items === null || items.length > 0) return;
+    if (world.areas.length === 0) return;
+    startFirstIssue(world.id);
+    let alive = true;
+    const timer = setInterval(async () => {
+      const got = await loadIssue(world.id, today).catch(() => []);
+      if (!alive || !got.length) return;
+      clearInterval(timer);
+      setItems(got);
+      setRest(await loadRest(world.id, today).catch(() => []));
+      setDates(await loadIssueDates(world.id).catch(() => []));
+    }, 15_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [world.id, world.areas.length, date, today, items]);
+
 
   const noAreas = world.areas.length === 0;
 
@@ -310,11 +340,11 @@ function DailyBody({ world }: { world: World }) {
       {items?.length === 0 && !noAreas && (
         <Empty
           title={
-            date === today ? "Still being written" : "No issue on that date"
+            date === today ? "Writing this week's issue" : "No issue on that date"
           }
           body={
             date === today
-              ? "This week's issue is on its way and will be here shortly."
+              ? "Reading your world now. It lands on this page by itself in a minute or two — nothing to press."
               : "Pick another date from the back issues below."
           }
         />

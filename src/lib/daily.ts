@@ -41,6 +41,38 @@ export interface DailyRest {
   url: string;
 }
 
+/**
+ * START THIS WORLD'S FIRST ISSUE, AND DO NOT WAIT FOR IT.
+ *
+ * The schedule runs hourly, which leaves a brand new world with nothing to
+ * read for up to an hour — and the first issue is the one that decides
+ * whether somebody believes the research is really already done.
+ *
+ * Deliberately not awaited by any caller. The request keeps running on the
+ * server after the page moves on, so the seller finishes setup, wanders into
+ * the app, and the paper is there when they arrive. It writes only when the
+ * week's issue is actually missing, so calling it twice costs nothing.
+ */
+export function startFirstIssue(worldId: string) {
+  void (async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      await fetch("/api/world-daily/first", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ worldId }),
+      });
+    } catch {
+      /* The hourly schedule is behind this; a failure here is not visible. */
+    }
+  })();
+}
+
 export async function loadRest(
   worldId: string,
   date: string,
