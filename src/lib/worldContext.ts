@@ -1,4 +1,4 @@
-import { AFFINITY_QUESTIONS, type World } from "./world";
+import { type World } from "./world";
 import { formatDropDate, type Drop } from "./drops";
 
 /**
@@ -51,19 +51,6 @@ export function dropStory(world: World, drops: Drop[], current?: Drop | null) {
   return lines;
 }
 
-/** How the seller says they relate to this customer. Reflection, not a score. */
-export function connection(world: World) {
-  const answered = AFFINITY_QUESTIONS.filter(
-    (q) => world.affinity[q.key] !== null,
-  );
-  if (!answered.length) return [];
-  return [
-    `[seller_reflection] How strongly the seller says they relate to this customer, on a 1–10 scale they answered in words: ${answered
-      .map((q) => `${q.question} ${world.affinity[q.key]}`)
-      .join(" · ")}.`,
-  ];
-}
-
 /**
  * WHERE EVERYTHING CAME FROM
  *
@@ -81,7 +68,6 @@ Each line is tagged with where it came from. These tags are the difference betwe
 - [world_signal] something a live web search verified as real and current in this world. True, but not demand data and not a product instruction.
 - [research_board_item] something the seller collected while researching. Raw material they happened to notice. Unverified.
 - [customer_simulation] words from the simulated customer. One plausible person, extrapolated from research. Never evidence about a market.
-- [seller_reflection] the seller's private answers about their own connection to this world. Never quote it back and never treat it as a verdict.
 - [drop_record] what has been uploaded and released. A record of what was made. No sales or performance figures exist anywhere in this software, so never imply you can see how anything did.`;
 
 /**
@@ -129,7 +115,6 @@ export function dailyContext(
 ): string {
   return [
     ...worldOpening(world),
-    ...connection(world),
     ...dropStory(world, drops, null),
     ...alreadyReported(signals, "daily"),
   ].join("\n");

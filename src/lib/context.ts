@@ -10,7 +10,6 @@ import { type Drop } from "./drops";
 */
 import {
   alreadyReported,
-  connection,
   dropStory,
   SIGNAL_DAYS,
   SIGNAL_MAX,
@@ -224,8 +223,6 @@ export async function buildWorldContext(
   ]);
 
   const lines: string[] = worldOpening(world);
-
-  lines.push(...connection(world));
   lines.push(...dropStory(world, drops, currentDrop));
   lines.push(...board);
 

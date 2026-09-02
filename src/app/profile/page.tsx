@@ -8,12 +8,11 @@ import Shell from "@/components/Shell";
 import { Page, PageHeader, ErrorNote } from "@/components/ui";
 import {
   SubNicheInput,
-  AffinityInput,
   VisualCalibrationInput,
   AreasSuggest,
 } from "@/components/world-inputs";
 import { worldActions } from "@/lib/worldActions";
-import { AFFINITY_QUESTIONS, hasDemandFloor, type World } from "@/lib/world";
+import { hasDemandFloor, type World } from "@/lib/world";
 import Customiser from "@/components/Customiser";
 import DropRhythm from "@/components/DropRhythm";
 import PinterestBoards from "@/components/PinterestBoards";
@@ -126,9 +125,6 @@ function ProfileBody({ world }: { world: World }) {
   const a = worldActions(world, patch, setErr);
 
   const toggle = (k: ModuleKey) => setOpen(open === k ? null : k);
-  const answered = AFFINITY_QUESTIONS.filter(
-    (q) => world.affinity[q.key] !== null,
-  ).length;
 
   return (
     <Page width="reading">
@@ -201,19 +197,6 @@ function ProfileBody({ world }: { world: World }) {
           />
         </Module>
 
-        <Module
-          title="Why this world"
-          summary={
-            answered === 0
-              ? "Not answered yet"
-              : `${answered} of ${AFFINITY_QUESTIONS.length} answered`
-          }
-          id="connection"
-          open={open === "connection"}
-          onToggle={() => toggle("connection")}
-        >
-          <AffinityInput affinity={world.affinity} onChange={a.setAffinity} />
-        </Module>
       </Group>
 
       <Group title="What feeds it">

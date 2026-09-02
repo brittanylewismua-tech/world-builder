@@ -6,7 +6,6 @@ import { useWorld } from "@/lib/useWorld";
 import { createWorld, deriveAreas } from "@/lib/api";
 import { worldActions } from "@/lib/worldActions";
 import {
-  AFFINITY_QUESTIONS,
   hasDemandFloor,
   MIN_SUB_NICHES,
   SUGGESTED_VISUAL_REFERENCES,
@@ -14,7 +13,6 @@ import {
 } from "@/lib/world";
 import {
   SubNicheInput,
-  AffinityScale,
   VisualCalibrationInput,
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
@@ -38,17 +36,18 @@ import { ErrorNote, Note } from "@/components/ui";
  *
  * SPEC: "This is not a one-time onboarding wizard that disappears forever."
  * Every question here is the same question World Profile asks, so nothing
- * answered now is ever locked. The four connection questions are separate
- * cards rather than one long form; a 1–10 scale asked on its own gets a
- * considered answer, and the same four stacked together get four sevens.
+ * answered now is ever locked.
+ *
+ * It asks only what the software goes on to use. Four questions about how
+ * much the seller personally related to the world used to live here, on two
+ * cards, and nothing anywhere read the answers — they were two screens
+ * between somebody and the tool they had just paid for.
  */
 
 interface Step {
   eyebrow: string;
   question: string;
   line: string;
-  /** Indexes into AFFINITY_QUESTIONS that this card asks. */
-  affinity?: number[];
   /** Optional — steps without one cannot be skipped. */
   optional?: boolean;
 }
@@ -58,20 +57,6 @@ const STEPS: Step[] = [
     eyebrow: "your research",
     question: "Which sub-niches did you validate?",
     line: `Worlds are found from the bottom up. Bring the keywords you already researched in eRank — at least ${MIN_SUB_NICHES} — and the world underneath them will show itself.`,
-  },
-  {
-    eyebrow: "your connection",
-    question: "How close are you to this world?",
-    line: "Demand on its own is not enough. Fluency comes faster when you like the person you are building for — and when you would want the thing yourself.",
-    affinity: [0, 1],
-    optional: true,
-  },
-  {
-    eyebrow: "your connection",
-    question: "Could you stay curious about this for a year?",
-    line: "This is a long game. Nothing here is scored and nothing gets approved or rejected — you decide what your answers mean.",
-    affinity: [2, 3],
-    optional: true,
   },
   {
     eyebrow: "your eye",
@@ -93,8 +78,15 @@ const STEPS: Step[] = [
   },
 ];
 
-const CALIBRATION_STEP = 3;
-const NAME_STEP = 4;
+/*
+  Two cards asking how much the seller personally relates to this world used
+  to sit between the keywords and these. They were a nice idea and did
+  nothing — nothing read the answers, nothing changed because of them, and
+  they were two screens standing between somebody and the tool they had just
+  paid for. Setup now asks only what the software actually uses.
+*/
+const CALIBRATION_STEP = 1;
+const NAME_STEP = 2;
 
 export default function Setup() {
   const router = useRouter();
@@ -256,26 +248,6 @@ function SetupBody({
                 onAddMany={a.addSubNiches}
                 onRemove={a.removeSubNiche}
               />
-            )}
-
-            {s.affinity && (
-              <div className="space-y-4">
-                {s.affinity.map((i) => {
-                  const q = AFFINITY_QUESTIONS[i];
-                  return (
-                    <AffinityScale
-                      key={q.key}
-                      question={q.question}
-                      low={q.low}
-                      high={q.high}
-                      value={world.affinity[q.key]}
-                      onChange={(n) =>
-                        a.setAffinity({ ...world.affinity, [q.key]: n })
-                      }
-                    />
-                  );
-                })}
-              </div>
             )}
 
             {step === CALIBRATION_STEP && (

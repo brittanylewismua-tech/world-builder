@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Zoomable from "@/components/Zoomable";
 import {
-  AFFINITY_QUESTIONS,
   MIN_SUB_NICHES,
   SUGGESTED_VISUAL_REFERENCES,
-  type Affinity,
   type SubNiche,
   type VisualReference,
   type WorldArea,
@@ -292,102 +290,7 @@ export function SubNicheInput({
 /* O — OWN THE WORLD                                                   */
 /* ------------------------------------------------------------------ */
 
-/**
- * One affinity question on its own. Onboarding shows these one card at a
- * time; World Profile stacks all four.
- */
-/*
-  A row of ten numbered buttons is a rating widget, and a rating widget
-  implies something is being scored. Nothing here is scored — this is the
-  seller working out whether they want to live in this world for a year.
-  Five worded options say the same thing in the seller's own language.
 
-  The stored value is still 1–10 so nothing already answered is lost and the
-  rest of the software keeps reading one scale. Each band saves its top
-  number, and any number inside a band lights that band up.
-*/
-const BANDS: { max: number; save: number; word: string | null }[] = [
-  { max: 2, save: 2, word: null },
-  { max: 4, save: 4, word: "A little" },
-  { max: 6, save: 6, word: "Somewhat" },
-  { max: 8, save: 8, word: "A lot" },
-  { max: 10, save: 10, word: null },
-];
-
-export function AffinityScale({
-  question,
-  low,
-  high,
-  value,
-  onChange,
-  bare = false,
-}: {
-  question: string;
-  low: string;
-  high: string;
-  value: number | null;
-  onChange: (n: number) => void;
-  /** Drop the surrounding box when the card already provides one. */
-  bare?: boolean;
-}) {
-  const band =
-    value === null ? -1 : BANDS.findIndex((b) => value <= b.max);
-
-  return (
-    <div className={bare ? "" : "rounded-2xl border border-black/12 bg-white p-4"}>
-      {!bare && <p className="t-h3 text-ink">{question}</p>}
-      <div className={`grid grid-cols-5 gap-1.5 ${bare ? "" : "mt-3"}`}>
-        {BANDS.map((b, i) => {
-          const label = b.word ?? (i === 0 ? low : high);
-          return (
-            <button
-              key={b.save}
-              onClick={() => onChange(b.save)}
-              className={`min-h-[3.25rem] rounded-lg border-2 px-1.5 py-2 text-[12.5px] font-semibold leading-tight transition ${
-                band === i
-                  ? "border-black bg-black text-white"
-                  : "border-black/12 bg-white text-ink-2 hover:border-black"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-export function AffinityInput({
-  affinity,
-  onChange,
-}: {
-  affinity: Affinity;
-  onChange: (next: Affinity) => void;
-}) {
-  return (
-    <div>
-      <Note>
-        Reflection, not a test. Nothing here gets scored and nothing gets
-        approved or rejected — you are deciding whether this world is worth
-        months of your attention. Answer honestly or skip it.
-      </Note>
-
-      <div className="space-y-6">
-        {AFFINITY_QUESTIONS.map((q) => (
-          <AffinityScale
-            key={q.key}
-            question={q.question}
-            low={q.low}
-            high={q.high}
-            value={affinity[q.key]}
-            onChange={(n) => onChange({ ...affinity, [q.key]: n })}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* R — VISUAL CALIBRATION                                              */
