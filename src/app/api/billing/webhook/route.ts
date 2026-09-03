@@ -43,12 +43,43 @@ export async function POST(req: Request) {
 
   const db = serviceDb();
 
-  /** Which account a Stripe subscription belongs to. */
+  /*
+    THIS ENDPOINT HEARS ABOUT EVERY SUBSCRIPTION ON THE WHOLE STRIPE ACCOUNT.
+
+    That account also runs a Kajabi business, and Stripe has no way to scope a
+    webhook to one product — an endpoint receives every event on the account it
+    lives in. So most of what arrives here belongs to somebody else's customers
+    and must be ignored, silently and safely.
+
+    "Ignored" has to mean ignored. The first version took client_reference_id
+    or metadata.user_id at face value and wrote it straight into a uuid column;
+    any other integration on this account that sets those fields to something
+    of its own would have made Postgres reject the row, turned into a 500, and
+    Stripe retries a failing endpoint until it disables it — at which point
+    World Builder's OWN payments stop being delivered too. A stranger's
+    checkout could have switched off ours.
+
+    So an id is only believed if it is a uuid AND names a real account here.
+  */
+  const UUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  async function oursOrNull(id: string | null | undefined) {
+    if (!id || !UUID.test(id)) return null;
+    const { data } = await db.auth.admin.getUserById(id);
+    return data?.user ? id : null;
+  }
+
+  /** Which World Builder account a Stripe subscription belongs to, if any. */
   async function ownerOf(sub: Stripe.Subscription): Promise<string | null> {
-    const fromMeta = sub.metadata?.user_id;
+    const fromMeta = await oursOrNull(sub.metadata?.user_id);
     if (fromMeta) return fromMeta;
     const customer =
       typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+    /*
+      Our own table, so anything found here is ours by definition — a Kajabi
+      customer has no row in it.
+    */
     const { data } = await db
       .from("wb_subscriptions")
       .select("user_id")
@@ -90,7 +121,8 @@ export async function POST(req: Request) {
       */
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.client_reference_id;
+        /* Somebody else's checkout on this account resolves to null here. */
+        const userId = await oursOrNull(session.client_reference_id);
         if (userId && session.subscription) {
           const sub = await s.subscriptions.retrieve(
             typeof session.subscription === "string"
