@@ -33,6 +33,9 @@ import Logo from "./Logo";
 */
 const ALWAYS_OPEN = ["/terms", "/privacy", "/login", "/reset"];
 
+/** Where somebody goes to keep their access. Empty hides the button. */
+const UPGRADE_URL = process.env.NEXT_PUBLIC_UPGRADE_URL || "";
+
 export default function Admitted({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   /*
@@ -98,16 +101,11 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
   const stale = !!endsAt && new Date(endsAt) <= new Date();
 
   /*
-    Still inside their term: the app, plus a quiet note in the last week so
-    the end does not arrive as a surprise.
+    Still inside their term: just the app. The last-week notice lives on Home
+    rather than here — a strip across every screen is a countdown following
+    somebody around their own work, and Home is where a session starts.
   */
-  if (inside && !stale)
-    return (
-      <>
-        <Ending at={endsAt} />
-        {children}
-      </>
-    );
+  if (inside && !stale) return <>{children}</>;
 
   /* Out of term. The app stays, read-only, behind an honest banner. */
   if (inside && stale)
@@ -176,33 +174,6 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * The last week of the challenge, said once and quietly.
- *
- * Not a countdown on every screen — that reads as pressure and it is on
- * every page they use. A single line, only in the final seven days, and only
- * so the ending is never a surprise.
- */
-function Ending({ at }: { at: string | null }) {
-  if (!at) return null;
-  const days = Math.ceil(
-    (new Date(at).getTime() - Date.now()) / 86_400_000,
-  );
-  if (days > 7) return null;
-  return (
-    <div className="border-b-2 border-black bg-white px-5 py-2 text-center">
-      <p className="t-small text-ink-2">
-        {days <= 1
-          ? "Your challenge access ends today."
-          : `${days} days left of your challenge access.`}{" "}
-        <span className="text-ink-3">
-          Everything you build is yours to keep.
-        </span>
-      </p>
-    </div>
-  );
-}
-
-/**
  * After the term. The app is still there behind this, read-only, because a
  * world you can still see is the whole reason to continue.
  */
@@ -257,12 +228,24 @@ function Ended({ onEntered }: { onEntered: () => void }) {
             </button>
           </span>
         ) : (
-          <button
-            onClick={() => setOpen(true)}
-            className="t-small ml-auto shrink-0 font-semibold text-[color:var(--accent-on)] underline underline-offset-4"
-          >
-            I have a code
-          </button>
+          <span className="ml-auto flex shrink-0 items-center gap-4">
+            {UPGRADE_URL && (
+              <a
+                href={UPGRADE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary shrink-0"
+              >
+                Keep my access
+              </a>
+            )}
+            <button
+              onClick={() => setOpen(true)}
+              className="t-small shrink-0 font-semibold text-[color:var(--accent-on)] underline underline-offset-4"
+            >
+              I have a code
+            </button>
+          </span>
         )}
       </div>
       {err && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
+import ChallengeEnding from "@/components/ChallengeEnding";
 import { Page, Card, Dots, Star } from "@/components/ui";
 import {
   formatIssueDate,
@@ -87,6 +88,9 @@ function HomeBody({ world }: { world: World }) {
 
   return (
     <Page width="wide">
+
+      {/* Only in the last seven days, and never for a subscriber. */}
+      <ChallengeEnding />
 
       <header className="mb-8">
         <span className="t-small text-ink-3">{formatIssueDate(today)}</span>
