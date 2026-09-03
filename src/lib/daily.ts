@@ -285,3 +285,31 @@ export function hostOf(url: string) {
     return url;
   }
 }
+
+/**
+ * RE-READ THE SHOPS THIS WORLD FOLLOWS.
+ *
+ * Runs on the same press as the week's issue, so "this week" means the same
+ * thing in the research and in the shop numbers underneath it. Etsy calls
+ * only — no model, no allowance.
+ *
+ * Never allowed to stop the issue: a seller who follows no shops, or whose
+ * shops will not answer, still gets their paper.
+ */
+export async function sweepShops(worldId: string): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch("/api/shops/sweep", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ worldId }),
+    });
+  } catch {
+    /* The paper matters more than the shop numbers under it. */
+  }
+}

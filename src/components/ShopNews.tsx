@@ -85,12 +85,12 @@ export default function ShopNews({ worldId }: { worldId: string }) {
       */}
       {news.shops === 0 && (
         <p className="t-body mt-3 max-w-[58ch] text-ink-2">
-          Follow {WANT_SHOPS} competitor shops in{" "}
+          Add {WANT_SHOPS} competitor shops in{" "}
           <Link href="/shops" className="underline underline-offset-4">
             World Shops
-          </Link>{" "}
-          and their news lands here — what they publish, and which of their
-          designs are gaining.
+          </Link>
+          , then come back here. Their news arrives with your next issue —
+          what they publish, and which of their designs are gaining.
         </p>
       )}
 
@@ -104,7 +104,8 @@ export default function ShopNews({ worldId }: { worldId: string }) {
 
       {news.shops >= WANT_SHOPS && !hasNews && (
         <p className="t-body mt-3 max-w-[58ch] text-ink-2">
-          Watching {news.shops} shops. Their news starts next week.
+          Watching {news.shops} shops. Their news arrives with your next
+          issue.
         </p>
       )}
 

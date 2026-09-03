@@ -4,10 +4,6 @@
     {
       "path": "/api/cron/world-news",
       "schedule": "17 * * * *"
-    },
-    {
-      "path": "/api/cron/shops",
-      "schedule": "40 */3 * * *"
     }
   ]
 }

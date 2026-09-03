@@ -14,6 +14,7 @@ import {
   nextIssueDate,
   generateIssue,
   loadIssue,
+  sweepShops,
   loadIssueDates,
   startFirstIssue,
   loadRest,
@@ -169,6 +170,8 @@ function DailyBody({ world }: { world: World }) {
   /* Whether we yet know if this world has a history — see the effect below. */
   const [datesReady, setDatesReady] = useState(false);
   const [writing, setWriting] = useState(false);
+  /* Bumped after a run so the shop section re-reads its numbers. */
+  const [newsKey, setNewsKey] = useState(0);
   const [err, setErr] = useState("");
   const [nextDrop, setNextDrop] = useState<Drop | null>(null);
   /** Set when what is on screen is an older issue standing in for today's. */
@@ -380,10 +383,18 @@ function DailyBody({ world }: { world: World }) {
                   setWriting(true);
                   setErr("");
                   try {
+                    /*
+                      Shops first, so the numbers under the paper are from the
+                      same moment as the paper. It is quick and it cannot fail
+                      the issue.
+                    */
+                    await sweepShops(world.id);
                     const got = await generateIssue(world, today);
                     setItems(got);
                     setRest(await loadRest(world.id, today).catch(() => []));
                     setDates(await loadIssueDates(world.id).catch(() => dates));
+                    /* The shop section is a sibling; tell it to look again. */
+                    setNewsKey((n) => n + 1);
                   } catch (e) {
                     /* A failed run costs nothing — the allowance is returned. */
                     setErr(
@@ -614,7 +625,7 @@ function DailyBody({ world }: { world: World }) {
         follows anybody — when it is empty it is the thing that explains what
         following shops would give them.
       */}
-      {date === today && <ShopNews worldId={world.id} />}
+      {date === today && <ShopNews key={newsKey} worldId={world.id} />}
 
       {dates.length > 1 && (
         <div className="mt-8 border-t border-black/12 pt-5">
