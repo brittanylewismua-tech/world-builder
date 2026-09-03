@@ -23,7 +23,7 @@ const KEY =
   "sb_publishable_1dP18eUzIVckldFdIR2w7Q_6clKwTmu";
 
 /**
- * Calls per person per day, by route.
+ * THE ALLOWANCES.
  *
  * These are not a fairness rule, they are the spend ceiling. Nothing else
  * limits what one account can cost, so the worst case is exactly this table
@@ -36,122 +36,60 @@ const KEY =
  * entire allowance, every day.
  *
  * Set so that a heavy, genuine day of work never touches them.
- */
-export const DAILY_CAP = {
-  /*
-    Counted per WEEK — see WEEKLY below — and the number is now what the
-    feature actually is. The issue is written once a week and there is no
-    refresh button any more, so a seller needs exactly one.
-
-    One. It was two, as a spare — the allowance is spent before the work, so
-    a run that failed still cost a unit and at one a single timeout left
-    somebody with no paper until Monday.
-
-    That spare was a workaround for a bug, and the bug is fixed: every path
-    out of the route that does not hand back an issue returns the unit. A
-    failure now costs nothing, so the cap can finally say what the feature
-    actually is. One issue a week.
-
-    This is the most expensive call in the product by a wide margin — a scout
-    reading eighty thousand tokens, then a judge writing twelve — at roughly
-    nineteen cents a run. Six a week was five dollars a month per seller for a
-    thing that changes weekly.
-  */
-  daily: 1,
-  /* A real conversation is ten or fifteen turns. Thirty is a long session. */
-  customer: 30,
-  room: 30,
-  areas: 5,
-  /*
-    One analysis per saved item, at about a penny each.
-
-    Eighty was written for a seller adding pieces by hand. Importing a
-    Pinterest board brings fifty at once, and the real days on record are 218
-    and 171 — so roughly half of those items were refused and quietly went
-    unanalysed, which silently weakens the pattern read that depends on them.
-
-    A ceiling that is regularly hit is not a ceiling, it is a bug. Two
-    hundred covers a genuine multi-board import day and still caps the worst
-    case at about two dollars.
-  */
-  board: 200,
-  /*
-    Patterns are read one keyword at a time, at about three cents a read, and
-    a world holds ten keywords. Somebody setting one up in an evening does ten
-    reads in a row, so a cap of three stopped them a third of the way in and
-    sent them back tomorrow. Twice.
-
-    This is also the only real spend gate on World Winners. Uploading costs
-    nothing but an Etsy call, and deleting a keyword deletes its designs, so
-    churning keywords to dodge the ten-keyword limit buys a reshuffled wall
-    and no extra reads. The money is here, so the ceiling is here: twelve is a
-    full world plus a couple of second looks, and about thirty-six cents in
-    the worst case anybody could contrive.
-  */
-  winners: 12,
-  /*
-    The read across every keyword at once — counted per WEEK, not per day.
-
-    It is the only thing in World Winners that spans the world rather than a
-    corner of it, and a world does not change between two presses on a
-    Tuesday: the wall only moves when an export is uploaded. Two, because the
-    allowance is spent before the work and a failed run would otherwise cost
-    the week.
-  */
-  world: 2,
-  /*
-    Reading a followed shop — the catalogue, or its buyers.
-
-    This was six, directly under a comment saying five shops with two reads
-    each is TEN. The number contradicted the sentence above it, and it cut a
-    seller off four reads short of using the feature as designed — which is
-    exactly what it did, in front of an audience.
-
-    A shop can only be read once a week per kind now, and a world holds five
-    shops, so ten is the real ceiling whatever this says. Twelve leaves room
-    for a shop swapped mid-week without the cap becoming the thing that
-    decides. The per-shop lock is the guard; this is only a backstop.
-  */
-  shops: 12,
-  /*
-    Following a NEW shop. Counted per week, and a refresh of a shop already
-    followed does not count.
-
-    Five held at once was never the real limit — somebody could remove one and
-    add another all afternoon, and hold five while cycling through fifty. This
-    is the honest lock: five new shops a week, and deleting to make room costs
-    one of them. It also matches what following a shop is for. Reading five
-    catalogues properly is a week's study, not an afternoon's browsing.
-  */
-  shopAdds: 5,
-  /*
-    Working out who lives in this world. Once per world, per week.
-
-    It is not a thing anybody presses repeatedly — the answer only moves when
-    the evidence under it moves, which happens on the timescale of uploads and
-    drops, not minutes. Two a week covers a seller who reshapes their world
-    and wants the person rebuilt on top of it.
-  */
-  avatar: 2,
-} as const;
-
-export type Route = keyof typeof DAILY_CAP;
-
-/**
- * Routes whose allowance runs by the week rather than by the day.
  *
- * World News publishes once a week. A daily cap on it, however small, still
- * multiplies by thirty — two a day is sixty research runs a month for
- * something that needs four. Six a week is the issue plus five refreshes, and
- * it puts a real ceiling on the month instead of a ceiling on the morning.
+ * THE NUMBERS LIVE IN limits.ts. They moved there the moment the app began
+ * showing a seller how many they had left: a number on screen has to be the
+ * same number that refuses them, and two copies of a rule drift. The
+ * reasoning stays here, next to the code that enforces it.
+ *
+ *   daily: 1 — counted per WEEK. The issue is written once a week and there
+ *     is no refresh button, so a seller needs exactly one. It was two, as a
+ *     spare, because the allowance is spent before the work and a failed run
+ *     still cost a unit. That spare was a workaround for a bug, and the bug
+ *     is fixed: refund() returns the unit on every path that hands back no
+ *     issue. This is the most expensive call in the product by a wide margin
+ *     — a scout reading eighty thousand tokens, then a judge writing twelve,
+ *     about nineteen cents a run.
+ *
+ *   customer: 30, room: 30 — a real conversation is ten or fifteen turns.
+ *     Thirty is a long session.
+ *
+ *   areas: 5
+ *
+ *   board: 200 — one analysis per saved item, about a penny each. Eighty was
+ *     written for a seller adding pieces by hand; a Pinterest import brings
+ *     fifty at once, and the real days on record are 218 and 171. So roughly
+ *     half of those items were refused and went quietly unanalysed, which
+ *     silently weakens the pattern read that depends on them. A ceiling that
+ *     is regularly hit is not a ceiling, it is a bug.
+ *
+ *   winners: 12 — patterns are read one keyword at a time, about three cents
+ *     each, and a world holds ten keywords. A cap of three stopped somebody a
+ *     third of the way through setting up. This is also the only real spend
+ *     gate on World Winners: uploading costs nothing but an Etsy call, and
+ *     churning keywords buys a reshuffled wall, not extra reads.
+ *
+ *   world: 2 — the read across every keyword at once, per WEEK. A world does
+ *     not change between two presses on a Tuesday; the wall only moves when
+ *     an export is uploaded.
+ *
+ *   shops: 12 — reading a followed shop, catalogue or buyers, per WEEK. This
+ *     was six, directly under a comment saying five shops with two reads each
+ *     is TEN. The number contradicted the sentence above it and cut a seller
+ *     off four reads short of using the feature as designed — in front of an
+ *     audience. The per-shop weekly lock is the real guard; this is a backstop.
+ *
+ *   shopAdds: 5 — following a NEW shop, per WEEK. Holding five at once was
+ *     never the real limit: somebody could remove one and add another all
+ *     afternoon. This is the honest lock, and deleting to make room costs one
+ *     of them. Refreshing a shop already followed does not count.
+ *
+ *   avatar: 2 — working out who lives in this world, per WEEK. The answer
+ *     only moves when the evidence under it moves, which happens on the
+ *     timescale of uploads and drops, not minutes.
  */
-const WEEKLY: ReadonlySet<Route> = new Set<Route>([
-  "daily",
-  "world",
-  "shops",
-  "shopAdds",
-  "avatar",
-]);
+export { DAILY_CAP, WEEKLY, type Route } from "./limits";
+import { DAILY_CAP, WEEKLY, type Route } from "./limits";
 
 /*
   Hitting a limit is not a mistake and these should not read like a telling

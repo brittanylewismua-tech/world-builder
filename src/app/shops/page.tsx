@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
+import Left, { spent } from "@/components/Left";
 import { report } from "@/lib/report";
 import { saveFindingToBoard } from "@/lib/board";
 import { splitDrops, syncSchedule, type Drop } from "@/lib/drops";
@@ -235,6 +236,7 @@ function ShopsBody({ world }: { world: World }) {
     try {
       const res = await addShop(world, value);
       setInput("");
+      spent(); // a slot just went; the count beside the button is now stale
       await refresh();
       setSaid(`${res.shopName} — ${res.designs} designs.`);
     } catch (e) {
@@ -285,6 +287,12 @@ function ShopsBody({ world }: { world: World }) {
           {said && !adding && (
             <span className="t-small text-ink-2">{said}</span>
           )}
+          {/*
+            Following a shop is the one capped action here somebody can walk
+            into unawares — five a week, and removing one to make room still
+            costs a slot. Better said beside the button than after it.
+          */}
+          <Left route="shopAdds" className="w-full" />
         </div>
       )}
 
@@ -384,6 +392,7 @@ function ShopBlock({
         setDesigns(null);
       }
       await readShop(world, shop.id, kind);
+      spent();
       await onChanged();
       setShowing(kind);
     } catch (e) {
@@ -757,13 +766,16 @@ function Brief({
             Can be read again {when(opens.toISOString())}
           </span>
         ) : (
-          <button
-            onClick={onRead}
-            className="btn btn-ghost"
-            title="Pulls their newest listings and numbers, then reads the shop again"
-          >
-            Read again
-          </button>
+          <>
+            <button
+              onClick={onRead}
+              className="btn btn-ghost"
+              title="Pulls their newest listings and numbers, then reads the shop again"
+            >
+              Read again
+            </button>
+            <Left route="shops" />
+          </>
         )}
       </div>
 

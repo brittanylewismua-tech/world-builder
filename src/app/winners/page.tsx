@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import Shell from "@/components/Shell";
 import { Page, Card, Empty, ErrorNote, Rich } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
+import Left, { spent } from "@/components/Left";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import {
@@ -131,6 +132,7 @@ function WinnersBody({ world }: { world: World }) {
     setSaid("");
     try {
       await readTheWorld(world);
+      spent();
       await refresh();
       setWorldOpen(true);
     } catch (e) {
@@ -149,6 +151,7 @@ function WinnersBody({ world }: { world: World }) {
     setSaid("");
     try {
       await readPatterns(world, keyword);
+      spent();
       await refresh();
       setShowing((s) => ({ ...s, [keyword]: true }));
     } catch (e) {
@@ -366,6 +369,12 @@ function WinnersBody({ world }: { world: World }) {
             >
               {worldBrief ? "Read it again" : "Read my world"}
             </button>
+            {/*
+              Two a week. The wall only moves when an export is uploaded, so
+              this is rarely a constraint — but at two, the one time somebody
+              presses it twice on a Tuesday they should know before, not after.
+            */}
+            <Left route="world" className="w-full" />
           </div>
 
           {!worldBrief && (
@@ -737,6 +746,7 @@ function BriefPanel({
             {stale ? "Read it again" : "Refresh"}
           </button>
         </div>
+        <Left route="winners" className="w-full" />
       </div>
 
       <Patterns points={stored.brief.patterns} />
