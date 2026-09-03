@@ -159,28 +159,28 @@ export default function Privacy() {
         </p>
       </Clause>
 
-      <Clause n={9} title="What you can ask us to do">
+      <Clause n={9} title="Deleting your data">
         <p>
-          Wherever you live, you can ask us to show you what we hold, correct
-          it, delete it, or send you a copy. Email{" "}
-          <a href={`mailto:${CONTACT}`}>{CONTACT}</a> and we will do it within
-          thirty days.
+          You can delete your own data at any time, from inside the app,
+          without asking us. Deleting a world removes everything in it —
+          keywords, boards, uploads, drops and conversations — including the
+          image files.
         </p>
         <p>
-          If you are in California, that includes the right to know what is
-          collected and to have it deleted, and the right not to be treated
-          differently for asking. We do not sell or share personal information
-          as those laws define it, so there is nothing for you to opt out of.
+          That is the fastest way to do it and it needs nothing from us.
         </p>
         <p>
-          If you are in the UK or EU, our basis for processing is performing
-          the contract you signed up for, and our legitimate interest in
-          keeping the service working and unabused. You can object, restrict
-          processing, or complain to your data protection authority.
+          If you are in the UK or EU, data protection law also gives you the
+          right to ask for a copy of what we hold, to have it corrected, or to
+          have it deleted, and to complain to your data protection authority.
+          Email <a href={`mailto:${CONTACT}`}>{CONTACT}</a> and we will respond
+          within one month. Our basis for processing is performing the contract
+          you signed up for, and our legitimate interest in keeping the service
+          working and unabused.
         </p>
         <p>
-          You can also delete your own account&apos;s worlds from inside the
-          app at any time, without asking us.
+          We do not sell or share personal information as US state privacy laws
+          define those terms, so there is nothing to opt out of.
         </p>
       </Clause>
 
