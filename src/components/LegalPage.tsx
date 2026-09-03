@@ -33,7 +33,7 @@ export default function LegalPage({
 
       <footer className="mt-16 border-t-2 border-black pt-6">
         <p className="t-small text-ink-2">
-          Questions about any of this go to{" "}
+          Any questions, email{" "}
           <a
             href={`mailto:${CONTACT}`}
             className="font-semibold underline underline-offset-4"

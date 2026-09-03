@@ -16,7 +16,7 @@ export default function Privacy() {
   return (
     <LegalPage
       title="Privacy"
-      intro={`What ${PRODUCT} collects, why, who else can see it, and how to make it go away.`}
+      intro={`What ${PRODUCT} collects, why, who else can see it, and how to delete it.`}
     >
       <Clause n={1} title="Who is responsible">
         <p>
@@ -37,7 +37,7 @@ export default function Privacy() {
           <strong>What you put in.</strong> Your world&apos;s name, the search
           terms you have researched, the parts of the world you watch, the
           images and notes on your research boards, the designs you upload to a
-          drop, and anything you type in the two chats.
+          drop, and anything you type to your customer or in the Creative Room.
         </p>
         <p>
           <strong>What we fetch for you.</strong> Public information about Etsy
@@ -89,12 +89,12 @@ export default function Privacy() {
           forbid training on it.
         </p>
         <p>
-          We also do not read your worlds to build anything for other
-          customers, and we do not sell your data. Ever, to anyone.
+          We do not read your worlds to build anything for other customers,
+          and we do not sell your data to anyone.
         </p>
       </Clause>
 
-      <Clause n={5} title="Who else touches it">
+      <Clause n={5} title="Who else we share it with">
         <p>
           These companies process data on our behalf so the product can work.
           Each is bound to use it only for that.
@@ -111,13 +111,13 @@ export default function Privacy() {
           them. If you never connect Pinterest, we never contact Pinterest.
         </p>
         <p>
-          We may also disclose information if the law genuinely requires it, or
-          to protect someone&apos;s safety. If that ever happens we will tell
-          you unless we are legally forbidden from doing so.
+          We may also share information if the law requires it, or to protect
+          someone&apos;s safety. If that happens we will tell you, unless we
+          are legally prevented from doing so.
         </p>
       </Clause>
 
-      <Clause n={6} title="Other people's shops">
+      <Clause n={6} title="Other people&apos;s shops">
         <p>
           {PRODUCT} reads public Etsy shops so you can study what already sells
           in your world. That information is about a business, is published by
@@ -126,23 +126,23 @@ export default function Privacy() {
           and public reviews.
         </p>
         <p>
-          Reviews are written by real people. We use them to describe who buys
-          in a market, never to identify or contact anybody, and we do not
-          store reviewer names or any way of reaching them.
+          Reviews are written by real people. We use them to understand who
+          buys in a market. We do not store reviewer names or any contact
+          details, and we never use reviews to identify or contact anyone.
         </p>
       </Clause>
 
-      <Clause n={7} title="Where it lives and how it is protected">
+      <Clause n={7} title="Where it is stored and how it is protected">
         <p>
-          Everything is stored in the United States. Your world is walled off
-          at the database level: the rules that decide who can read a row are
-          enforced by the database itself, so no other customer can reach your
-          work even if the application had a bug. Uploaded images sit in a
-          private bucket and are served through links that expire.
+          Everything is stored in the United States. Only your account can
+          read your world. That rule is enforced by the database itself rather
+          than only by the app, so a bug in the app cannot expose your work to
+          another customer. Uploaded images are stored privately and are shown
+          to you through links that expire.
         </p>
         <p>
-          No system is perfectly secure, and we will not pretend otherwise. If
-          your data is ever exposed we will tell you promptly and plainly.
+          No system is completely secure. If your data is ever exposed, we
+          will tell you as soon as we know.
         </p>
       </Clause>
 
@@ -152,10 +152,10 @@ export default function Privacy() {
           everything under it goes with it, including the uploaded files.
         </p>
         <p>
-          Two things outlive a deleted world. Cost records — feature, model,
-          tokens, price — are kept as our own business accounting, and they
-          contain none of your content. Server and crash logs age out on their
-          own within about thirty days.
+          Two things are kept after you delete a world. Cost records — which
+          feature ran, which model, how many tokens, what it cost — are kept
+          for our accounting, and contain none of your content. Server and
+          crash logs are deleted automatically after about thirty days.
         </p>
       </Clause>
 

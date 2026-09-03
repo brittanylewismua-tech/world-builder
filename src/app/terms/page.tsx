@@ -17,7 +17,7 @@ export default function Terms() {
   return (
     <LegalPage
       title="Terms"
-      intro={`The agreement between you and ${COMPANY} for using ${PRODUCT}. Plain language on purpose — if something here is unclear, ask and we will fix the wording.`}
+      intro={`The agreement between you and ${COMPANY} for using ${PRODUCT}. If anything here is unclear, tell us and we will reword it.`}
     >
       <Clause n={1} title="Who this is between">
         <p>
@@ -38,8 +38,8 @@ export default function Terms() {
         </p>
         <p>
           One account is for one person or one business. Sharing a login so
-          several people can avoid paying is the one thing that will get an
-          account closed without warning.
+          several people can use it on one subscription will close the
+          account.
         </p>
         <p>You must be 18 or over.</p>
       </Clause>
@@ -88,15 +88,15 @@ export default function Terms() {
       <Clause n={5} title="What you upload">
         <p>
           Only upload things you have the right to upload. Reference images
-          collected for research are normally fine; passing somebody
-          else&apos;s design off as your own is not, and that is on you, not
-          us.
+          collected for research are normally fine. Selling someone
+          else&apos;s design as your own is not, and you are responsible for
+          that, not us.
         </p>
         <p>
-          Do not use {PRODUCT} to copy another seller&apos;s designs. The whole
-          product is built to tell you what is <em>working</em> and never to
-          reproduce it, and using it to clone somebody is both against these
-          terms and a good way to lose an Etsy shop.
+          Do not use {PRODUCT} to copy another seller&apos;s designs. It is
+          built to show you what is <em>working</em>, not to reproduce it.
+          Copying someone breaks these terms, and it can get your Etsy shop
+          closed.
         </p>
         <p>
           We can remove content that breaks these terms or the law, and we will
@@ -121,7 +121,7 @@ export default function Terms() {
         </p>
       </Clause>
 
-      <Clause n={7} title="The AI is sometimes wrong">
+      <Clause n={7} title="The AI gets things wrong">
         <p>
           {PRODUCT} uses AI to read designs, write research and hold
           conversations. It gets things wrong. It can misread a picture, draw a
@@ -130,21 +130,20 @@ export default function Terms() {
         </p>
         <p>
           The customer you talk to is a simulation built from research. It is
-          not a real person, not a survey, and not evidence about a market. It
-          is there to think with, not to be believed.
+          not a real person, not a survey, and not evidence about a market.
+          Use it to think through ideas, not as proof of anything.
         </p>
         <p>
-          Check anything that matters before you spend money on it. Treat what
-          you read here the way you would treat a sharp friend&apos;s
-          opinion — worth having, not proof.
+          Check anything important before you act on it. Treat what you read
+          here as a useful opinion, not as fact.
         </p>
       </Clause>
 
       <Clause n={8} title="Fair use of the service">
         <p>
-          Every AI feature has a limit on how often it can run. Those limits
-          exist because each run costs real money, and they are set so that
-          ordinary heavy use never reaches them.
+          Every AI feature has a limit on how often it can run, because each
+          run costs us money. The limits are set high enough that normal heavy
+          use will not reach them.
         </p>
         <p>
           Do not try to get around them — with extra accounts, automated
@@ -160,25 +159,25 @@ export default function Terms() {
           Etsy or Pinterest, and neither endorses us.
         </p>
         <p>
-          Those services can change or withdraw access at any time. If they do,
-          the features that depend on them may stop working, and that is not
-          something we can promise around.
+          Those services can change or withdraw access at any time. If they
+          do, the features that depend on them may stop working, and we cannot
+          guarantee otherwise.
         </p>
       </Clause>
 
       <Clause n={10} title="Early access">
         <p>
           {PRODUCT} is new and still being built. Features will change, some
-          will be removed, and there will be bugs. We will not delete your work
-          without warning, but we cannot promise the product will look the same
-          next month.
+          will be removed, and there will be bugs. We will not delete your
+          work without warning, but the product may look different from one
+          month to the next.
         </p>
       </Clause>
 
-      <Clause n={11} title="Ending it">
+      <Clause n={11} title="Cancelling">
         <p>
-          You can stop whenever you like. Cancel in the app or email us, delete
-          your worlds, and that is that.
+          You can cancel at any time, in the app or by emailing us. You can
+          delete your worlds whenever you want.
         </p>
         <p>
           We can close an account that breaks these terms. Unless it is
