@@ -20,9 +20,10 @@ export default function Privacy() {
     >
       <Clause n={1} title="Who is responsible">
         <p>
-          {PRODUCT} is run by {COMPANY}, registered in {STATE}. We decide what
-          is collected and why, which makes us the data controller. Write to us
-          at <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
+          {PRODUCT} is run by {COMPANY}
+          {STATE ? `, registered in ${STATE}` : ""}. We decide what is
+          collected and why, which makes us the data controller. Write to us at{" "}
+          <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
         </p>
       </Clause>
 

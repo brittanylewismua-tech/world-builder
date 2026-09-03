@@ -10,13 +10,22 @@
  */
 
 /**
- * The registered company. Brittany confirmed there is one; the exact
- * registered name and state still need filling in before these pages go in
- * front of a paying customer, because the terms bind whoever is named here
- * and "The Goldie Suite" on its own is a trading name, not a legal person.
+ * The company these documents bind. "The Goldie Suite" is a trading name;
+ * this is the legal person.
+ *
+ * If the registration carries a suffix — LLC, Inc — it belongs here exactly
+ * as registered, because a name that does not match the filing is a name a
+ * court has to interpret.
  */
-export const COMPANY = "[REGISTERED COMPANY NAME]";
-export const STATE = "[STATE OF REGISTRATION]";
+export const COMPANY = "Be A Wolf Biz";
+
+/**
+ * The state of registration, which decides the governing law. Empty until
+ * confirmed, and every page that mentions it simply leaves the phrase out
+ * rather than printing a placeholder at a reader — an unfinished legal page
+ * should read as finished or not be published.
+ */
+export const STATE = "";
 
 export const PRODUCT = "World Builder";
 export const SUITE = "The Goldie Suite";

@@ -21,9 +21,10 @@ export default function Terms() {
     >
       <Clause n={1} title="Who this is between">
         <p>
-          {PRODUCT} is operated by {COMPANY}, registered in {STATE}. Using it
-          means you accept these terms. If you are using it for a business, you
-          are agreeing on that business&apos;s behalf.
+          {PRODUCT} is operated by {COMPANY}
+          {STATE ? `, registered in ${STATE}` : ""}. Using it means you accept
+          these terms. If you are using it for a business, you are agreeing on
+          that business&apos;s behalf.
         </p>
       </Clause>
 
@@ -214,9 +215,11 @@ export default function Terms() {
 
       <Clause n={14} title="Law">
         <p>
-          These terms are governed by the laws of {STATE}, and any dispute goes
-          to the courts there. If you are a consumer somewhere with stronger
-          protections, you keep those.
+          {STATE
+            ? `These terms are governed by the laws of ${STATE}, and any dispute goes to the courts there.`
+            : `These terms are governed by the laws of the state in which ${COMPANY} is registered, and any dispute goes to the courts there.`}{" "}
+          If you are a consumer somewhere with stronger protections, you keep
+          those.
         </p>
       </Clause>
     </LegalPage>
