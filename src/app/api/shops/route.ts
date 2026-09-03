@@ -234,6 +234,40 @@ export async function POST(req: Request) {
       .from("wb_shop_designs")
       .upsert(rows, { onConflict: "shop_id,listing_id" });
 
+  /*
+    KEEP THIS WEEK'S READING BEFORE THE NEXT ONE REPLACES IT.
+
+    The catalogue above is overwritten on every refresh, which is right — a
+    design that came down should leave. But it means the numbers only ever
+    say what a design HAS, never what it gained, and gaining is the whole
+    signal: a design that picked up four hundred favourites in a week is
+    news, and the same design sitting on four thousand is furniture.
+
+    One row per design per week, so a second refresh inside a week corrects
+    the reading rather than adding another. Never allowed to fail the request
+    — a missing week of history is a smaller problem than a shop that would
+    not follow.
+  */
+  const monday = new Date();
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  const week = monday.toISOString().slice(0, 10);
+  try {
+    if (rows.length)
+      await db.from("wb_design_weekly").upsert(
+        rows.map((r) => ({
+          world_id: worldId,
+          listing_id: r.listing_id,
+          week,
+          views: r.views,
+          favorers: r.favorers,
+          taken_at: new Date().toISOString(),
+        })),
+        { onConflict: "world_id,listing_id,week" },
+      );
+  } catch {
+    /* History is a nice-to-have; following the shop is the job. */
+  }
+
   return NextResponse.json({
     shopName: shop.shop_name,
     designs: rows.length,

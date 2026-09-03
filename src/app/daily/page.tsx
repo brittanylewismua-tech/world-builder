@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import ReadingBar from "@/components/ReadingBar";
+import ShopNews from "@/components/ShopNews";
 import { Page, Card, Empty, ErrorNote, Dots } from "@/components/ui";
 import {
   formatIssueDate,
@@ -627,6 +628,13 @@ function DailyBody({ world }: { world: World }) {
           </>
         );
       })()}
+
+      {/*
+        Shown on the current issue only, and shown whether or not the seller
+        follows anybody — when it is empty it is the thing that explains what
+        following shops would give them.
+      */}
+      {date === today && <ShopNews worldId={world.id} />}
 
       {dates.length > 1 && (
         <div className="mt-8 border-t border-black/12 pt-5">
