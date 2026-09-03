@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { NEW_BEFORE_REREAD } from "@/lib/limits";
 import { admit, meter, refund } from "@/lib/guard";
 
 export const runtime = "nodejs";
@@ -134,7 +135,6 @@ export async function POST(req: Request) {
 
     Checked BEFORE admit, which spends a unit of the allowance as it runs.
   */
-  const NEW_BEFORE_REREAD = 10;
   const boardId = body.boardId;
   if (boardId) {
     const auth = req.headers.get("authorization") ?? "";

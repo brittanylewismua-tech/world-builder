@@ -4,12 +4,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
+import ReadingBar from "@/components/ReadingBar";
 import { Page, Card, Empty, ErrorNote, Dots } from "@/components/ui";
 import {
   formatIssueDate,
   hostOf,
   hideRest,
   nextIssueDate,
+  generateIssue,
   loadIssue,
   loadIssueDates,
   startFirstIssue,
@@ -163,6 +165,9 @@ function DailyBody({ world }: { world: World }) {
   const [rest, setRest] = useState<DailyRest[]>([]);
   const [restOpen, setRestOpen] = useState(false);
   const [dates, setDates] = useState<string[]>([]);
+  /* Whether we yet know if this world has a history — see the effect below. */
+  const [datesReady, setDatesReady] = useState(false);
+  const [writing, setWriting] = useState(false);
   const [err, setErr] = useState("");
   const [nextDrop, setNextDrop] = useState<Drop | null>(null);
   /** Set when what is on screen is an older issue standing in for today's. */
@@ -214,23 +219,28 @@ function DailyBody({ world }: { world: World }) {
   useEffect(() => {
     loadIssueDates(world.id)
       .then(setDates)
-      .catch(() => setDates([]));
+      .catch(() => setDates([]))
+      .finally(() => setDatesReady(true));
     open(today);
   }, [world.id, today, open]);
 
   /*
-    THE BACKSTOP.
+    THE FIRST ISSUE WRITES ITSELF. EVERY ONE AFTER IT IS ASKED FOR.
 
-    Setup starts the first issue, and the hourly schedule catches anything it
-    misses — but a world made before either existed, or one whose write was
-    interrupted, would sit on "still being written" until the next hour. So
-    an empty current week starts one itself and then watches for it, without
-    a spinner and without anything to press. The seller is not waiting on
-    this; they are reading a page that fills itself in.
+    A newspaper waiting for you the first time you log in is the promise of
+    the product, so that one is bought without anybody pressing anything —
+    setup starts it, the schedule backs it up, and this backs up the schedule.
+
+    Buying every following week for every seller was buying two hundred
+    newspapers a week and hoping somebody opened them. So from the second
+    issue on there is a button, and a world nobody comes back to costs
+    nothing. `dates` holds every issue this world has ever had; empty means
+    this is still the first one.
   */
   useEffect(() => {
     if (date !== today || items === null || items.length > 0) return;
     if (world.areas.length === 0) return;
+    if (!datesReady || dates.length > 0) return;
     startFirstIssue(world.id);
     let alive = true;
     const timer = setInterval(async () => {
@@ -245,7 +255,7 @@ function DailyBody({ world }: { world: World }) {
       alive = false;
       clearInterval(timer);
     };
-  }, [world.id, world.areas.length, date, today, items]);
+  }, [world.id, world.areas.length, date, today, items, datesReady, dates.length]);
 
 
   const noAreas = world.areas.length === 0;
@@ -332,20 +342,63 @@ function DailyBody({ world }: { world: World }) {
 
 
       {/*
-        Nothing here starts work. The paper is written ahead of the week by
-        the scheduled job, so this state is only ever "it has not landed
-        yet" — which resolves itself within the hour and needs no button.
-        There is deliberately nothing to press and nothing to wait on.
+        Three different empty states, and telling them apart matters.
+
+        A world with no history is having its first issue written right now
+        and needs nothing pressed. A world with history is waiting to be
+        asked. And an old date that is empty is simply an old date.
       */}
-      {items?.length === 0 && !noAreas && (
+      {items?.length === 0 && !noAreas && writing && (
+        <Card className="mb-16 flex flex-col items-center py-12 text-center">
+          <img src="/globe.png" alt="" className="globe-turn h-12 w-12 opacity-80" />
+          <p className="t-h3 mt-4 text-ink">Reading your world…</p>
+          <ReadingBar className="mt-4 max-w-xs" expect={75} />
+        </Card>
+      )}
+
+      {items?.length === 0 && !noAreas && !writing && (
         <Empty
           title={
-            date === today ? "Writing this week's issue" : "No issue on that date"
+            date !== today
+              ? "No issue on that date"
+              : dates.length === 0
+                ? "Writing this week's issue"
+                : "This week's issue is ready to be written"
           }
           body={
-            date === today
-              ? "Reading your world now. It lands on this page by itself in a minute or two — nothing to press."
-              : "Pick another date from the back issues below."
+            date !== today
+              ? "Pick another date from the back issues below."
+              : dates.length === 0
+                ? "Reading your world now. It lands on this page by itself in a minute or two — nothing to press."
+                : "Each issue is researched fresh when you ask for it, so it is genuinely this week's rather than something written in advance and left to go stale."
+          }
+          action={
+            date === today && dates.length > 0 ? (
+              <button
+                onClick={async () => {
+                  setWriting(true);
+                  setErr("");
+                  try {
+                    const got = await generateIssue(world, today);
+                    setItems(got);
+                    setRest(await loadRest(world.id, today).catch(() => []));
+                    setDates(await loadIssueDates(world.id).catch(() => dates));
+                  } catch (e) {
+                    /* A failed run costs nothing — the allowance is returned. */
+                    setErr(
+                      e instanceof Error
+                        ? e.message
+                        : "That did not finish. Nothing was used up; try again.",
+                    );
+                  } finally {
+                    setWriting(false);
+                  }
+                }}
+                className="btn btn-accent"
+              >
+                Write this week&apos;s issue
+              </button>
+            ) : undefined
           }
         />
       )}

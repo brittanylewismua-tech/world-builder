@@ -74,3 +74,17 @@ export const WEEKLY: ReadonlySet<Route> = new Set<Route>([
 export function warnAt(cap: number) {
   return Math.max(1, Math.min(Math.ceil(cap / 4), 10));
 }
+
+/**
+ * HOW MUCH NEW WORK BEFORE A BOARD CAN BE READ AGAIN.
+ *
+ * The whole board goes into a pattern read, so a press that cannot change the
+ * answer is the most expensive nothing in the product. Ten was too generous —
+ * a Pinterest import brings fifty at once, so ten was reachable inside a
+ * single afternoon of collecting, over and over.
+ *
+ * Thirty is about a real batch of new material: enough that the read has
+ * something genuinely different to say, and roughly once or twice per drop
+ * rather than whenever somebody is curious.
+ */
+export const NEW_BEFORE_REREAD = 30;

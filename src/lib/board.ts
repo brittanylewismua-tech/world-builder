@@ -137,7 +137,7 @@ export interface Board {
  * it gets dearer as the board grows. Ten is roughly a session's saving, which
  * is the point at which the answer genuinely moves.
  */
-export const NEW_BEFORE_REREAD = 10;
+export { NEW_BEFORE_REREAD } from "./limits";
 
 const SIGNED_TTL = 60 * 60 * 8;
 

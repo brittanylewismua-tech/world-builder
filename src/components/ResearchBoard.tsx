@@ -526,7 +526,7 @@ export default function ResearchBoard({
               board goes into this call, so a press that cannot change the
               answer is the most expensive nothing in the product.
             */}
-            {canRead && (
+            {canRead ? (
               <button
                 onClick={look}
                 disabled={thinking}
@@ -538,6 +538,24 @@ export default function ResearchBoard({
                     ? "Find the patterns"
                     : "Read the board again"}
               </button>
+            ) : (
+              /*
+                SAY WHY, RATHER THAN JUST NOT BEING THERE.
+
+                The button used to vanish once a board had been read, which
+                looks like the feature breaking rather than waiting. Somebody
+                who read their board on Monday and added six things on Tuesday
+                deserves to know they are twenty-four short, not to wonder
+                where the button went.
+              */
+              board.covered != null && (
+                <span className="t-small text-ink-3">
+                  {(() => {
+                    const left = NEW_BEFORE_REREAD - (analysed - board.covered);
+                    return `${left} more ${left === 1 ? "piece" : "pieces"} before this can be read again`;
+                  })()}
+                </span>
+              )
             )}
           </span>
         </div>

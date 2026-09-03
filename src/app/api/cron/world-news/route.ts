@@ -94,11 +94,23 @@ export async function GET(req: Request) {
   const only = url.searchParams.get("world");
   const limit = Number(url.searchParams.get("limit") ?? PER_RUN) || PER_RUN;
 
-  /* Which worlds already have this week's paper? */
-  const { data: written } = await db
-    .from("wb_daily_items")
-    .select("world_id")
-    .eq("issue_date", week);
+  /*
+    THE FIRST ISSUE ONLY. NEVER THE WEEKLY ONE.
+
+    This used to write a paper every week for every world, which meant buying
+    a newspaper for two hundred sellers whether or not they ever opened it —
+    most of a challenge's worth of research, most of it unread, at nineteen
+    cents a copy.
+
+    The first issue is different. It is the one that has to already be there
+    when somebody logs in for the first time, because a product whose promise
+    is "the research is done" cannot open on "come back later". After that,
+    the seller asks for the week's issue with a button, and a world nobody
+    comes back to costs nothing.
+
+    So: any world that has ever had an issue is no longer this job's business.
+  */
+  const { data: written } = await db.from("wb_daily_items").select("world_id");
   const done = new Set((written ?? []).map((r) => r.world_id as string));
 
   const { data: attempts } = await db
