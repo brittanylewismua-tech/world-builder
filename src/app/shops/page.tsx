@@ -453,6 +453,23 @@ function ShopBlock({
           >
             ▶
           </span>
+          {/*
+            The shop's own mark, which Etsy sends with everything else about
+            them and which was being thrown away. A column of names is a list;
+            a column of names with the businesses' own faces beside them is
+            recognisably the set of shops this seller decided to study.
+
+            Older rows have no icon until their next pull, so the name simply
+            stands alone rather than leaving a hole where a picture should be.
+          */}
+          {shop.iconUrl && (
+            <img
+              src={shop.iconUrl}
+              alt=""
+              loading="lazy"
+              className="h-8 w-8 shrink-0 rounded-full border-2 border-black object-cover"
+            />
+          )}
           <h2 className="t-h2 truncate text-ink">{shop.name}</h2>
         </button>
 

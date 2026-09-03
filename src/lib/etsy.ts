@@ -108,6 +108,8 @@ export interface EtsyShop {
   review_average?: number;
   transaction_sold_count?: number;
   create_date?: number;
+  /* The shop's own icon. Etsy sends it with the shop; we were discarding it. */
+  icon_url_fullxfull?: string | null;
 }
 
 export interface EtsyListing {

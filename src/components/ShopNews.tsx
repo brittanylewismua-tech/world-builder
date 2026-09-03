@@ -85,7 +85,7 @@ export default function ShopNews({ worldId }: { worldId: string }) {
       */}
       {news.shops === 0 && (
         <p className="t-body mt-3 max-w-[58ch] text-ink-2">
-          Add {WANT_SHOPS} competitor shops in{" "}
+          Add at least {WANT_SHOPS} competitor shops in{" "}
           <Link href="/shops" className="underline underline-offset-4">
             World Shops
           </Link>

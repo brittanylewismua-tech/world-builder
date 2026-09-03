@@ -26,6 +26,8 @@ export interface Shop {
   etsyShopId: number;
   name: string;
   url: string | null;
+  /* The shop's own icon, straight from Etsy. */
+  iconUrl: string | null;
   listingCount: number | null;
   favorers: number | null;
   reviewCount: number | null;
@@ -72,7 +74,7 @@ export async function loadShops(worldId: string): Promise<Shop[]> {
   const { data, error } = await supabase
     .from("wb_shops")
     .select(
-      "id, etsy_shop_id, shop_name, url, listing_count, favorers, review_count, review_avg, sold_count, opened_at, refreshed_at",
+      "id, etsy_shop_id, shop_name, url, icon_url, listing_count, favorers, review_count, review_avg, sold_count, opened_at, refreshed_at",
     )
     .eq("world_id", worldId)
     .order("added_at");
@@ -87,6 +89,7 @@ export async function loadShops(worldId: string): Promise<Shop[]> {
     reviewCount: r.review_count as number | null,
     reviewAvg: r.review_avg as number | null,
     soldCount: r.sold_count as number | null,
+    iconUrl: (r.icon_url as string | null) ?? null,
     openedAt: r.opened_at as string | null,
     refreshedAt: r.refreshed_at as string,
   }));

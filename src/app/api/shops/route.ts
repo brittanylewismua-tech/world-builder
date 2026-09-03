@@ -184,6 +184,7 @@ export async function POST(req: Request) {
         etsy_shop_id: shop.shop_id,
         shop_name: shop.shop_name,
         url: shop.url ?? `https://www.etsy.com/shop/${shop.shop_name}`,
+        icon_url: shop.icon_url_fullxfull ?? null,
         listing_count: shop.listing_active_count ?? null,
         favorers: shop.num_favorers ?? null,
         review_count: shop.review_count ?? null,
