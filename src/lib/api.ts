@@ -122,6 +122,12 @@ const COLUMNS =
  * worlds is a reasonable thing to want. RLS still decides what is readable,
  * so a tampered value gets nothing rather than somebody else's world.
  */
+/*
+  An account has one world now, so nothing chooses between them any more.
+  This is kept because browsers still hold the key from when it did: a stale
+  id pointing at a world that no longer exists must resolve to the world the
+  seller does have, not to an empty app. loadWorld below does exactly that.
+*/
 const PICKED = "wb-world";
 
 export function pickWorld(id: string | null) {
@@ -141,21 +147,6 @@ export function pickedWorld(): string | null {
   }
 }
 
-/** Every world this seller owns, oldest first. For the switcher. */
-export async function listWorlds(): Promise<
-  { id: string; name: string; createdAt: string }[]
-> {
-  const { data, error } = await supabase
-    .from("wb_worlds")
-    .select("id, name, created_at")
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => ({
-    id: r.id as string,
-    name: (r.name as string) || "",
-    createdAt: r.created_at as string,
-  }));
-}
 
 /** The seller's world, or null if they have not created one yet. */
 export async function loadWorld(): Promise<World | null> {
@@ -245,12 +236,32 @@ export async function loadWorld(): Promise<World | null> {
   };
 }
 
+/**
+ * THE ACCOUNT'S WORLD — made if it is not there, returned if it is.
+ *
+ * An account has exactly one, and the database enforces that with a unique
+ * index. So this asks for the world rather than making one: two tabs open on
+ * setup, a retried request, or a seller who reloads mid-onboarding all get
+ * the same world back instead of an error about a duplicate.
+ *
+ * That was not academic. Three worlds existed on one account here, two of
+ * them empty shells created by ordinary page loads.
+ */
 export async function createWorld(): Promise<World> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error("Not signed in.");
+
+  const held = await loadWorld();
+  if (held) return held;
+
   const { error } = await supabase.from("wb_worlds").insert({ user_id: uid });
-  if (error) throw new Error(error.message);
+  /*
+    23505 is the unique index: somebody else's request got there first, which
+    means the world now exists and reading it is the right answer.
+  */
+  if (error && error.code !== "23505") throw new Error(error.message);
+
   const w = await loadWorld();
   if (!w) throw new Error("World was created but could not be read back.");
   return w;

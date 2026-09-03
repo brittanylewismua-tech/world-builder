@@ -366,15 +366,13 @@ ${areas.map((a) => `- ${a}`).join("\n")}
 
 ${
   body.subNiches?.length
-    ? `The keywords above are the authority. They are read fresh every time an
-issue is written, so they are what this shop sells right now. The areas are a
-standing list worked out earlier and never revised — an area can outlive the
-keyword it came from, and covering it then means reporting on something this
-seller has already walked away from.
+    ? `The keyword list is read fresh every time an issue is written, so it is
+what this shop sells right now. Let it steer what is worth reporting.
 
-So an area only earns a place in this issue if it still connects to something
-in the keyword list. If it does not, skip it, and spend the room on the areas
-that do. Do not mention that an area was skipped.`
+Do not police it. A seller knows things about their own world that do not look
+like a clean connection from outside — a keyword that seems unrelated to an
+area is usually a judgement you do not have the context to make. What they
+sell and what they watch are both their call.`
     : ""
 }
 

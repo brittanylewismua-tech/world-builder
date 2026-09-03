@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import WorldSwitch from "@/components/WorldSwitch";
 import Link from "next/link";
 import { useWorld } from "@/lib/useWorld";
 import Shell from "@/components/Shell";
@@ -144,8 +143,6 @@ function ProfileBody({ world }: { world: World }) {
       />
 
       {err && <ErrorNote>{err}</ErrorNote>}
-
-      <WorldSwitch current={world.id} />
 
       {/*
         THREE GROUPS, NOT SEVEN ROWS.
