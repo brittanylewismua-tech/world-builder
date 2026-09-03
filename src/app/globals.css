@@ -308,6 +308,60 @@ body {
 }
 
 /*
+  THE ONE NOTICE THAT MUST NOT LOOK LIKE THE PAGE.
+
+  Everything on Home is a white card with a black border, which is the point —
+  it is a calm place to start. So a card telling somebody their access ends in
+  three days read as more furniture: seen a hundred times, scrolled past.
+
+  This is the only filled block in the product, so it cannot be mistaken for
+  anything else on the page. The glow breathes rather than blinks — four
+  seconds, and it never fully leaves — because this is on screen for a week
+  and a flashing thing you cannot dismiss is an enemy by day two.
+*/
+.notice-live {
+  background: var(--accent);
+  color: var(--accent-on);
+  border: 2px solid #000;
+  border-radius: 0.75rem;
+  animation: noticeGlow 4s ease-in-out infinite;
+}
+/*
+  The glow is mixed from --accent rather than written as a pink, because the
+  seller picks their own accent and a hardcoded pink would be the one thing on
+  the page ignoring the theme they just chose.
+*/
+@keyframes noticeGlow {
+  0%,
+  100% {
+    box-shadow:
+      4px 4px 0 #000,
+      0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow:
+      4px 4px 0 #000,
+      0 0 22px 5px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+/* The countdown itself, ticking quietly beside the words. */
+.notice-dot {
+  animation: noticeDot 1.6s ease-in-out infinite;
+}
+@keyframes noticeDot {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/*
   SKELETONS
   A white screen between rooms reads as the app having gone away. The shape of
   the page arrives first and fills in, so navigating always feels like the same
@@ -348,6 +402,8 @@ body {
   .globe-turn,
   .spin-slow,
   .pulse-soft,
+  .notice-live,
+  .notice-dot,
   .skeleton,
   .card-hover,
   .btn {

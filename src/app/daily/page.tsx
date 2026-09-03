@@ -503,7 +503,16 @@ function DailyBody({ world }: { world: World }) {
                   same eyebrow every other section on this page has, a real
                   heading and a line saying what it is.
                 */}
-                <p className="eyebrow mb-3 text-ink-3">The rest of the read</p>
+                {/*
+                  These were behind a heading calling them "everything else it
+                  found", under a paragraph explaining that they had not made
+                  the paper. That framing told the reader the next twelve
+                  stories were the offcuts, before they had read one — and it
+                  was there to explain the software's sorting, which is not
+                  something a reader needs to know about.
+
+                  They are stories. Publish them.
+                */}
                 <button
                   onClick={() => setRestOpen((v) => !v)}
                   aria-expanded={restOpen}
@@ -516,9 +525,7 @@ function DailyBody({ world }: { world: World }) {
                   >
                     ▶
                   </span>
-                  <span className="t-h2 text-ink">
-                    Everything else it found
-                  </span>
+                  <span className="t-h2 text-ink">More this week</span>
                   <span
                     className="chip shrink-0"
                     style={{
@@ -530,11 +537,6 @@ function DailyBody({ world }: { world: World }) {
                     {rest.length}
                   </span>
                 </button>
-                <p className="t-small mt-1.5 text-ink-2">
-                  Real things this week&rsquo;s reading turned up that did not
-                  make the paper. Not filtered for printability — that is your
-                  call.
-                </p>
 
                 {restOpen && (
                   <ul className="mt-4 space-y-4">

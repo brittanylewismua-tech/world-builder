@@ -4,7 +4,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { MOST_SHOPS } from "@/lib/limits";
 
 /**
  * WHAT THE SHOPS YOU WATCH DID THIS WEEK.
@@ -61,7 +60,7 @@ export default function ShopNews({ worldId }: { worldId: string }) {
   const hasNews = news.climbing.length > 0 || news.new.length > 0;
 
   return (
-    <section className="mt-12 border-t-2 border-black pt-6">
+    <section className="card mt-12 p-5">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="t-h2 text-ink">
           in the shops{" "}
@@ -69,56 +68,49 @@ export default function ShopNews({ worldId }: { worldId: string }) {
             you watch
           </span>
         </h2>
-        {news.shops > 0 && (
-          <Link
-            href="/shops"
-            className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
-          >
-            world shops
-          </Link>
-        )}
+        <Link
+          href="/shops"
+          className="t-small shrink-0 text-ink-3 underline underline-offset-4 transition hover:text-ink"
+        >
+          world shops
+        </Link>
       </div>
 
-      {/* Nothing followed yet: say what to do and what will happen. */}
+      {/*
+        SAY WHAT WILL BE HERE. NOT HOW IT WORKS.
+
+        This used to explain snapshots, comparisons and where to press
+        refresh — the machinery, in a place where the reader only wants to
+        know whether there is anything to read.
+      */}
       {news.shops === 0 && (
-        <p className="t-body mt-3 max-w-[62ch] text-ink-2">
-          Follow at least {WANT_SHOPS} competitor shops in{" "}
+        <p className="t-body mt-3 max-w-[58ch] text-ink-2">
+          Follow {WANT_SHOPS} competitor shops in{" "}
           <Link href="/shops" className="underline underline-offset-4">
             World Shops
-          </Link>
-          , and news about them appears here — which of their designs are
-          gaining, and what they have published since you last looked. It comes
-          from their real Etsy numbers, so it is about your corner of the
-          market rather than the internet in general.
+          </Link>{" "}
+          and their news lands here — what they publish, and which of their
+          designs are gaining.
         </p>
       )}
 
-      {/* Following some, but not enough to be worth much. */}
       {news.shops > 0 && news.shops < WANT_SHOPS && (
-        <p className="t-body mt-3 max-w-[62ch] text-ink-2">
-          You are following {news.shops} shop{news.shops === 1 ? "" : "s"}.
-          Follow {WANT_SHOPS - news.shops} more — you can hold {MOST_SHOPS} —
-          and this becomes a read on your market rather than on one seller.
+        <p className="t-body mt-3 max-w-[58ch] text-ink-2">
+          Following {news.shops} shop{news.shops === 1 ? "" : "s"}. Add{" "}
+          {WANT_SHOPS - news.shops} more and this becomes a read on your
+          market rather than on one seller.
         </p>
       )}
 
-      {/*
-        Following shops, but only one reading on file. The comparison needs
-        two, so say plainly when it starts instead of showing an empty space.
-      */}
       {news.shops >= WANT_SHOPS && !hasNews && (
-        <p className="t-body mt-3 max-w-[62ch] text-ink-2">
-          Watching {news.shops} shops. This needs two readings to compare, so
-          the first report lands after your next refresh in World Shops — after
-          that it says what moved since the last one.
+        <p className="t-body mt-3 max-w-[58ch] text-ink-2">
+          Watching {news.shops} shops. Their news starts next week.
         </p>
       )}
 
       {news.climbing.length > 0 && (
         <>
-          <p className="t-small mt-5 text-ink-3">
-            Gaining favourites{news.since ? " since your last reading" : ""}
-          </p>
+          <p className="eyebrow mt-5 text-ink-3">Gaining favourites</p>
           <ul className="mt-3 space-y-3">
             {news.climbing.map((d, i) => (
               <Row key={`c${i}`} d={d} note={`+${d.gained} favourites`} />
@@ -129,7 +121,7 @@ export default function ShopNews({ worldId }: { worldId: string }) {
 
       {news.new.length > 0 && (
         <>
-          <p className="t-small mt-6 text-ink-3">Newly published</p>
+          <p className="eyebrow mt-6 text-ink-3">Newly published</p>
           <ul className="mt-3 space-y-3">
             {news.new.map((d, i) => (
               <Row
