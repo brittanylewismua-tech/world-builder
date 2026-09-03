@@ -42,8 +42,22 @@ export async function POST(req: Request) {
   if (!worldId)
     return NextResponse.json({ error: "No world given." }, { status: 400 });
 
-  const door = await ownerOf(req, worldId);
-  if ("deny" in door) return door.deny;
+  /*
+    The weekly sweep pulls these shops on nobody's behalf in particular, so
+    there is no session to check ownership against. It proves itself with the
+    deployment secret instead, exactly as the World News job does.
+
+    It reaches only the refresh path — a shop already followed — so it can
+    neither add a shop nor spend anybody's allowance.
+  */
+  const cronSecret = process.env.CRON_SECRET;
+  const byCron =
+    !!cronSecret && req.headers.get("x-cron-secret") === cronSecret;
+
+  if (!byCron) {
+    const door = await ownerOf(req, worldId);
+    if ("deny" in door) return door.deny;
+  }
 
   const name = shopNameFrom(body.input ?? "");
   if (!name)
@@ -128,6 +142,12 @@ export async function POST(req: Request) {
     So the slot comes back on every path that does not end in a followed shop.
   */
   let slot: Caller | null = null;
+  if (!already && byCron)
+    return NextResponse.json(
+      { error: "The sweep only refreshes shops that are already followed." },
+      { status: 400 },
+    );
+
   if (!already) {
     const gate = await admit(req, "shopAdds");
     if ("deny" in gate) return gate.deny;
