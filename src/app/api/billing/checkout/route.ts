@@ -27,11 +27,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
   const db = serviceDb();
-  const { data: existing } = await db
-    .from("wb_subscriptions")
-    .select("stripe_customer_id")
-    .eq("user_id", who.id)
-    .maybeSingle();
+  const [{ data: existing }, { data: access }] = await Promise.all([
+    db
+      .from("wb_subscriptions")
+      .select("stripe_customer_id")
+      .eq("user_id", who.id)
+      .maybeSingle(),
+    db
+      .from("wb_admitted")
+      .select("expires_at")
+      .eq("user_id", who.id)
+      .maybeSingle(),
+  ]);
+
+  /*
+    NOBODY SHOULD PAY FOR TIME THEY ALREADY HAVE FREE.
+
+    Somebody on day 12 of a 21-day challenge who decides to continue would
+    otherwise be choosing between subscribing early — paying for nine days
+    they already had — and waiting until the last minute, which is when
+    people forget. Both are bad, and the second one costs the sale.
+
+    So the free days they have left become the trial. They enter a card now,
+    are charged nothing, and Stripe bills them on the day their free access
+    would have run out. Deciding early costs them nothing, which is the whole
+    point.
+
+    Somebody whose access has already lapsed has no days left, gets no trial,
+    and is charged immediately — which is correct.
+  */
+  const left = access?.expires_at
+    ? Math.ceil(
+        (new Date(access.expires_at as string).getTime() - Date.now()) /
+          86_400_000,
+      )
+    : 0;
+  const trialDays = left >= 1 ? Math.min(left, 730) : undefined;
 
   const origin = new URL(req.url).origin;
 
@@ -48,7 +79,11 @@ export async function POST(req: Request) {
       allow_promotion_codes: true,
       success_url: `${origin}/home?welcome=1`,
       cancel_url: `${origin}/home`,
-      subscription_data: { metadata: { user_id: who.id } },
+      subscription_data: {
+        metadata: { user_id: who.id },
+        /* The rest of their free run, honoured as a trial. */
+        ...(trialDays ? { trial_period_days: trialDays } : {}),
+      },
     });
 
     return NextResponse.json({ url: session.url });
