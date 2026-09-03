@@ -353,10 +353,30 @@ export async function POST(req: Request) {
   const prompt = `Today is ${today}.
 
 ${body.memory?.trim() || `CUSTOMER WORLD: ${body.worldName || "unnamed"}`}
-${!body.memory && body.subNiches?.length ? `Sub-niches the seller sells into: ${body.subNiches.join(" · ")}` : ""}
+
+${
+  body.subNiches?.length
+    ? `WHAT THIS SELLER ACTUALLY SELLS, TODAY:
+${body.subNiches.map((k) => `- ${k}`).join("\n")}`
+    : ""
+}
 
 AREAS TO WATCH:
 ${areas.map((a) => `- ${a}`).join("\n")}
+
+${
+  body.subNiches?.length
+    ? `The keywords above are the authority. They are read fresh every time an
+issue is written, so they are what this shop sells right now. The areas are a
+standing list worked out earlier and never revised — an area can outlive the
+keyword it came from, and covering it then means reporting on something this
+seller has already walked away from.
+
+So an area only earns a place in this issue if it still connects to something
+in the keyword list. If it does not, skip it, and spend the room on the areas
+that do. Do not mention that an area was skipped.`
+    : ""
+}
 
 Search for what is actually being said in these areas right now. Prioritise the last two weeks.
 
