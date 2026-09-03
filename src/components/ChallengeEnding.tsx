@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { startCheckout } from "@/lib/upgrade";
 
 /**
  * THE LAST WEEK, SAID ONCE, IN THE ONE PLACE PEOPLE START.
@@ -15,11 +16,10 @@ import { supabase } from "@/lib/supabase";
  * subscriber — an account with no expiry never sees this.
  */
 
-/** Where somebody goes to keep their access. Set once, used here. */
-const UPGRADE_URL = process.env.NEXT_PUBLIC_UPGRADE_URL || "";
-
 export default function ChallengeEnding() {
   const [endsAt, setEndsAt] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -64,17 +64,19 @@ export default function ChallengeEnding() {
             and nothing changes; nothing is lost either way.
           </p>
         </div>
-        {UPGRADE_URL && (
-          <a
-            href={UPGRADE_URL}
-            className="btn btn-accent shrink-0"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Keep my access
-          </a>
-        )}
+        <button
+          onClick={async () => {
+            setBusy(true);
+            setErr((await startCheckout()) ?? "");
+            setBusy(false);
+          }}
+          disabled={busy}
+          className="btn btn-accent shrink-0"
+        >
+          {busy ? "Opening…" : "Keep my access"}
+        </button>
       </div>
+      {err && <p className="t-small mt-3 text-ink-3">{err}</p>}
     </div>
   );
 }

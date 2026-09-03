@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Logo from "./Logo";
+import { startCheckout } from "@/lib/upgrade";
 
 /**
  * THE DOOR.
@@ -33,8 +34,6 @@ import Logo from "./Logo";
 */
 const ALWAYS_OPEN = ["/terms", "/privacy", "/login", "/reset"];
 
-/** Where somebody goes to keep their access. Empty hides the button. */
-const UPGRADE_URL = process.env.NEXT_PUBLIC_UPGRADE_URL || "";
 
 export default function Admitted({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -229,16 +228,17 @@ function Ended({ onEntered }: { onEntered: () => void }) {
           </span>
         ) : (
           <span className="ml-auto flex shrink-0 items-center gap-4">
-            {UPGRADE_URL && (
-              <a
-                href={UPGRADE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary shrink-0"
-              >
-                Keep my access
-              </a>
-            )}
+            <button
+              onClick={async () => {
+                setBusy(true);
+                setErr((await startCheckout()) ?? "");
+                setBusy(false);
+              }}
+              disabled={busy}
+              className="btn btn-primary shrink-0"
+            >
+              {busy ? "Opening…" : "Keep my access"}
+            </button>
             <button
               onClick={() => setOpen(true)}
               className="t-small shrink-0 font-semibold text-[color:var(--accent-on)] underline underline-offset-4"
