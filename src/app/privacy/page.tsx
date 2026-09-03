@@ -161,13 +161,9 @@ export default function Privacy() {
 
       <Clause n={9} title="Deleting your data">
         <p>
-          You can delete your own data at any time, from inside the app,
-          without asking us. Deleting a world removes everything in it —
-          keywords, boards, uploads, drops and conversations — including the
-          image files.
-        </p>
-        <p>
-          That is the fastest way to do it and it needs nothing from us.
+          You can delete your own data at any time from inside the app.
+          Deleting a world removes everything in it — keywords, boards,
+          uploads, drops and conversations — including the image files.
         </p>
         <p>
           If you are in the UK or EU, data protection law also gives you the
