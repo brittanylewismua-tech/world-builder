@@ -234,6 +234,30 @@ export async function admit(
       ),
     };
 
+  /*
+    IS THIS ACCOUNT STILL LIVE?
+
+    Challenge access runs for 21 days and then goes stale: everything they
+    built stays exactly where it is and stays readable, but nothing that
+    costs money will run. This is the check that makes that true — without
+    it, "expired" would be a message on a screen and the bill would keep
+    arriving.
+
+    Subscribing clears the expiry, and because nothing else about the
+    account changes, somebody who pays mid-challenge notices nothing.
+  */
+  const { data: live } = await supabase.rpc("wb_is_live");
+  if (live === false)
+    return {
+      deny: NextResponse.json(
+        {
+          error:
+            "Your challenge access has ended. Everything you built is still here — subscribe to pick it back up.",
+        },
+        { status: 402 },
+      ),
+    };
+
   const { data: allowed, error: spendError } = await supabase.rpc(
     WEEKLY.has(route) ? "wb_spend_weekly" : "wb_spend",
     { k: route, cap: DAILY_CAP[route] },
