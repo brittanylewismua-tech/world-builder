@@ -28,12 +28,29 @@ export const maxDuration = 300;
  */
 
 /**
- * Worlds written per run. Each issue is thirty to sixty seconds and the
- * function ceiling is five minutes, so four leaves room for a slow one.
- * Hourly runs make that ninety-six a day, which is far more headroom than
- * a weekly paper needs.
+ * The most worlds one run will attempt. A ceiling, not a target — the clock
+ * below usually stops it first.
  */
 const PER_RUN = 4;
+
+/**
+ * STOP STARTING WORK THERE IS NOT TIME TO FINISH.
+ *
+ * The count alone was wrong. Measured against real issues the average run is
+ * eighty-one seconds and the worst is a hundred and twenty-five, so four in a
+ * row is three hundred and twenty-four seconds against a three hundred second
+ * ceiling: the last world was being started with no chance of finishing, and
+ * Vercel killed it mid-sentence. A killed run spends the research money and
+ * writes nothing, and because the kill happens outside the catch it is not
+ * even recorded as an attempt.
+ *
+ * So the loop watches the clock instead of counting. It only begins another
+ * world while there is room for the slowest one ever measured, plus margin.
+ * Two or three a run, seventy-two a day, all of them finished — against a
+ * paper each world needs once a week.
+ */
+const CEILING_MS = maxDuration * 1000;
+const SLOWEST_SEEN_MS = 130_000;
 
 /**
  * A world that fails this many times running stops being retried, so a
@@ -132,8 +149,19 @@ export async function GET(req: Request) {
 
   const report: { world: string; wrote?: number; skipped?: string; error?: string }[] = [];
 
+  const startedAt = Date.now();
+  let outOfTime = 0;
+
   for (const w of waiting.slice(0, limit)) {
     const worldId = w.id as string;
+    /*
+      Leaving a world for the next run costs an hour. Starting one that gets
+      killed costs the research and delivers nothing, so waiting wins.
+    */
+    if (Date.now() - startedAt > CEILING_MS - SLOWEST_SEEN_MS) {
+      outOfTime++;
+      continue;
+    }
     try {
       const wrote = await writeIssue(db, worldId, week, secret!, req.url);
       report.push({ world: worldId, wrote });
@@ -157,7 +185,8 @@ export async function GET(req: Request) {
     week,
     worlds: (worlds ?? []).length,
     alreadyWritten: done.size,
-    stillWaiting: Math.max(0, waiting.length - limit),
+    stillWaiting: Math.max(0, waiting.length - limit) + outOfTime,
+    leftForNextRun: outOfTime,
     ran: report,
   });
 }
