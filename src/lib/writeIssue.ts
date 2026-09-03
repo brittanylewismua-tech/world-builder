@@ -71,6 +71,26 @@ export async function writeIssue(
   if (!body.items?.length) throw new Error("came back empty");
 
   /*
+    DID SOMEBODY ELSE FINISH FIRST?
+
+    Two things write issues: setup, the moment a world is established, and the
+    hourly schedule. A world that finishes setup at 11:16 is not yet written
+    when the 11:17 run picks its list, so both start — and the research takes
+    two minutes, which is a wide enough window to be ordinary rather than
+    unlucky on a morning when two hundred people are setting up at once.
+
+    Checked here, after the research and immediately before the write, because
+    that is the only point where the answer is still current. The loser throws
+    its work away rather than overwriting a good issue with an identical one.
+  */
+  const { count: raced } = await db
+    .from("wb_daily_items")
+    .select("id", { count: "exact", head: true })
+    .eq("world_id", worldId)
+    .eq("issue_date", week);
+  if ((raced ?? 0) > 0) return 0;
+
+  /*
     Written only once the research has actually answered, so a failed run
     never clears an issue that was already there.
   */

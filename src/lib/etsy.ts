@@ -19,22 +19,67 @@ export function etsyKey() {
   return s ? `${k}:${s}` : k;
 }
 
+/**
+ * ONE ETSY KEY, SHARED BY EVERY SELLER USING THIS APP.
+ *
+ * Etsy's limits are per application, not per person: ten requests a second
+ * across everybody. Following one shop is about eleven requests — the shop,
+ * five pages of listings, five batches of pictures — so it takes very few
+ * people pressing Follow at the same moment to cross it.
+ *
+ * That had no handling at all. Etsy answered 429, and the seller was told
+ * "Etsy returned 429." on a launch morning when the honest answer was "wait
+ * two seconds". Somebody else's timing became their error.
+ *
+ * So a refusal that is only about timing is waited out rather than passed on.
+ * Backoff doubles and carries jitter, because without it every request that
+ * collided retries in the same instant and collides again.
+ */
+const BUSY = new Set([429, 500, 502, 503, 504]);
+const WAITS = [400, 1200, 3000];
+
 export async function etsyGet<T>(path: string, key: string): Promise<T> {
-  const res = await fetch(`${ETSY}${path}`, {
-    headers: { "x-api-key": key, accept: "application/json" },
-    signal: AbortSignal.timeout(25_000),
-  });
-  if (!res.ok) {
-    throw new Error(
-      res.status === 401 || res.status === 403
-        ? "Etsy would not accept the API key."
-        : res.status === 404
-          ? "Etsy has no record of that."
-          : `Etsy returned ${res.status}.`,
-    );
+  let last = 0;
+
+  for (let attempt = 0; attempt <= WAITS.length; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${ETSY}${path}`, {
+        headers: { "x-api-key": key, accept: "application/json" },
+        signal: AbortSignal.timeout(25_000),
+      });
+    } catch (e) {
+      /* A dropped connection is worth one more go for the same reason. */
+      if (attempt === WAITS.length) throw e;
+      await sleep(WAITS[attempt]);
+      continue;
+    }
+
+    if (res.ok) return (await res.json()) as T;
+    last = res.status;
+
+    /* Anything that is genuinely about this request will not improve. */
+    if (!BUSY.has(res.status)) break;
+    if (attempt === WAITS.length) break;
+
+    /* Etsy will sometimes say how long to wait. Believe it, within reason. */
+    const told = Number(res.headers.get("retry-after"));
+    const wait = told > 0 ? Math.min(told * 1000, 5000) : WAITS[attempt];
+    await sleep(wait + Math.random() * 250);
   }
-  return (await res.json()) as T;
+
+  throw new Error(
+    last === 401 || last === 403
+      ? "Etsy would not accept the API key."
+      : last === 404
+        ? "Etsy has no record of that."
+        : last === 429
+          ? "Etsy is busy right now. Give it a minute and try again — nothing was lost."
+          : `Etsy returned ${last}.`,
+  );
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * A shop name out of whatever the seller pasted.

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { admit, ownerOf } from "@/lib/guard";
+import { admit, type Caller, ownerOf, refund } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 import { MOST_SHOPS } from "@/lib/limits";
 import {
@@ -102,11 +102,14 @@ export async function POST(req: Request) {
       );
   }
 
-  if (!already) {
-    const gate = await admit(req, "shopAdds");
-    if ("deny" in gate) return gate.deny;
-  }
+  /*
+    CHECKED BEFORE THE ALLOWANCE IS TOUCHED.
 
+    Being full is not an attempt at anything; it is a fact about the world
+    that we already knew before the seller pressed the button. Charging a slot
+    to be told "you are following five shops" was taking a week's allowance to
+    deliver a sentence.
+  */
   if (!already && count >= MOST_SHOPS)
     return NextResponse.json(
       {
@@ -115,21 +118,43 @@ export async function POST(req: Request) {
       { status: 400 },
     );
 
+  /*
+    Only five of these exist per week, and everything after this point can
+    fail for reasons that are not the seller's doing — a typo in the shop
+    name, Etsy being down, a save going wrong. Every one of those used to keep
+    the slot, so misspelling a shop twice cost forty per cent of the week to
+    accomplish nothing.
+
+    So the slot comes back on every path that does not end in a followed shop.
+  */
+  let slot: Caller | null = null;
+  if (!already) {
+    const gate = await admit(req, "shopAdds");
+    if ("deny" in gate) return gate.deny;
+    slot = gate.caller;
+  }
+  const giveBack = async () => {
+    if (slot) await refund(slot, "shopAdds");
+  };
+
   let shop;
   try {
     shop = await findShop(name, key);
   } catch (e) {
+    await giveBack();
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Etsy did not answer." },
       { status: 502 },
     );
   }
 
-  if (!shop)
+  if (!shop) {
+    await giveBack();
     return NextResponse.json(
       { error: `Etsy has no shop called “${name}”.` },
       { status: 404 },
     );
+  }
 
   const { data: saved, error: shopError } = await db
     .from("wb_shops")
@@ -154,16 +179,19 @@ export async function POST(req: Request) {
     .select("id")
     .single();
 
-  if (shopError || !saved)
+  if (shopError || !saved) {
+    await giveBack();
     return NextResponse.json(
       { error: "That shop did not save." },
       { status: 500 },
     );
+  }
 
   let listings;
   try {
     listings = await allListings(shop.shop_id, key);
   } catch (e) {
+    await giveBack();
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Etsy did not answer." },
       { status: 502 },

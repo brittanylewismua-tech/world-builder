@@ -136,8 +136,22 @@ export async function GET(req: Request) {
     return !(changed && changed > t.at);
   };
 
-  /* A paused world is not being worked on; it does not need a paper. */
-  let q = db.from("wb_worlds").select("id, name, user_id").neq("paused", true);
+  /*
+    A paused world is not being worked on; it does not need a paper.
+
+    Nor does a half-built one. Setup can be abandoned partway — somebody signs
+    up, names a world, and closes the tab — and an unestablished world has no
+    areas, so writing it always fails. Left in, those failures would eat the
+    run's budget six times each before giving up, and on a launch morning
+    where a couple of hundred people start setup and some do not finish, the
+    abandoned worlds would crowd out the finished ones. Throughput here is two
+    or three an hour; it belongs to people who actually built something.
+  */
+  let q = db
+    .from("wb_worlds")
+    .select("id, name, user_id")
+    .neq("paused", true)
+    .eq("established", true);
   if (only) q = db.from("wb_worlds").select("id, name, user_id").eq("id", only);
   const { data: worlds, error } = await q;
   if (error)
