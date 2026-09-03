@@ -10,22 +10,19 @@
  */
 
 /**
- * The company these documents bind. "The Goldie Suite" is a trading name;
- * this is the legal person.
- *
- * If the registration carries a suffix — LLC, Inc — it belongs here exactly
- * as registered, because a name that does not match the filing is a name a
- * court has to interpret.
+ * The company these documents bind, exactly as registered. "The Goldie
+ * Suite" is a trading name; this is the legal person. No suffix — the
+ * registration carries none, and adding one would name a company that does
+ * not exist.
  */
 export const COMPANY = "Be A Wolf Biz";
 
 /**
- * The state of registration, which decides the governing law. Empty until
- * confirmed, and every page that mentions it simply leaves the phrase out
- * rather than printing a placeholder at a reader — an unfinished legal page
- * should read as finished or not be published.
+ * The state of registration, which decides the governing law. Pages that
+ * mention it leave the phrase out entirely when this is empty, rather than
+ * printing a placeholder at a reader.
  */
-export const STATE = "";
+export const STATE = "California";
 
 export const PRODUCT = "World Builder";
 export const SUITE = "The Goldie Suite";
