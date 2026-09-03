@@ -439,7 +439,7 @@ function DailyBody({ world }: { world: World }) {
 
             {quick.length > 0 && (
               <section className="mt-6">
-                <p className="eyebrow mb-3 text-ink-3">Also moving</p>
+                {/* No heading. They are stories, in order; that is enough. */}
                 <div className="divide-y divide-black/10 overflow-hidden rounded-xl border border-black/15 bg-white">
                   {quick.map((it, i) => (
                     <article key={it.id} className="flex gap-3.5 px-4 py-3.5">
@@ -598,35 +598,13 @@ function DailyBody({ world }: { world: World }) {
             )}
 
             {/*
-              A footer, not an essay.
+              No footer.
 
-              This was four sentences of the tool explaining its own epistemics
-              — what it is not, what it dropped, who decides. One line carries
-              the only part a reader needs, which is that none of this is sales
-              data. The button says what it does and the note under it says
-              when it is worth pressing.
+              What stood here was the tool talking about itself — that this is
+              not sales data, that it is written once a week. Both were true
+              and neither was the reader's problem: a newspaper does not end
+              with a note explaining what kind of newspaper it is.
             */}
-            <div className="mt-6 border-t border-black/10 pt-4">
-              <p className="t-small text-ink-3">Not sales or demand data.</p>
-              {/*
-                ONCE A WEEK MEANS ONCE A WEEK.
-
-                There was a Refresh button on every issue, so the most
-                expensive call in the product — a scout reading eighty
-                thousand tokens and a judge writing twelve — was one click
-                away, any number of times. And it was dishonest: a world does
-                not turn over between two presses on a Tuesday, so a second
-                run mostly finds the same week again.
-
-                The week's issue is written once. After that the button is
-                gone and the page says when the next one is due.
-              */}
-              {date === today && (
-                <p className="t-small mt-2 text-ink-3">
-                  Written once a week.
-                </p>
-              )}
-            </div>
           </>
         );
       })()}
