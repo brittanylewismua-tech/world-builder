@@ -29,7 +29,27 @@ const SUPABASE_URL =
   "https://ywncfltxrnrchicjwcse.supabase.co";
 
 /** New accounts per address per day. Generous for a person, useless to a bot. */
-const CAP = 8;
+/**
+ * NEW ACCOUNTS FROM ONE NETWORK ADDRESS, PER DAY.
+ *
+ * Eight was written when signing up was the only door and a free account was
+ * worth farming. It is now the wrong shape of defence and a live hazard.
+ *
+ * WHY IT WOULD HAVE BROKEN A LAUNCH. Mobile carriers put very large numbers
+ * of subscribers behind a handful of public addresses. Two hundred people
+ * joining a challenge on the same morning, many on phones, is exactly the
+ * shape of traffic that looks like one address signing up over and over —
+ * and the ninth of them would have been told to come back tomorrow, on day
+ * one of a twenty-one day thing they had just paid for.
+ *
+ * WHAT ACTUALLY GUARDS THE DOOR NOW. An account with no code is inert: it
+ * cannot make a world, cannot spend anything, cannot read anything. The real
+ * ceiling is the seat count on the code, which is a number that can be seen
+ * and changed. This is only here to stop a script opening thousands of empty
+ * rows, and fifty a day from one address does that without ever touching a
+ * roomful of real people.
+ */
+const CAP = 50;
 
 const EMAIL = /^[^@\s]+@[^@\s.]+\.[^@\s]+$/;
 
@@ -77,7 +97,10 @@ export async function POST(req: Request) {
   });
   if (allowed === false)
     return NextResponse.json(
-      { error: "Too many accounts from here today. Try again tomorrow." },
+      {
+        error:
+          "Too many accounts have been created from this network today. Email goldie@beawolfbiz.com and we will get you in.",
+      },
       { status: 429 },
     );
 
