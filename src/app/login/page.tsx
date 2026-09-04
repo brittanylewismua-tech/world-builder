@@ -169,7 +169,13 @@ export default function Login() {
             onKeyDown={(e) => e.key === "Enter" && submit()}
             type="email"
             autoComplete="email"
-            placeholder="you@yourshop.com"
+            {/*
+              Just "email". A sample address in a placeholder reads as an
+              instruction about which address to use — and nobody's email is
+              at their shop's domain, so the one thing it manages to say is
+              wrong.
+            */}
+            placeholder="email"
             className={field}
           />
           <input
