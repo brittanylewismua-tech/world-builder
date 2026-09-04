@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Page, Card, ErrorNote } from "@/components/ui";
+import ErrorLog from "@/components/ErrorLog";
 
 /**
  * WHAT THIS COSTS, AND WHERE IT COMES FROM.
@@ -90,7 +91,7 @@ const FEATURE: Record<string, string> = {
   canon: "World Web (removed)",
 };
 
-export default function CostsPage() {
+function Spend() {
   const [report, setReport] = useState<Report | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(true);
@@ -120,18 +121,9 @@ export default function CostsPage() {
   }, [load]);
 
   if (busy && !report)
-    return (
-      <Page width="full">
-        <p className="t-small py-12 text-ink-3">Adding it up…</p>
-      </Page>
-    );
+    return <p className="t-small py-12 text-ink-3">Adding it up…</p>;
 
-  if (err)
-    return (
-      <Page width="full">
-        <ErrorNote>{err}</ErrorNote>
-      </Page>
-    );
+  if (err) return <ErrorNote>{err}</ErrorNote>;
 
   if (!report) return null;
 
@@ -144,7 +136,7 @@ export default function CostsPage() {
   const peak = Math.max(...report.daily.map((d) => d.cost), 0.0001);
 
   return (
-    <Page width="full">
+    <>
       <header className="mb-12 border-b-2 border-black pb-6">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <span className="chip chip-solid">what this costs</span>
@@ -413,7 +405,7 @@ export default function CostsPage() {
         {usd(report.allTime.cost)} across{" "}
         {report.allTime.calls.toLocaleString()} calls.
       </p>
-    </Page>
+    </>
   );
 }
 
@@ -487,5 +479,49 @@ function Split({ parts }: { parts: [string, number, string][] }) {
         />
       ))}
     </div>
+  );
+}
+
+/**
+ * THE BACK OF HOUSE.
+ *
+ * Two questions get asked about a running product, and they get asked in the
+ * same five minutes: what is this costing me, and is anything broken. They
+ * were built as separate things — one a page, the other a table nobody could
+ * read — so this is one door with both behind it.
+ *
+ * Deliberately outside the app shell: no nav link, no mention on any seller
+ * surface, and both routes behind it refuse anyone whose signed-in email is
+ * not on the owner list.
+ */
+export default function BackOfHouse() {
+  const [tab, setTab] = useState<"spend" | "errors">("spend");
+
+  return (
+    <Page width="full">
+      <div className="mb-8 flex gap-2">
+        {(
+          [
+            ["spend", "Spend"],
+            ["errors", "Errors"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            aria-current={tab === key ? "page" : undefined}
+            className={`rounded-lg border-2 px-4 py-2 text-[14px] font-bold transition ${
+              tab === key
+                ? "border-black bg-black text-white"
+                : "border-black/15 bg-white text-ink-2 hover:border-black hover:text-ink"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "spend" ? <Spend /> : <ErrorLog />}
+    </Page>
   );
 }
