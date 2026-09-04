@@ -41,6 +41,7 @@ export const DAILY_CAP = {
   room: 30,
   areas: 5,
   board: 200,
+  boardRead: 4,
   winners: 12,
   world: 2,
   shops: 12,
@@ -52,6 +53,7 @@ export type Route = keyof typeof DAILY_CAP;
 
 /** Allowances that run by the week rather than by the day. */
 export const WEEKLY: ReadonlySet<Route> = new Set<Route>([
+  "boardRead",
   "daily",
   "world",
   "shops",

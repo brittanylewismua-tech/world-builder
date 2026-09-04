@@ -179,7 +179,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const door = await admit(req, "board");
+  const door = await admit(req, "boardRead");
   if ("deny" in door) return door.deny;
 
   /*
@@ -189,7 +189,7 @@ export async function POST(req: Request) {
   */
   let delivered = false;
   const settle = async () => {
-    if (!delivered) await refund(door.caller, "board");
+    if (!delivered) await refund(door.caller, "boardRead");
   };
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -255,7 +255,9 @@ export async function POST(req: Request) {
 
     /* Every model call in the app lands in the same ledger, or the cost
        dashboard is blind exactly where the volume is. */
-    meter("board", door.caller.userId, {
+    /* Metered as its own surface too, so the expensive call stops hiding
+       inside the cheap one on the cost dashboard. */
+    meter("boardRead", door.caller.userId, {
       model: MODEL,
       ...res.usage,
       ms: Date.now() - began,

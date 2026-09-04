@@ -111,6 +111,8 @@ const OUT_OF_BUDGET: Record<Route, string> = {
     "You have reached today's limit. You can add areas yourself in the meantime.",
   board:
     "You have reached today's limit. Everything you saved is safe and still there.",
+  boardRead:
+    "You have read across this board as many times as you can this week. It resets on Monday, and every pattern you already have is still here.",
   winners:
     "You have read patterns as many times as you can today. It resets tomorrow, and every brief you already have is still here.",
   world:
