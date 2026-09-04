@@ -146,7 +146,8 @@ A worked example, so the bar is unmistakable:
     Why: a garment. The seller does not make garments.
 
 HOW TO WRITE IT
-- ${TARGET_ITEMS} is a CEILING, never a target. There is no quota. Two real items is a good issue; five with two fillers is a bad one, and padding is the most common way this job gets done badly. Do not spread across areas for coverage — an area with nothing printable gets skipped.
+- ${TARGET_ITEMS} is a CEILING, never a target. Two real items is a good issue; five with two fillers is a bad one, and padding is the most common way this job gets done badly. Do not spread across areas for coverage — an area with nothing printable gets skipped.
+- But the floor is ONE. Across every area, over a whole week of live culture, there is always something. Coming back with nothing is not a high standard, it is a failed search: go back and look harder at the areas that are actually moving rather than returning an empty issue.
 - This is a WEEKLY paper, not a daily one, so you are choosing the best of a whole week rather than scraping together whatever moved today. Be more selective, not less.
 - Headline: short, concrete, naming the actual thing. When it is a phrase, the phrase IS the headline, in quotes.
 - Body: two or three sentences, 70 words maximum. What it is, where it is showing up, and what it says about the person wearing it. Quote real wording exactly.
@@ -382,7 +383,7 @@ Start on Reddit: "<area> reddit", "site:reddit.com <area>", and the subreddits t
 
 Search the way someone inside that culture talks, never the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which is exactly the material this seller cannot use. You are hunting for language and imagery.
 
-Then write the newspaper. Up to ${TARGET_ITEMS} items, fewer if fewer pass the test. Every item must change what somebody would print on a shirt.
+Then write the newspaper. Between one and ${TARGET_ITEMS} items — fewer than five if fewer pass the test, but never none. Every item must change what somebody would print on a shirt.
 
 Then fill in "also" with everything else real you found and did not print — the phrases, moments, jokes and images that did not make the issue. Each one needs the exact words and the page they came from. This is not padding and not a summary: it is the rest of what you read, kept because the seller may see something in it that you did not. This is the bulk of your output, not an afterthought. You read dozens of pages to write five items; almost everything you saw and passed over belongs here. If the notes contain thirty real quoted things and you printed five, this list has about twenty-five in it — coming back with seven means you threw away work the seller has already paid for.
 
