@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useOwnerToken } from "@/lib/ownerToken";
 import { Page, Card, ErrorNote } from "@/components/ui";
 
 /**
@@ -56,6 +56,7 @@ const when = (iso: string) =>
   });
 
 export default function ErrorLog() {
+  const token = useOwnerToken();
   const [log, setLog] = useState<Log | null>(null);
   const [days, setDays] = useState(7);
   const [err, setErr] = useState("");
@@ -63,12 +64,10 @@ export default function ErrorLog() {
   const [open, setOpen] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!token) return;
     setBusy(true);
     setErr("");
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error("Sign in first.");
       const r = await fetch(`/api/admin/errors?days=${days}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -80,13 +79,13 @@ export default function ErrorLog() {
     } finally {
       setBusy(false);
     }
-  }, [days]);
+  }, [days, token]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  if (busy && !log)
+  if (token === undefined || (busy && !log))
     return <p className="t-small py-12 text-ink-3">Reading the log…</p>;
   if (err) return <ErrorNote>{err}</ErrorNote>;
   if (!log) return null;

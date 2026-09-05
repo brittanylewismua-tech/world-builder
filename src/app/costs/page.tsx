@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useOwnerToken } from "@/lib/ownerToken";
 import { Page, Card, ErrorNote } from "@/components/ui";
 import ErrorLog from "@/components/ErrorLog";
 
@@ -92,17 +92,16 @@ const FEATURE: Record<string, string> = {
 };
 
 function Spend() {
+  const token = useOwnerToken();
   const [report, setReport] = useState<Report | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(true);
 
   const load = useCallback(async () => {
+    if (!token) return;
     setBusy(true);
     setErr("");
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error("Sign in first.");
       const r = await fetch("/api/admin/costs", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -114,11 +113,16 @@ function Spend() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  /* Still working out whether there is a session. Not the same as no session. */
+  if (token === undefined)
+    return <p className="t-small py-12 text-ink-3">One moment…</p>;
+  if (token === null) return <SignedOut />;
 
   if (busy && !report)
     return <p className="t-small py-12 text-ink-3">Adding it up…</p>;
@@ -478,6 +482,27 @@ function Split({ parts }: { parts: [string, number, string][] }) {
           style={{ width: `${(v / total) * 100}%`, background: colour }}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Genuinely signed out — say so once, with the way back.
+ *
+ * This used to be an ErrorNote reading "Sign in first.", which is the same
+ * shape the page uses for "the ledger would not load". Being logged out is
+ * not a fault and should not look like one.
+ */
+function SignedOut() {
+  return (
+    <div className="py-16">
+      <p className="t-h3 text-ink">You are signed out</p>
+      <p className="t-body mt-2 text-ink-2">
+        This page reads the business's own numbers, so it needs your account.
+      </p>
+      <a href="/login" className="btn btn-accent mt-5 inline-flex">
+        Sign in
+      </a>
     </div>
   );
 }
