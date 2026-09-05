@@ -613,7 +613,23 @@ Write down everything that is language or imagery. Quote exactly.`;
      */
     async function judge(field: string, relaxed: boolean) {
       const at = Date.now();
-      const res = await client.messages.create({
+      /*
+        STREAMED, WHICH IS WHAT LETS THE CEILING BE HONEST.
+
+        A plain request is refused outright once max_tokens is high enough
+        that the SDK thinks the call could run past ten minutes — that is why
+        this sat at sixteen thousand, and sixteen thousand was then hit
+        exactly, twice, cutting the issue off mid-write. A truncated tool call
+        still parses into whatever items completed, so the failure looks
+        identical to a quiet week.
+
+        Streaming lifts that restriction, so the ceiling can be set where the
+        work actually needs it instead of where a non-streamed request is
+        allowed to ask for. Nothing is streamed to anybody — no seller is
+        watching this, it runs on a schedule — the final message is awaited
+        exactly as before. It is the transport that changes, not the shape.
+      */
+      const streamed = client.messages.stream({
         model: judgeModel,
         /*
           The judge writes the issue AND everything else it read.
@@ -645,7 +661,7 @@ Write down everything that is language or imagery. Quote exactly.`;
           Streaming is the real answer if this is ever reached again. It is
           not a change to make hours before a launch.
         */
-        max_tokens: 16000,
+        max_tokens: 32000,
         system: SYSTEM,
         tools: TWO_STAGE
           ? [PUBLISH_TOOL as unknown as Anthropic.Tool]
@@ -680,6 +696,8 @@ ${field || "(nothing came back)"}`
           },
         ],
       });
+      /* Nobody is watching the tokens arrive; only the finished message. */
+      const res = await streamed.finalMessage();
 
       meter("daily", caller.userId, {
         model: judgeModel,
