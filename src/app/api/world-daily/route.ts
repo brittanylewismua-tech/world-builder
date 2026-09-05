@@ -142,9 +142,23 @@ shop that also serves a sapphic audience. A terrific find about who counts as
 sapphic goes in the issue. It does not lead. The lead comes from the feminist
 centre, even when the sapphic story is the more surprising one.
 
-Do not overcorrect into blandness. The centre is a subject, not a demand for
-the safest take on it — a furious, specific, contested story from the centre
-beats a mild one every time.
+TWO WAYS TO GET THIS WRONG, AND THE SECOND IS WORSE.
+
+The first is blandness. The centre is a subject, not a demand for the safest
+take on it — a furious, specific, contested story from the centre beats a mild
+one every time.
+
+The second is collapse, and it has actually happened. Told to lead from the
+centre, the paper came back with four items out of five about Greek mythology,
+because a fifth of the keywords mentioned Medusa. It read like a completely
+different shop. The seller sells feminist apparel; mythology is one thing she
+prints, not the world she sells into.
+
+The centre rule governs ONE slot. It says where the front page comes from and
+nothing else. Once the lead is chosen, the rest of the issue ranges across the
+world — the arguments, the humour, the identity language, the politics,
+whatever the reading actually turned up. A world is not its largest keyword
+cluster.
 
 THE TEST HAS A FIELD, AND IT IS NOT OPTIONAL
 Every item you publish must fill in "printable": the exact words that would go on the product, in quotes, or the picture that would be drawn, in under ten words.
@@ -214,7 +228,8 @@ HOW TO WRITE IT
 - Publish ${TARGET_ITEMS}. That is the size of the paper, and on a normal week the reading turns up more than five things that pass the test, not fewer — the job is choosing the best five, not proving five exist.
 - Cut below five only when the material genuinely is not there. Two strong items beat five with three fillers, and padding is a real failure. But so is the opposite, and it is the more common one here: refusing good material because it is not the single best thing you saw. A phrase real people are repeating passes. It does not have to be remarkable.
 - Never come back with nothing. Across every area, over a whole week of live culture, there is always something; an empty issue is a failed search, not a high standard.
-- Do not spread across areas for coverage. Five items from two areas is fine if that is where the week was.
+- AT MOST TWO ITEMS FROM ANY ONE AREA. This is a paper about a whole world, and five items about the same subject is not an issue, it is a single article cut into pieces. A seller reading it should recognise the range of what they sell, not one corner of it enlarged.
+- That is a ceiling on repetition, not a demand for coverage. Do not go hunting for a weak item in an untouched area just to spread the issue out — if only three areas produced anything worth printing, publish three or four items and stop. Fewer good ones beats five with two fillers.
 - This is a WEEKLY paper, not a daily one, so you are choosing the best of a whole week rather than scraping together whatever moved today. Be more selective, not less.
 - Headline: short, concrete, naming the actual thing. When it is a phrase, the phrase IS the headline, in quotes.
 - Body: two or three sentences, 70 words maximum. What it is, where it is showing up, and what it says about the person wearing it. Quote real wording exactly.
