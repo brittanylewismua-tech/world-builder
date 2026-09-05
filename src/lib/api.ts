@@ -347,6 +347,19 @@ export async function removeSubNiche(id: string) {
 
 /* --------------------------------- L ------------------------------- */
 
+
+/**
+ * The seller has curated their own watch list, so the per-issue
+ * re-translation from keywords must stop replacing it. See the column
+ * comment on wb_worlds.areas_pinned.
+ */
+async function pinAreas(worldId: string) {
+  await supabase
+    .from("wb_worlds")
+    .update({ areas_pinned: true })
+    .eq("id", worldId);
+}
+
 export async function addArea(worldId: string, name: string) {
   const { data, error } = await supabase
     .from("wb_areas")
@@ -354,6 +367,7 @@ export async function addArea(worldId: string, name: string) {
     .select("id, name")
     .single();
   if (error) throw new Error(error.message);
+  await pinAreas(worldId);
   return data as World["areas"][number];
 }
 
@@ -395,8 +409,15 @@ export async function deriveAreas(
 }
 
 export async function removeArea(id: string) {
+  /* Read the owner before the row goes, or there is nothing left to pin. */
+  const { data: row } = await supabase
+    .from("wb_areas")
+    .select("world_id")
+    .eq("id", id)
+    .single();
   const { error } = await supabase.from("wb_areas").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  if (row?.world_id) await pinAreas(row.world_id as string);
 }
 
 /* --------------------------------- R ------------------------------- */

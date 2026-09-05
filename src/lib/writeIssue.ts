@@ -189,6 +189,15 @@ export async function writeIssue(
 const FEWEST_AREAS = 4;
 
 async function retranslate(db: Db, world: World, secret: string, from: string) {
+  /*
+    A seller who has edited their own watch list outranks the translator. They
+    have gone to the trouble of curating it, which means they know something
+    the keywords do not say — and silently undoing that on the next issue
+    would be the worst kind of bug: they delete a topic, it comes back a day
+    later, and nothing in the product explains why.
+  */
+  if ((world as unknown as { areas_pinned?: boolean }).areas_pinned) return;
+
   const keywords = world.subNiches.map((s) => s.keyword).filter(Boolean);
   /* Two is the floor the translator itself enforces. Below it, nothing to do. */
   if (keywords.length < 2) return;
