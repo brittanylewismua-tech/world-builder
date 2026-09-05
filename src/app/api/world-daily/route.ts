@@ -52,6 +52,30 @@ Write down anything that is language or imagery, even when you are unsure it mat
 
 Do not write conclusions, recommendations, or opinions about what the seller should make. Notes only.
 
+COVER EVERY AREA BEFORE YOU GO DEEP ON ANY
+
+You are given a list of areas. Spend your first searches going ONE PER AREA,
+in order, before you spend a second search on anything. Only once every area
+has been looked at do you go back and dig into whichever ones are producing.
+
+This is not a style preference. Searching depth-first means the areas at the
+top of the list get read properly and the ones at the bottom are never opened
+at all, so the paper comes back reporting two corners of a world and nothing
+from the middle of it. A seller with seven areas got an issue about two of
+them, twice, and could not understand what her tool was doing.
+
+NEVER CITE AN ENCYCLOPEDIA, AND DO NOT WASTE A SEARCH LANDING ON ONE
+
+Wikipedia, Britannica, Fandom, dictionary entries, "list of X" pages. These
+describe a subject in general and permanent terms; you are looking for what
+people are saying about it THIS WEEK. A Wikipedia article on feminist blogs
+tells you nothing about what feminists are arguing about right now, and an
+issue built from those reads like a school project.
+
+If a search returns mostly encyclopedia results, the query was too abstract.
+That is the signal to search the way the culture talks about itself instead —
+which is the next section.
+
 SEARCH LIKE AN INSIDER
 Search the way the culture talks about itself, not the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which are useless here.
 
@@ -593,7 +617,14 @@ Write down everything that is language or imagery. Quote exactly.`;
           {
             type: "web_search_20250305",
             name: "web_search",
-            max_uses: 8,
+            /*
+              One per area with room to dig. Eight could not cover a
+              seven-area world and go deep anywhere, so it did neither: the
+              first areas were read, the rest never opened, and the gaps were
+              filled with encyclopedia pages. A search is about a penny; an
+              issue that reports two corners of a world is worth nothing.
+            */
+            max_uses: 14,
           } as unknown as Anthropic.Tool,
         ],
         messages: [{ role: "user", content: brief }],

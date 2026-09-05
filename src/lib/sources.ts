@@ -31,6 +31,32 @@ export function usableSource(raw: string) {
 
   const host = u.hostname.replace(/^www\./, "");
 
+  /*
+    AN ENCYCLOPEDIA IS NOT NEWS, AND THIS IS ENFORCED RATHER THAN REQUESTED.
+
+    A reference page describes a subject in general and permanent terms. This
+    paper is about what people are saying this week, so a Wikipedia article is
+    never the answer even when it is genuinely the best page a search returned.
+
+    It got here by a specific route worth remembering: broad areas — "radical
+    feminist politics" — searched abstractly return encyclopedia results,
+    while narrow ones — "sapphic culture" — return the actual communities. So
+    the encyclopedia pages did not merely waste sources, they silently biased
+    every issue toward the narrowest areas of a world, which is exactly the
+    complaint that surfaced them. The scout is told to avoid these; this makes
+    sure one never reaches a seller regardless.
+  */
+  if (
+    host === "wikipedia.org" ||
+    host.endsWith(".wikipedia.org") ||
+    host.endsWith("wiktionary.org") ||
+    host.endsWith("britannica.com") ||
+    host.endsWith("fandom.com") ||
+    host.endsWith("wikia.com") ||
+    /^\/wiki\//i.test(path)
+  )
+    return false;
+
   // The platforms worth naming individually, because their useless pages look
   // exactly like their useful ones until you read the path.
   if (host.endsWith("tiktok.com"))
