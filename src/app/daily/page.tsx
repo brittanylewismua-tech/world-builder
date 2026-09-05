@@ -177,7 +177,7 @@ function DailyBody({ world }: { world: World }) {
   const [items, setItems] = useState<DailyItem[] | null>(null);
   /* Everything the same reading found and the paper did not print. */
   const [rest, setRest] = useState<DailyRest[]>([]);
-  const [restOpen, setRestOpen] = useState(false);
+  const [tab, setTab] = useState<"world" | "shops">("world");
   const [dates, setDates] = useState<string[]>([]);
   /* Whether we yet know if this world has a history — see the effect below. */
   const [datesReady, setDatesReady] = useState(false);
@@ -212,10 +212,11 @@ function DailyBody({ world }: { world: World }) {
     }
   }
 
+  /* Back issues are paper only; the shops tab has nothing to show there. */
   const open = useCallback(
     async (d: string) => {
       setItems(null);
-        setRestOpen(false);
+      setTab("world");
       setDate(d);
       try {
         const [got, more] = await Promise.all([
@@ -355,6 +356,48 @@ function DailyBody({ world }: { world: World }) {
         <span className="rule-accent mt-4" />
       </header>
 
+      {/*
+        THE SHOPS ARE A TAB, NOT A TAIL.
+
+        This section used to sit under everything, below the paper and below
+        the twelve extras — which meant the two things a seller most wanted
+        were at opposite ends of a long scroll, and whichever one they did not
+        scroll to did not exist. Neither of them is a footnote to the other.
+        One is what the world is saying; the other is what the competition
+        actually shipped. They are two halves, so they get two doors.
+
+        Only on the current issue: the shop reading is a comparison between
+        this week and last, so it has nothing to say about a date in March.
+      */}
+      {date === today && !noAreas && (
+        <div
+          role="tablist"
+          aria-label="World news sections"
+          className="mb-6 flex gap-1 border-b-2 border-black/12"
+        >
+          {(
+            [
+              ["world", "The world"],
+              ["shops", "The shops you watch"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className="-mb-[2px] border-b-2 px-3 pb-2 pt-1 text-[15px] font-bold transition"
+              style={{
+                borderColor: tab === id ? "var(--accent)" : "transparent",
+                color: tab === id ? "var(--ink)" : "var(--ink-3)",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {err && <ErrorNote>{err}</ErrorNote>}
 
 
@@ -373,7 +416,7 @@ function DailyBody({ world }: { world: World }) {
         and needs nothing pressed. A world with history is waiting to be
         asked. And an old date that is empty is simply an old date.
       */}
-      {items?.length === 0 && !noAreas && writing && (
+      {tab === "world" && items?.length === 0 && !noAreas && writing && (
         <Card className="mb-16 flex flex-col items-center py-12 text-center">
           <img src="/globe.png" alt="" className="globe-turn h-12 w-12 opacity-80" />
           <p className="t-h3 mt-4 text-ink">Reading your world…</p>
@@ -381,7 +424,7 @@ function DailyBody({ world }: { world: World }) {
         </Card>
       )}
 
-      {items?.length === 0 && !noAreas && !writing && (
+      {tab === "world" && items?.length === 0 && !noAreas && !writing && (
         <Empty
           title={
             date !== today
@@ -436,7 +479,7 @@ function DailyBody({ world }: { world: World }) {
         />
       )}
 
-      {items && items.length > 0 && (() => {
+      {tab === "world" && items && items.length > 0 && (() => {
         /*
           Five equally large cards read as a research dump and take ten
           minutes. A paper has a front page: one lead with room to breathe,
@@ -545,33 +588,22 @@ function DailyBody({ world }: { world: World }) {
 
                   They are stories. Publish them.
                 */}
-                <button
-                  onClick={() => setRestOpen((v) => !v)}
-                  aria-expanded={restOpen}
-                  className="flex w-full items-center gap-3 text-left"
-                >
-                  <span
-                    className="shrink-0 text-ink-3 transition-transform"
-                    style={{ transform: restOpen ? "rotate(90deg)" : "none" }}
-                    aria-hidden
-                  >
-                    ▶
-                  </span>
-                  <span className="t-h2 text-ink">More this week</span>
-                  <span
-                    className="chip shrink-0"
-                    style={{
-                      background: "var(--accent)",
-                      borderColor: "var(--accent)",
-                      color: "#fff",
-                    }}
-                  >
-                    {rest.length}
-                  </span>
-                </button>
+                {/*
+                  NOT BEHIND A DOOR ANY MORE.
 
-                {restOpen && (
-                  <ul className="mt-4 space-y-4">
+                  This was a collapsed toggle, shut by default, and the pile
+                  behind it turned out to be some of the best material on the
+                  page — the hawk worry, the things people argue about. A
+                  reader who never presses the arrow never learns that, and
+                  most readers never press the arrow.
+
+                  So it is printed, with the same quiet eyebrow every other
+                  section here has. Not a heading announcing a second-class
+                  pile: just more of the paper.
+                */}
+                <p className="eyebrow mb-4 text-ink-3">More this week</p>
+
+                <ul className="space-y-4">
                     {rest.map((r) => (
                       <li
                         key={r.id}
@@ -625,7 +657,6 @@ function DailyBody({ world }: { world: World }) {
                       </li>
                     ))}
                   </ul>
-                )}
               </section>
             )}
 
@@ -642,11 +673,12 @@ function DailyBody({ world }: { world: World }) {
       })()}
 
       {/*
-        Shown on the current issue only, and shown whether or not the seller
-        follows anybody — when it is empty it is the thing that explains what
-        following shops would give them.
+        Shown whether or not the seller follows anybody — when it is empty it
+        is the thing that explains what following shops would give them.
       */}
-      {date === today && <ShopNews key={newsKey} worldId={world.id} />}
+      {date === today && tab === "shops" && (
+        <ShopNews key={newsKey} worldId={world.id} />
+      )}
 
       {dates.length > 1 && (
         <div className="mt-8 border-t border-black/12 pt-5">

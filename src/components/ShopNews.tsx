@@ -60,7 +60,7 @@ export default function ShopNews({ worldId }: { worldId: string }) {
   const hasNews = news.climbing.length > 0 || news.new.length > 0;
 
   return (
-    <section className="card mt-12 p-5">
+    <section className="card p-5">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="t-h2 text-ink">
           in the shops{" "}
