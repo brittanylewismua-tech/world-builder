@@ -90,6 +90,29 @@ and Hecate are not four areas; they are one, and that one is something like
 "feminist mythology" — while the same seller's world also contains protest
 humour, the language women use about anger, and who her customer is loyal to.
 
+THE NAMED SUBJECT IS ITSELF AN AREA. USUALLY THE FIRST ONE.
+
+Everything above tells you to zoom out from the keywords and never restate
+one. That is right for the spokes and wrong for the hub, and the distinction
+was missing, so watch lists came back made entirely of things ADJACENT to the
+shop with nothing at the centre.
+
+A world named "Feminist" produced: radical feminist politics, anti-trump
+resistance, girl solidarity culture, lgbtq pride, sapphic culture, feminist
+mythology, feminist jewelry trends. Seven areas, not one of which is feminism
+— what is happening to women this week, what the movement is arguing about,
+who is winning. The seller looked at her own watch list and could not find her
+own shop in it.
+
+So name the subject plainly as an area, in the words a person would use for
+it. Then the other six are the parts of that customer's life around it.
+
+  A world called "Feminist" watches feminism. Then: the backlash, the humour,
+  who her customer is loyal to, what she is furious about.
+
+The only exception is a name too vague to search — "My Shop", "Store 2",
+"Ideas". Then, and only then, work the centre out from the keywords.
+
 RULES
 1. Areas are about the customer's WORLD, not about products. "Festival fashion" is an area. "Rave t-shirts" is a product category — do not return it. A character or symbol the seller prints is closer to a product than to a world: zoom out to the culture that motif lives inside.
 2. Never just restate a keyword. Zoom out from the keywords to the culture underneath them.
