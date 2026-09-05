@@ -90,3 +90,18 @@ export function warnAt(cap: number) {
  * rather than whenever somebody is curious.
  */
 export const NEW_BEFORE_REREAD = 30;
+
+/**
+ * WHOSE APP THIS IS.
+ *
+ * Used only to decide whether to draw the Admin link in the sidebar. It is
+ * not a security boundary and must never be treated as one — anybody can edit
+ * what their own browser believes. The back of house is protected on the
+ * server, where /api/admin/* checks the signed-in account's email against
+ * WB_OWNER_EMAILS and refuses everyone else. This just stops the link
+ * appearing for two hundred sellers who would only wonder what it is.
+ */
+export const OWNER_EMAILS = ["brittanylewismua@gmail.com"];
+
+export const isOwner = (email: string | null | undefined) =>
+  !!email && OWNER_EMAILS.includes(email.trim().toLowerCase());

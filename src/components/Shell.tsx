@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { isOwner } from "@/lib/limits";
 import { useWorld } from "@/lib/useWorld";
 import type { World } from "@/lib/world";
 import { DEFAULT_THEME, onAccent } from "@/lib/theme";
@@ -243,7 +244,13 @@ export default function Shell({
             borderColor: railDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.1)",
           }}
         >
-          {NAV_FOOT.map((n) => {
+          {[
+            ...NAV_FOOT,
+            /* Only ever drawn for the owner; the server refuses everyone else. */
+            ...(isOwner(session?.user?.email)
+              ? [{ href: "/costs", label: "admin" }]
+              : []),
+          ].map((n) => {
             const active = pathname === n.href;
             return (
               <Link
