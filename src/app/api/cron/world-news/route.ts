@@ -93,6 +93,12 @@ export async function GET(req: Request) {
   const week = /^\d{4}-\d{2}-\d{2}$/.test(asked ?? "") ? asked! : weekStart();
   const only = url.searchParams.get("world");
   const limit = Number(url.searchParams.get("limit") ?? PER_RUN) || PER_RUN;
+  /*
+    ?judge=<model> runs the issue on a different model without changing
+    WB_MODEL, which every other AI surface reads. For comparing one paper
+    against another; it reaches here only behind the cron secret checked above.
+  */
+  const judge = url.searchParams.get("judge") ?? undefined;
 
   /*
     THE FIRST ISSUE ONLY. NEVER THE WEEKLY ONE.
@@ -189,7 +195,7 @@ export async function GET(req: Request) {
       continue;
     }
     try {
-      const wrote = await writeIssue(db, worldId, week, secret!, req.url);
+      const wrote = await writeIssue(db, worldId, week, secret!, req.url, judge);
       report.push({ world: worldId, wrote });
     } catch (e) {
       const why = e instanceof Error ? e.message : "unknown";

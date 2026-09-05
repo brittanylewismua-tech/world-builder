@@ -87,10 +87,46 @@ So there is one test, and every item must pass it:
 
 Either because it hands them words and pictures directly, or because it tells them something about their world they can work from. If a signal only changes which blank you buy, it fails — that is not a decision this seller gets to make.
 
+THAT TEST IS A FLOOR. IT IS NOT HOW YOU RANK.
+Read this carefully, because getting it backwards produces a technically
+correct and completely useless paper.
+
+The test above decides what is allowed in. What goes FIRST is a different
+question, and the answer is: whatever most changes how this seller
+understands the person they are selling to.
+
+The most literally printable thing is almost never the most valuable thing. A
+list of breed names is maximally printable and teaches nobody anything — it
+is a noun list, and the seller could have written it themselves. "This
+community publicly corrects each other's failed bakes" is harder to put on a
+shirt and worth ten times more, because it is a fact about how these people
+behave that the seller did not know this morning.
+
+So order the issue like this, best first:
+
+1. Something that reveals how these people think, argue, worry, or show off.
+   What they are anxious about. What they tease each other for. What they are
+   quietly proud of. What divides them.
+2. Exact language they actually use about themselves — quoted, with who said
+   it and where.
+3. A happening in the world that shifts the mood of it.
+4. Objects, symbols and motifs that keep appearing.
+5. Bare lists of names or terms. These go LAST when they go in at all.
+
+A quote showing a real worry — "we'd love to free-range but we have hawks" —
+belongs above any roster of anything. The seller can turn a worry into a joke
+on a shirt. They cannot do anything with a list they already knew.
+
 THE TEST HAS A FIELD, AND IT IS NOT OPTIONAL
 Every item you publish must fill in "printable": the exact words that would go on the product, in quotes, or the picture that would be drawn, in under ten words.
 
-Fill that field FIRST, before you write the headline. If you cannot fill it honestly — without inventing a phrase nobody said, without turning an observation into a slogan yourself — then the item fails and you do not publish it. No exceptions, no matter how interesting the observation is.
+If you cannot fill it honestly — without inventing a phrase nobody said, without turning an observation into a slogan yourself — then the item fails and you do not publish it. No exceptions, no matter how interesting the observation is.
+
+Filling it is a gate, not a goal. Do not reach for the item with the most
+obvious slogan in it; reach for the one that teaches the most, then say
+plainly what a designer would take from it. For an observation about how
+these people behave, the field is the idea — not a slogan you invented to
+make it qualify.
 
   "Satin is dominating modest fashion" → a fabric. Nothing here for someone who prints on blanks. Cut it.
   "The longline vest is the new third piece" → a garment. Cut it.
@@ -289,6 +325,8 @@ interface Body {
   worldName?: string;
   areas?: string[];
   subNiches?: string[];
+  /* Test only, cron-authenticated. See below. */
+  judge?: string;
   /** Everything this world already knows — see lib/context.ts. */
   memory?: string;
 }
@@ -296,6 +334,7 @@ interface Body {
 export async function POST(req: Request) {
   const door = await admit(req, "daily");
   if ("deny" in door) return door.deny;
+
   /*
     Pulled out of the union here. The metering calls now live inside closures,
     and TypeScript will not carry the narrowing of `door` across a function
@@ -336,6 +375,23 @@ export async function POST(req: Request) {
     await settle();
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
+
+  /*
+    WHICH MODEL JUDGES — OVERRIDABLE, BUT ONLY BY THE DEPLOYMENT.
+
+    Trying a cheaper judge is the obvious cost lever, and the only honest way
+    to evaluate it is to run the same world through both and read the two
+    papers side by side. Doing that through WB_MODEL would swap the model for
+    the customer, the Creative Room, the board and both pattern reads at the
+    same time, which is a far bigger change than the question being asked.
+
+    So the cron secret may name a judge for one run. A seller cannot: the
+    header is the deployment's, and without it this is whatever WB_MODEL says.
+  */
+  const cronSecret = process.env.CRON_SECRET;
+  const byCron =
+    !!cronSecret && req.headers.get("x-cron-secret") === cronSecret;
+  const judgeModel = (byCron && body.judge?.trim()) || MODEL;
 
   const areas = (body.areas ?? []).filter(Boolean);
   if (!areas.length) {
@@ -532,7 +588,7 @@ Write down everything that is language or imagery. Quote exactly.`;
     async function judge(field: string, relaxed: boolean) {
       const at = Date.now();
       const res = await client.messages.create({
-        model: MODEL,
+        model: judgeModel,
         /*
           The judge writes the issue AND everything else it read.
 
@@ -600,7 +656,7 @@ ${field || "(nothing came back)"}`
       });
 
       meter("daily", caller.userId, {
-        model: MODEL,
+        model: judgeModel,
         ...res.usage,
         web_searches:
           (
@@ -647,7 +703,7 @@ ${field || "(nothing came back)"}`
         console.error(
           "[world-daily] the judge hit max_tokens — this issue is short " +
             "because it was cut off, not because the week was quiet.",
-          { model: MODEL, output: res.usage?.output_tokens },
+          { model: judgeModel, output: res.usage?.output_tokens },
         );
 
       // The issue arrives as tool input, already structured. The old

@@ -29,6 +29,8 @@ export async function writeIssue(
   week: string,
   secret: string,
   from: string,
+  /* Names a different judge for this one issue. Testing only; see the route. */
+  judge?: string,
 ): Promise<number> {
   const world = await loadWorld(db, worldId);
   if (!world.areas.length)
@@ -59,6 +61,7 @@ export async function writeIssue(
       areas: world.areas.map((a) => a.name),
       subNiches: world.subNiches.map((s) => s.keyword),
       memory: dailyContext(world, [], (signals ?? []) as never[]),
+      ...(judge ? { judge } : {}),
     }),
   });
 
