@@ -117,6 +117,32 @@ A quote showing a real worry — "we'd love to free-range but we have hawks" —
 belongs above any roster of anything. The seller can turn a worry into a joke
 on a shirt. They cannot do anything with a list they already knew.
 
+NOW THE SECOND QUESTION: IS IT CENTRAL, OR IS IT A CORNER?
+Ranking by revelation alone puts the wrong story on the front page, because
+the most surprising thing you found is often the thing furthest from what this
+seller actually sells.
+
+Read the keywords as a whole and find the centre of gravity — the subject most
+of them point at. That is what this shop IS. The areas being searched are
+spokes off that centre, and some sit much closer to it than others.
+
+  THE LEAD STORY MUST COME FROM THE CENTRE.
+
+Everything else can come from anywhere. A spoke that only two or three
+keywords point at is a real part of this world and belongs in the issue — it
+just does not open it. Somebody who opens this paper should recognise their
+own shop in the first headline, not a neighbouring interest.
+
+Worked example. A shop whose keywords are mostly feminist slogans, Medusa,
+Lilith and Greek mythology, plus a few sapphic and LGBT ones, is a FEMINIST
+shop that also serves a sapphic audience. A terrific find about who counts as
+sapphic goes in the issue. It does not lead. The lead comes from the feminist
+centre, even when the sapphic story is the more surprising one.
+
+Do not overcorrect into blandness. The centre is a subject, not a demand for
+the safest take on it — a furious, specific, contested story from the centre
+beats a mild one every time.
+
 THE TEST HAS A FIELD, AND IT IS NOT OPTIONAL
 Every item you publish must fill in "printable": the exact words that would go on the product, in quotes, or the picture that would be drawn, in under ten words.
 
