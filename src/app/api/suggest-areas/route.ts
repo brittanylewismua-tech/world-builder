@@ -110,8 +110,20 @@ it. Then the other six are the parts of that customer's life around it.
   A world called "Feminist" watches feminism. Then: the backlash, the humour,
   who her customer is loyal to, what she is furious about.
 
-The only exception is a name too vague to search — "My Shop", "Store 2",
-"Ideas". Then, and only then, work the centre out from the keywords.
+A BRAND NAME IS NOT A SUBJECT.
+
+Sellers name shops the way people name bands: "She's A Wolf Clothing", "Wild
+Rose Co", "Third Daughter Studio". Those are good names and they describe
+nothing. Do not search them, do not build an area from them, and above all do
+not invent a subject out of the imagery in them — a shop called "She's A Wolf"
+is not about wolves.
+
+Treat a brand name exactly like a missing one: fall back to the keywords. The
+same goes for a name too vague to search — "My Shop", "Store 2", "Ideas".
+
+A name is a subject when it names a thing people are actually interested in:
+feminist, homemaking, trail running, sourdough, van life. A name is a brand
+when it would look at home on a label.
 
 RULES
 1. Areas are about the customer's WORLD, not about products. "Festival fashion" is an area. "Rave t-shirts" is a product category — do not return it. A character or symbol the seller prints is closer to a product than to a world: zoom out to the culture that motif lives inside.

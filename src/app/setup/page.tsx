@@ -59,14 +59,28 @@ const STEPS: Step[] = [
   },
   {
     /*
-      Naming is a nicety, not a requirement. It lets a few screens address
-      the world directly and nothing more, so it must never be the thing
-      standing between a seller and the tool they just paid for. Optional,
-      skippable, and editable forever in World Profile.
+      THIS STOPPED BEING A NICETY.
+
+      It used to be decoration — a label a few screens could address the
+      world by — and the copy said so: name it later, or never.
+
+      It now decides what gets researched. The subject named here is the
+      first thing the watch list is built around, and everything World News
+      reads every week follows from it. A world named "Feminist" watches
+      feminism; the same world left blank has its subject guessed from
+      whichever keywords happen to cluster, which reliably picks the most
+      searchable corner rather than the point of the shop.
+
+      So the question changed with the job. It asks what the world is ABOUT,
+      not what to call it, because a brand name — "She's A Wolf Clothing" —
+      is a fine name and tells the research nothing. Still skippable: it must
+      never stand between somebody and the tool they just paid for, and the
+      keywords are a workable fallback. But the seller should know what
+      skipping costs, rather than being told it does not matter.
     */
     eyebrow: "your world",
-    question: "Want to name this world?",
-    line: "Some people like calling it something. If a name comes to you looking at your sub-niches, use it — otherwise skip and carry on.",
+    question: "What is this world about?",
+    line: "Two or three plain words for the subject itself — feminist, homemaking, trail running. This is what gets researched for you every week, so say what it is rather than what you would call the shop.",
     optional: true,
   },
 ];
@@ -334,12 +348,14 @@ function SetupBody({
             onClick={() => go(step + 1)}
             className="t-small mt-3 text-ink-3 transition hover:text-ink"
           >
-            Skip — you can answer this any time in World Profile
+            Skip — your keywords will be used to work it out instead
           </button>
         )}
         {last && !world.name.trim() && (
           <p className="t-small mt-3 text-ink-3">
-            Leave it blank if nothing fits. You can name it later, or never.
+            Left blank, the subject is worked out from your keywords — which
+            usually lands close, and sometimes on the wrong corner of your
+            shop. You can set it any time in World Profile.
           </p>
         )}
 
