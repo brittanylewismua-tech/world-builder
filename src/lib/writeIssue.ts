@@ -1,4 +1,5 @@
 import { serviceDb } from "@/lib/pinterest";
+import { sweepWorldShops } from "@/lib/sweepWorldShops";
 import { dailyContext, SIGNAL_DAYS, SIGNAL_MAX } from "@/lib/worldContext";
 import type { World } from "@/lib/world";
 
@@ -34,6 +35,18 @@ export async function writeIssue(
 ): Promise<number> {
   const world = await loadWorld(db, worldId);
   await retranslate(db, world, secret, from);
+
+  /*
+    The shops are re-read on the same pass that writes the paper, so the
+    numbers under it are from the same week as it. Quick, no model, and it
+    cannot fail the issue — a shop that will not answer keeps last week's
+    numbers and is picked up on the next run.
+  */
+  try {
+    await sweepWorldShops(db, worldId, secret, new URL(from).origin);
+  } catch {
+    /* Already logged inside. The paper matters more. */
+  }
   if (!world.areas.length)
     throw new Error("no active areas to watch");
 
