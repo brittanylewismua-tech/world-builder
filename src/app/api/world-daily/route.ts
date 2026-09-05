@@ -547,11 +547,23 @@ Write down everything that is language or imagery. Quote exactly.`;
           like a short one, and the seller reads three items believing that is
           all their world had in it.
 
-          Twenty-four thousand, and stop_reason is checked below rather than
+          Sixteen thousand, and stop_reason is checked below rather than
           trusted. Output is billed on what is used, so a ceiling nobody
           reaches costs nothing; a ceiling somebody reaches costs the issue.
+
+          NOT HIGHER, AND THIS WAS LEARNED THE HARD WAY. Twenty-four thousand
+          was tried first and the SDK refused the request outright: past a
+          certain ceiling it estimates the call could run over ten minutes and
+          demands streaming instead. The run failed immediately with
+          "Streaming is required for operations that may take longer than 10
+          minutes" — so the number cannot simply be raised until it feels
+          safe. Sixteen is a third more room than the ceiling that was hit,
+          and still inside what a plain request is allowed to ask for.
+
+          Streaming is the real answer if this is ever reached again. It is
+          not a change to make hours before a launch.
         */
-        max_tokens: 24000,
+        max_tokens: 16000,
         system: SYSTEM,
         tools: TWO_STAGE
           ? [PUBLISH_TOOL as unknown as Anthropic.Tool]
