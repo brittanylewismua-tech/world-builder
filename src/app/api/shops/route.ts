@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { noteFailure } from "@/lib/noteFailure";
 import { admit, type Caller, ownerOf, refund } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 import { MOST_SHOPS } from "@/lib/limits";
@@ -285,8 +286,19 @@ export async function POST(req: Request) {
         })),
         { onConflict: "world_id,listing_id,week" },
       );
-  } catch {
-    /* History is a nice-to-have; following the shop is the job. */
+  } catch (e) {
+    /*
+      Following the shop is the job, so this never fails the request. But a
+      silently missing week is what put a shop out of the comparison with no
+      trace at all, so it is written down.
+    */
+    await noteFailure("shops", e, {
+      worldId,
+      shop: shop.shop_name,
+      week,
+      designs: rows.length,
+      job: "weekly-snapshot",
+    });
   }
 
   return NextResponse.json({
