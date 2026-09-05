@@ -416,29 +416,56 @@ function DailyBody({ world }: { world: World }) {
         and needs nothing pressed. A world with history is waiting to be
         asked. And an old date that is empty is simply an old date.
       */}
-      {tab === "world" && items?.length === 0 && !noAreas && writing && (
-        <Card className="mb-16 flex flex-col items-center py-12 text-center">
-          <img src="/globe.png" alt="" className="globe-turn h-12 w-12 opacity-80" />
-          <p className="t-h3 mt-4 text-ink">Reading your world…</p>
-          <ReadingBar className="mt-4 max-w-xs" expect={75} />
-        </Card>
-      )}
+      {/*
+        A WORLD WAITING FOR ITS FIRST PAPER IS LOADING, AND SHOULD LOOK IT.
 
-      {tab === "world" && items?.length === 0 && !noAreas && !writing && (
+        This state used to be a worded panel: a heading, and a sentence
+        explaining that the issue arrives by itself in a minute or two and
+        there is nothing to press. Every word of that was the software
+        apologising for its own latency. Nobody reads it and decides to relax;
+        they read it and wonder what they are supposed to do, which is the
+        opposite of what it says.
+
+        A turning globe and a bar say the same thing in no words at all.
+
+        Two ways in and one appearance: the seller who pressed the button, and
+        the seller whose first issue is being written by the schedule while
+        they sit here. The second waits longer, because the run may have
+        started before they opened the page — hence the slower bar.
+      */}
+      {tab === "world" &&
+        items?.length === 0 &&
+        !noAreas &&
+        (writing || (datesReady && dates.length === 0)) && (
+          <Card className="mb-16 flex flex-col items-center py-12 text-center">
+            <img
+              src="/globe.png"
+              alt=""
+              className="globe-turn h-12 w-12 opacity-80"
+            />
+            <p className="t-h3 mt-4 text-ink">Reading your world…</p>
+            <ReadingBar
+              className="mt-4 max-w-xs"
+              expect={writing ? 75 : 150}
+            />
+          </Card>
+        )}
+
+      {tab === "world" &&
+        items?.length === 0 &&
+        !noAreas &&
+        !writing &&
+        !(datesReady && dates.length === 0) && (
         <Empty
           title={
             date !== today
               ? "No issue on that date"
-              : dates.length === 0
-                ? "Writing this week's issue"
-                : "This week's issue is ready to be written"
+              : "This week's issue is ready to be written"
           }
           body={
             date !== today
               ? "Pick another date from the back issues below."
-              : dates.length === 0
-                ? "Reading your world now. It lands on this page by itself in a minute or two — nothing to press."
-                : "Each issue is researched fresh when you ask for it, so it is genuinely this week's rather than something written in advance and left to go stale."
+              : "Each issue is researched fresh when you ask for it, so it is genuinely this week's rather than something written in advance and left to go stale."
           }
           action={
             date === today && dates.length > 0 ? (
