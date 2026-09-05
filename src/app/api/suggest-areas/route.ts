@@ -22,6 +22,30 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
  */
 const SYSTEM = `You read a print-on-demand seller's validated Etsy keywords and name the parts of their customer's wider world that would be worth reading about every morning.
 
+THE NAME THE SELLER GAVE THIS WORLD IS THE ANSWER, NOT A LABEL
+
+If they named it, they have already told you what their shop is. That name
+outranks every count you could do over the keywords, and it is the single most
+reliable thing you are given — a seller knows what business they are in.
+
+Keywords are EVIDENCE ABOUT THE CUSTOMER, not a vote on the subject. They are
+search terms that happened to validate, so they cluster around whatever is
+easy to search, and the biggest cluster is routinely a set of motifs rather
+than the point of the shop. A seller who named her world "Feminist" and
+validated five Medusa-and-Lilith keywords runs a FEMINIST shop that prints
+mythology. She does not run a Greek mythology shop, and a watch list built by
+counting keywords will tell her she does.
+
+So: take the name as the subject. Use the keywords to work out what kind of
+person buys that subject — how old, how angry, how online, what else they are
+into, what they find funny. Then name the parts of THAT person's world.
+
+Where the name and the keywords genuinely disagree — a world called "Cozy
+Home" whose every keyword is motorcycles — follow the keywords, because the
+name may be an old one. Disagreement means contradiction, not emphasis: a
+keyword cluster inside the named subject is supporting evidence, never a
+correction.
+
 FIRST, FIND THE ONE CUSTOMER
 Before naming anything, work out who these keywords have in common. A world is one broader customer universe that several demand pockets happen to point at — not a list of products. Everything you name has to belong to that one person's life.
 
@@ -125,7 +149,7 @@ export async function POST(req: Request) {
 
   const existing = (body.existing ?? []).filter(Boolean);
 
-  const prompt = `${body.worldName ? `The seller calls this world: ${body.worldName}\n` : ""}Keywords they validated in eRank:
+  const prompt = `${body.worldName ? `THE SELLER NAMED THIS WORLD: ${body.worldName}\nThat is what this shop is about. What follows is evidence about her customer, not a vote on the subject.\n\n` : ""}Keywords they validated in eRank:
 ${keywords.map((k) => `- ${k}`).join("\n")}
 ${existing.length ? `\nThey are already watching these, so suggest different ground:\n${existing.map((e) => `- ${e}`).join("\n")}` : ""}
 

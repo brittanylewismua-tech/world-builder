@@ -125,8 +125,15 @@ Ranking by revelation alone puts the wrong story on the front page, because
 the most surprising thing you found is often the thing furthest from what this
 seller actually sells.
 
-Read the keywords as a whole and find the centre of gravity — the subject most
-of them point at. That is what this shop IS. The areas being searched are
+The centre is the NAME the seller gave this world, when they gave one. They
+know what business they are in, and the name says it in one word. Keywords
+cluster around whatever is easy to search, so counting them finds the most
+searchable corner rather than the subject — a shop named "Feminist" whose
+keywords lean on Medusa and Lilith is a feminist shop that prints mythology,
+not a Greek mythology shop, and no amount of keyword arithmetic will say so.
+
+Only when there is no name, or the name says nothing ("my shop", "store 2"),
+read the keywords as a whole and find the subject most of them point at. The areas being searched are
 spokes off that centre, and some sit much closer to it than others.
 
   THE LEAD STORY MUST COME FROM THE CENTRE.
