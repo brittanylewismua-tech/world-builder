@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Shell from "@/components/Shell";
+import { NeedsSetupPage, needsSetup } from "@/components/NeedsSetup";
 import { Page, Card, Empty, ErrorNote, Rich } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
 import Left, { spent } from "@/components/Left";
@@ -46,7 +47,18 @@ const when = (iso: string) =>
   });
 
 export default function WinnersPage() {
-  return <Shell>{(world) => <WinnersBody world={world} />}</Shell>;
+  return (
+    <Shell>
+      {(world) =>
+        /* Open to walk into, closed to work in — see NeedsSetup. */
+        needsSetup(world) ? (
+          <NeedsSetupPage world={world} what="World Winners" width="wide" />
+        ) : (
+          <WinnersBody world={world} />
+        )
+      }
+    </Shell>
+  );
 }
 
 function WinnersBody({ world }: { world: World }) {

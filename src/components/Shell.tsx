@@ -114,29 +114,26 @@ export default function Shell({
   const [navOpen, setNavOpen] = useState(false);
 
   /*
-    HOME IS REACHABLE BEFORE THE WORLD IS BUILT. NOTHING ELSE IS.
+    EVERY ROOM IS OPEN. THE MACHINERY INSIDE THEM IS NOT.
 
-    Onboarding has a way out now, and an exit that lands you straight back on
-    the thing you left is not an exit. So an unfinished world may sit on Home,
-    where a banner offers the way back in.
+    This used to send anybody with an unfinished world back to onboarding,
+    from everywhere. That is the same wall as having no exit from the
+    questionnaire: you cannot see the thing you joined to see until you have
+    answered every question.
 
-    Every other room still redirects, because they are all built on a world
-    that exists — Winners with no keywords or Shops with no customer are empty
-    rooms that look broken rather than unfinished.
+    So walking in is free. Each room decides for itself whether it has enough
+    to work with — see NeedsSetup — and says what is missing where the working
+    part would be. Nothing here is expensive to look at; only the buttons are.
   */
-  const canWaitOnHome = pathname === "/home";
-
   useEffect(() => {
     if (loading) return;
     if (!session) router.replace("/login");
     else if (!world) router.replace("/setup");
-    else if (!world.established && !canWaitOnHome) router.replace("/setup");
-  }, [loading, session, world, router, canWaitOnHome]);
+  }, [loading, session, world, router]);
 
   useEffect(() => setNavOpen(false), [pathname]);
 
   if (loading || !session || !world) return <Loading />;
-  if (!world.established && !canWaitOnHome) return <Loading />;
 
   const theme = world.theme ?? DEFAULT_THEME;
   const rail = theme.rail;

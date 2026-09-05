@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
+import { NeedsSetupPage, needsSetup } from "@/components/NeedsSetup";
 import DropBoard from "@/components/DropBoard";
 import ResearchTalk from "@/components/ResearchTalk";
 import DropWeek from "@/components/DropWeek";
@@ -26,7 +27,18 @@ import { report } from "@/lib/report";
 import { ErrorNote } from "@/components/ui";
 
 export default function Studio() {
-  return <Shell>{(world) => <StudioBody world={world} />}</Shell>;
+  return (
+    <Shell>
+      {(world) =>
+        /* Open to walk into, closed to work in — see NeedsSetup. */
+        needsSetup(world) ? (
+          <NeedsSetupPage world={world} what="The drop studio" width="wide" />
+        ) : (
+          <StudioBody world={world} />
+        )
+      }
+    </Shell>
+  );
 }
 
 function StudioBody({ world }: { world: World }) {

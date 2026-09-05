@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Shell from "@/components/Shell";
+import { NeedsSetupPage, needsSetup } from "@/components/NeedsSetup";
 import ReadingBar from "@/components/ReadingBar";
 import ShopNews from "@/components/ShopNews";
 import { Page, Card, Empty, ErrorNote, Dots } from "@/components/ui";
@@ -153,7 +154,18 @@ function groupByMonth(dates: string[]): [string, string[]][] {
 }
 
 export default function Daily() {
-  return <Shell>{(world) => <DailyBody world={world} />}</Shell>;
+  return (
+    <Shell>
+      {(world) =>
+        /* Open to walk into, closed to work in — see NeedsSetup. */
+        needsSetup(world) ? (
+          <NeedsSetupPage world={world} what="World News" width="reading" />
+        ) : (
+          <DailyBody world={world} />
+        )
+      }
+    </Shell>
+  );
 }
 
 function DailyBody({ world }: { world: World }) {

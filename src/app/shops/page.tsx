@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Shell from "@/components/Shell";
+import { NeedsSetupPage, needsSetup } from "@/components/NeedsSetup";
 import { Page, Card, Empty, ErrorNote } from "@/components/ui";
 import ReadingBar from "@/components/ReadingBar";
 import Left, { spent } from "@/components/Left";
@@ -190,7 +191,18 @@ function Line({ text, index }: { text: string; index: TitleIndex }) {
 /* ------------------------------------------------------------------ */
 
 export default function ShopsPage() {
-  return <Shell>{(world) => <ShopsBody world={world} />}</Shell>;
+  return (
+    <Shell>
+      {(world) =>
+        /* Open to walk into, closed to work in — see NeedsSetup. */
+        needsSetup(world) ? (
+          <NeedsSetupPage world={world} what="World Shops" width="full" />
+        ) : (
+          <ShopsBody world={world} />
+        )
+      }
+    </Shell>
+  );
 }
 
 function ShopsBody({ world }: { world: World }) {
