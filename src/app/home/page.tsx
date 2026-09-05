@@ -89,6 +89,39 @@ function HomeBody({ world }: { world: World }) {
   return (
     <Page width="wide">
 
+      {/*
+        UNFINISHED SETUP, SAID AT THE TOP AND IMPOSSIBLE TO MISS.
+
+        Skipping onboarding leaves a world with no keywords and no watch list,
+        which means most of the product has nothing to work from. That is a
+        fine state to be in for a day — it is not a fine state to be in
+        without knowing it, wondering why every room is empty.
+
+        Filled rather than outlined, for the same reason the challenge notice
+        is: everything else on this page is a white card, so a white card
+        saying something urgent reads as furniture.
+      */}
+      {!world.established && (
+        <div className="notice-live mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 p-5">
+          <div className="min-w-0 flex-1">
+            <p className="t-h3 text-[color:var(--accent-on)]">
+              Your world is not built yet
+            </p>
+            <p className="t-small mt-1.5 text-[color:var(--accent-on)] opacity-80">
+              A few questions about what you sell and who buys it. Everything
+              here works from those answers, so most of it is waiting.
+            </p>
+          </div>
+          <Link
+            href="/setup"
+            className="btn btn-primary shrink-0"
+            style={{ boxShadow: "3px 3px 0 #fff" }}
+          >
+            Finish setting up
+          </Link>
+        </div>
+      )}
+
       {/* Only in the last seven days, and never for a subscriber. */}
       <ChallengeEnding />
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useOwnerToken } from "@/lib/ownerToken";
+import { useOwnerAccount } from "@/lib/ownerToken";
+import { supabase } from "@/lib/supabase";
 import { Page, Card, ErrorNote } from "@/components/ui";
 import ErrorLog from "@/components/ErrorLog";
 
@@ -92,7 +93,7 @@ const FEATURE: Record<string, string> = {
 };
 
 function Spend() {
-  const token = useOwnerToken();
+  const { token, email } = useOwnerAccount();
   const [report, setReport] = useState<Report | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(true);
@@ -127,6 +128,7 @@ function Spend() {
   if (busy && !report)
     return <p className="t-small py-12 text-ink-3">Adding it up…</p>;
 
+  if (err === "Not for you.") return <WrongAccount email={email} />;
   if (err) return <ErrorNote>{err}</ErrorNote>;
 
   if (!report) return null;
@@ -482,6 +484,44 @@ function Split({ parts }: { parts: [string, number, string][] }) {
           style={{ width: `${(v / total) * 100}%`, background: colour }}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * SIGNED IN, JUST NOT AS THE OWNER.
+ *
+ * The route answers "Not for you." to any account that is not on the owner
+ * list, and the page printed that verbatim in a red box — which reads as the
+ * dashboard being broken rather than as being on the wrong account. It is
+ * exactly what somebody sees after making a test account in the same browser.
+ *
+ * So name the account, and put the way out next to it.
+ */
+function WrongAccount({ email }: { email: string | null }) {
+  return (
+    <div className="py-16">
+      <p className="t-h3 text-ink">This is not the owner account</p>
+      <p className="t-body mt-2 max-w-[52ch] text-ink-2">
+        {email ? (
+          <>
+            You are signed in as <strong className="text-ink">{email}</strong>.
+            The back of house is only visible to the account that owns the
+            business.
+          </>
+        ) : (
+          "The back of house is only visible to the account that owns the business."
+        )}
+      </p>
+      <button
+        onClick={async () => {
+          await supabase.auth.signOut();
+          window.location.href = "/login";
+        }}
+        className="btn btn-accent mt-5"
+      >
+        Sign in as someone else
+      </button>
     </div>
   );
 }

@@ -216,13 +216,32 @@ function SetupBody({
           <span className="t-small ml-auto tabular-nums text-ink-3">
             {step + 1} of {STEPS.length}
           </span>
-          {revisit && (
+          {revisit ? (
             <button
               onClick={onDone}
               className="t-small ml-4 font-semibold underline underline-offset-4 transition hover:opacity-70"
             >
               Save and exit
             </button>
+          ) : (
+            /*
+              A WAY OUT OF ONBOARDING THAT IS NOT FINISHING IT.
+
+              Somebody who joined to look around should not be held at a
+              questionnaire, and the only exits were answering every question
+              or closing the tab. The second one is the one people take, and
+              they do not come back.
+
+              It leaves rather than advancing: skipping to the next question is
+              not skipping. Everything answered so far is already saved, and
+              Home carries a way back in.
+            */
+            <a
+              href="/home"
+              className="t-small ml-4 text-ink-3 underline underline-offset-4 transition hover:text-ink"
+            >
+              Skip for now
+            </a>
           )}
         </div>
         <div className="h-[3px] w-full bg-black/8">

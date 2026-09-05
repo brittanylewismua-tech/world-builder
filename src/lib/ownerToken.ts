@@ -27,7 +27,16 @@ import { supabase } from "./supabase";
  *   token === string     use it.
  */
 export function useOwnerToken(): string | null | undefined {
+  return useOwnerAccount().token;
+}
+
+/** The same, plus who it belongs to — for saying so when they are the wrong who. */
+export function useOwnerAccount(): {
+  token: string | null | undefined;
+  email: string | null;
+} {
   const [token, setToken] = useState<string | null | undefined>(undefined);
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -38,13 +47,15 @@ export function useOwnerToken(): string | null | undefined {
       not waited on unnecessarily.
     */
     supabase.auth.getSession().then(({ data }) => {
-      if (alive && data.session?.access_token)
-        setToken(data.session.access_token);
+      if (!alive || !data.session?.access_token) return;
+      setToken(data.session.access_token);
+      setEmail(data.session.user?.email ?? null);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!alive) return;
       setToken(session?.access_token ?? null);
+      setEmail(session?.user?.email ?? null);
     });
 
     return () => {
@@ -53,5 +64,5 @@ export function useOwnerToken(): string | null | undefined {
     };
   }, []);
 
-  return token;
+  return { token, email };
 }

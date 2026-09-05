@@ -113,15 +113,30 @@ export default function Shell({
   const router = useRouter();
   const [navOpen, setNavOpen] = useState(false);
 
+  /*
+    HOME IS REACHABLE BEFORE THE WORLD IS BUILT. NOTHING ELSE IS.
+
+    Onboarding has a way out now, and an exit that lands you straight back on
+    the thing you left is not an exit. So an unfinished world may sit on Home,
+    where a banner offers the way back in.
+
+    Every other room still redirects, because they are all built on a world
+    that exists — Winners with no keywords or Shops with no customer are empty
+    rooms that look broken rather than unfinished.
+  */
+  const canWaitOnHome = pathname === "/home";
+
   useEffect(() => {
     if (loading) return;
     if (!session) router.replace("/login");
-    else if (!world || !world.established) router.replace("/setup");
-  }, [loading, session, world, router]);
+    else if (!world) router.replace("/setup");
+    else if (!world.established && !canWaitOnHome) router.replace("/setup");
+  }, [loading, session, world, router, canWaitOnHome]);
 
   useEffect(() => setNavOpen(false), [pathname]);
 
-  if (loading || !session || !world?.established) return <Loading />;
+  if (loading || !session || !world) return <Loading />;
+  if (!world.established && !canWaitOnHome) return <Loading />;
 
   const theme = world.theme ?? DEFAULT_THEME;
   const rail = theme.rail;
