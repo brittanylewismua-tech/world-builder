@@ -33,6 +33,7 @@ export async function writeIssue(
   judge?: string,
 ): Promise<number> {
   const world = await loadWorld(db, worldId);
+  await retranslate(db, world, secret, from);
   if (!world.areas.length)
     throw new Error("no active areas to watch");
 
@@ -135,6 +136,76 @@ export async function writeIssue(
 }
 
 /** Enough of a world to brief the paper. */
+/**
+ * TURN THE KEYWORDS INTO SEARCH TOPICS, EVERY TIME.
+ *
+ * The paper is not researched from a seller's keywords. It cannot be:
+ * searching "feminist sweatshirt" returns Etsy listings and Amazon, which is
+ * shopping, not people talking. So the keywords are translated into reading
+ * topics — "sapphic culture", "protest slogans" — and those are what actually
+ * get searched.
+ *
+ * That translation used to run exactly once, when a world had no topics at
+ * all. Which meant a seller could rewrite every keyword they had and keep
+ * getting a paper researched from the list they typed on their first day.
+ * It happened: a world whose keywords had nothing to do with immigration kept
+ * leading with ICE, because "abolish ice movement" had been derived months
+ * earlier and nothing ever revisited it. Nobody could have diagnosed that from
+ * the outside — the stale topic is not shown anywhere near the paper it wrote.
+ *
+ * So it runs on every issue. Keywords in, topics out, paper written from the
+ * fresh set. Half a cent against a thirty-five cent issue, and it removes a
+ * whole class of "why is this in my newspaper" that no seller could answer.
+ *
+ * IT FAILS SOFTLY AND ON PURPOSE. If the translation errors, returns nothing,
+ * or comes back suspiciously thin, the world keeps the topics it already had
+ * and the paper is written from those. A bad minute at Anthropic should cost
+ * an issue its freshness, never its existence — and never a seller's topics.
+ */
+const FEWEST_AREAS = 4;
+
+async function retranslate(db: Db, world: World, secret: string, from: string) {
+  const keywords = world.subNiches.map((s) => s.keyword).filter(Boolean);
+  /* Two is the floor the translator itself enforces. Below it, nothing to do. */
+  if (keywords.length < 2) return;
+
+  try {
+    const res = await fetch(`${new URL(from).origin}/api/suggest-areas`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-cron-secret": secret },
+      /*
+        No "existing" list. That parameter asks for topics DIFFERENT from the
+        ones already held, which is right when a seller wants more ground and
+        exactly wrong here: this is a re-translation of what they sell today,
+        so it has to be free to arrive at the same answer as last week.
+      */
+      body: JSON.stringify({ worldName: world.name, subNiches: keywords }),
+    });
+    if (!res.ok) return;
+
+    const { areas } = (await res.json()) as { areas?: string[] };
+    const fresh = (areas ?? []).map((a) => a.trim()).filter(Boolean);
+    if (fresh.length < FEWEST_AREAS) return;
+
+    /*
+      Replaced together, so a world is never left mid-swap with no topics —
+      if the insert fails the delete is not committed and the old set stands.
+    */
+    const { error } = await db.rpc("wb_set_areas", { w: world.id, names: fresh });
+    if (error) return;
+
+    /* Read back rather than trusting the input: the function lowercases,
+       trims and de-duplicates, so what landed is not exactly what was sent. */
+    const { data: saved } = await db
+      .from("wb_areas")
+      .select("id, name")
+      .eq("world_id", world.id);
+    if (saved?.length) world.areas = saved as World["areas"];
+  } catch {
+    /* Keep what the world has. */
+  }
+}
+
 async function loadWorld(db: Db, worldId: string): Promise<World> {
   const [{ data: w }, { data: areas }, { data: niches }, { data: refs }] =
     await Promise.all([
