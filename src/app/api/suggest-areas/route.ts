@@ -47,11 +47,30 @@ Good areas for the same seller: abolish ice · immigrant rights · protest signs
 
 Notice the last one. Watching the opposing camp is deliberate, not an accident — where their slogans go tells you where the whole argument is going.
 
+A MOTIF IS NOT AN AREA. THIS IS THE MOST COMMON WAY THIS GOES WRONG.
+
+Sellers validate keywords for the characters, symbols and figures they draw:
+Medusa, Lilith, sunflowers, skulls, cowboy boots. Those are things they PRINT.
+They are not parts of a customer's life, and they cannot produce news, because
+a symbol does not do anything week to week — the people who care about it do.
+
+Turning each motif into its own area is the failure mode. A feminist seller
+whose keywords mention Medusa and Lilith came back with "medusa and mythic
+feminism" AND "lilith and dark goddess symbolism" — two of seven slots on one
+idea, restated twice. Every issue then read like a Greek mythology shop
+instead of a feminist one, and the seller did not recognise her own business.
+
+So: collapse a family of motifs into the ONE culture they belong to, and spend
+the slots you free on the rest of the person's life. Medusa, Lilith, Persephone
+and Hecate are not four areas; they are one, and that one is something like
+"feminist mythology" — while the same seller's world also contains protest
+humour, the language women use about anger, and who her customer is loyal to.
+
 RULES
-1. Areas are about the customer's WORLD, not about products. "Festival fashion" is an area. "Rave t-shirts" is a product category — do not return it.
+1. Areas are about the customer's WORLD, not about products. "Festival fashion" is an area. "Rave t-shirts" is a product category — do not return it. A character or symbol the seller prints is closer to a product than to a world: zoom out to the culture that motif lives inside.
 2. Never just restate a keyword. Zoom out from the keywords to the culture underneath them.
 3. Two to four words each, lowercase, plain language the customer would recognise.
-4. Between 6 and 8 of them. Cover genuinely different ground; no two near-duplicates.
+4. Between 6 and 8 of them. Cover genuinely different ground; no two near-duplicates. Read the finished list and ask, of every pair, whether one week's news could plausibly belong to both — if it could, they are one area and you have wasted a slot. Two mythological figures, two words for the same scene, a subject and its own subcategory: all one area.
 5. Each one has to be something that changes — a thing you could read news about every week. If nothing new ever happens in it, leave it out.
 6. Every area must be recognisable as the same customer's life. Read your list back and ask whether one person could plausibly care about all of it. If not, cut what does not fit.
 7. Do not judge the seller's niche, score anything, or comment on whether it is a good world.
