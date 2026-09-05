@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { admit, meter, refund } from "@/lib/guard";
+import { noteFailure } from "@/lib/noteFailure";
 import { normalise, usableSource } from "@/lib/sources";
 
 export const runtime = "nodejs";
@@ -817,7 +818,8 @@ ${field || "(nothing came back)"}`
             usableSource(r.url),
         );
 
-      const items = (parsed?.items ?? [])
+      const raw = (parsed?.items ?? []) as Item[];
+      const items = raw
         .map((it) => ({
           area: (it.area || "").trim(),
           kind: (it.kind || "").trim().toLowerCase(),
@@ -836,6 +838,37 @@ ${field || "(nothing came back)"}`
         .filter(
           (it) =>
             it.headline && it.body && it.printable && it.sources.length > 0,
+        );
+
+      /*
+        WHY AN ISSUE CAME BACK EMPTY, WRITTEN DOWN.
+
+        Every link is checked against the set of URLs a search genuinely
+        returned, and an item whose sources all fail that check is dropped —
+        correctly, because a fabricated source is worse than a missing story.
+        But the drop was silent, and silence made the two possible failures
+        look identical from outside: a world with nothing happening in it, and
+        a judge that wrote five good items and cited pages the scout never
+        handed it. One is a quiet week. The other is a bug, and it cost hours
+        of guessing tonight because the numbers to tell them apart existed for
+        a few milliseconds and were never written anywhere.
+
+        Only on an empty result. A healthy issue logs nothing.
+      */
+      if (!items.length && raw.length)
+        await noteFailure(
+          "daily",
+          `The judge published ${raw.length} items and every one was dropped`,
+          {
+            wrote: raw.length,
+            citedUrls: raw.flatMap((it) =>
+              (it.sources ?? []).map((x) => x.url).filter(Boolean),
+            ).slice(0, 12),
+            searchUrls: [...seen].slice(0, 12),
+            searchUrlCount: seen.size,
+            relaxed,
+            stop: res.stop_reason,
+          },
         );
 
       return { items, also };
