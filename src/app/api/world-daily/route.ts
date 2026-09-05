@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { admit, meter, refund } from "@/lib/guard";
 import { noteFailure } from "@/lib/noteFailure";
-import { normalise, usableSource } from "@/lib/sources";
+import { normalise, repairSource, usableSource } from "@/lib/sources";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -559,7 +559,13 @@ Write down everything that is language or imagery. Quote exactly.`;
      * that never appeared anywhere in the run, which is the actual promise.
      */
     const seen = new Set<string>();
-    const allow = (u: string) => seen.add(normalise(u));
+    /* The same pages, unmangled — a repaired citation has to be a real link,
+       and `seen` holds only the normalised forms used for comparison. */
+    const seenRaw = new Set<string>();
+    const allow = (u: string) => {
+      seenRaw.add(u);
+      return seen.add(normalise(u));
+    };
 
     /**
      * One sweep of the web, written down. Called more than once on a thin
@@ -849,7 +855,8 @@ ${field || "(nothing came back)"}`
             r.url &&
             seen.has(normalise(r.url)) &&
             usableSource(r.url),
-        );
+        )
+        .map((r) => ({ ...r, url: repairSource(r.url!, seenRaw, normalise) ?? r.url! }));
 
       const raw = (parsed?.items ?? []) as Item[];
       const items = raw
@@ -860,6 +867,17 @@ ${field || "(nothing came back)"}`
           body: (it.body || "").trim(),
           printable: (it.printable || "").trim(),
           sources: (it.sources ?? [])
+            /*
+              Repair first, then verify. A citation the judge shortened to a
+              bare domain is put back on the one real page it can only have
+              meant; anything still unrecognised after that is dropped as
+              before. The order matters — verifying first would throw away
+              every repairable link, which is the bug this exists for.
+            */
+            .map((s) => ({
+              ...s,
+              url: s.url ? (repairSource(s.url, seenRaw, normalise) ?? s.url) : s.url,
+            }))
             .filter(
               (s) => s.url && seen.has(normalise(s.url)) && usableSource(s.url),
             )

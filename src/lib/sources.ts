@@ -127,3 +127,47 @@ export function subjectOf(keyword: string) {
   const stripped = keyword.replace(COMMERCE_WORDS, " ").replace(/\s+/g, " ").trim();
   return stripped.length >= 3 ? stripped : keyword;
 }
+
+/**
+ * PUT A TRIMMED CITATION BACK ON THE PAGE IT CAME FROM.
+ *
+ * The judge is told, at length, to reproduce a source URL exactly as the notes
+ * give it. It does not reliably do so. It shortens
+ * "medusasbody.substack.com/p/some-essay" to "medusasbody.substack.com",
+ * because the short form looks like a cleaner citation — and a bare domain
+ * fails verification, so the item is dropped and the seller gets an empty
+ * paper about a week that was not empty. That happened twice tonight, once
+ * after the instruction was made explicit.
+ *
+ * Instructions were the wrong tool. A model asked not to tidy a URL will tidy
+ * a URL, and no amount of capital letters changes that reliably.
+ *
+ * So this repairs instead. Given a citation and the set of URLs a search
+ * genuinely returned, if the citation is a truncation of exactly one real
+ * page, that page is what was meant, and it is substituted.
+ *
+ * IT CANNOT INVENT A SOURCE, WHICH IS THE WHOLE POINT. Every URL it can
+ * return was really returned by a real search; the only thing being recovered
+ * is which of them a shortened string refers to. Ambiguity is refused rather
+ * than guessed: if a bare domain matches four different articles, there is no
+ * way to know which was read, and the item is dropped exactly as before.
+ */
+export function repairSource(
+  cited: string,
+  seen: Iterable<string>,
+  normalise: (u: string) => string,
+): string | null {
+  const want = normalise(cited).replace(/\/+$/, "");
+  if (!want) return null;
+
+  const matches: string[] = [];
+  for (const real of seen) {
+    const r = normalise(real).replace(/\/+$/, "");
+    if (r === want) return real;
+    /* A prefix, and only at a path boundary: example.com must not match
+       example.completely-different.com. */
+    if (r.startsWith(want + "/")) matches.push(real);
+  }
+
+  return matches.length === 1 ? matches[0] : null;
+}
