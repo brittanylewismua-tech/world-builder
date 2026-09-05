@@ -276,23 +276,46 @@ function DailyBody({ world }: { world: World }) {
 
   const noAreas = world.areas.length === 0;
 
-  /** Fallback for a world whose watch list never got worked out. */
-  async function deriveNow() {
+  /*
+    A WATCH LIST THE SELLER IS NEVER ASKED FOR.
+
+    Setup works this out when onboarding finishes, so the only worlds without
+    one are those that skipped it. They used to arrive here to a card headed
+    "Nothing being watched yet" offering two buttons: work it out, or go and
+    pick them by hand.
+
+    Neither is a decision anybody has the information to make on their first
+    visit, and "let your keywords decide" is not a choice, it is the software
+    asking permission to do its job. It reads the keywords, which it already
+    has, and gets on with it.
+
+    Half a cent, and quiet. If it comes back with nothing the page says so
+    once, rather than handing back the same two buttons.
+  */
+  useEffect(() => {
+    if (!noAreas || deriving || world.subNiches.length < 2) return;
+    let alive = true;
     setDeriving(true);
-    const areas = await deriveAreas(
+    deriveAreas(
       world.id,
       world.name,
       world.subNiches.map((n) => n.keyword),
-    );
-    setDeriving(false);
-    if (areas.length) {
-      patch({ areas });
-    } else {
-      setErr(
-        "I could not work out a watch list from those keywords. You can pick them yourself in World Profile.",
-      );
-    }
-  }
+    )
+      .then((areas) => {
+        if (!alive) return;
+        if (areas.length) patch({ areas });
+        else
+          setErr(
+            "Your keywords did not give enough to watch. You can choose what this world watches in World Profile.",
+          );
+      })
+      .catch(() => {})
+      .finally(() => alive && setDeriving(false));
+    return () => {
+      alive = false;
+    };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [noAreas, world.id]);
 
   /*
     Research happens when it is asked for, and only then.
@@ -337,22 +360,8 @@ function DailyBody({ world }: { world: World }) {
 
       {noAreas && (
         <Empty
-          title="Nothing being watched yet"
-          body="Pick what this world watches, or let your keywords decide."
-          action={
-            <div className="flex flex-wrap justify-center gap-2">
-              <button
-                onClick={deriveNow}
-                disabled={deriving || world.subNiches.length < 2}
-                className="btn btn-accent"
-              >
-                {deriving ? "Reading your keywords…" : "Work out what to watch"}
-              </button>
-              <Link href="/profile" className="btn btn-ghost">
-                Choose them myself
-              </Link>
-            </div>
-          }
+          title="Working out what your world watches"
+          body="Reading your keywords. This takes a moment, and then your first issue writes itself."
         />
       )}
 

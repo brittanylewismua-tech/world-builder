@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { WorldProvider } from "@/lib/useWorld";
 import Boundary from "@/components/Boundary";
 import Admitted from "@/components/Admitted";
+import NewVersion from "@/components/NewVersion";
 import "./globals.css";
 
 /*
@@ -74,6 +75,12 @@ export default function RootLayout({
           <Admitted>
             <WorldProvider>{children}</WorldProvider>
           </Admitted>
+          {/*
+            Outside the door on purpose. A tab left open on the code screen or
+            the sign-in page goes stale exactly like any other, and telling
+            somebody to reload is not something that needs an account.
+          */}
+          <NewVersion />
         </Boundary>
       </body>
     </html>
