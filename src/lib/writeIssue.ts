@@ -36,17 +36,6 @@ export async function writeIssue(
   const world = await loadWorld(db, worldId);
   await retranslate(db, world, secret, from);
 
-  /*
-    The shops are re-read on the same pass that writes the paper, so the
-    numbers under it are from the same week as it. Quick, no model, and it
-    cannot fail the issue — a shop that will not answer keeps last week's
-    numbers and is picked up on the next run.
-  */
-  try {
-    await sweepWorldShops(db, worldId, secret, new URL(from).origin);
-  } catch {
-    /* Already logged inside. The paper matters more. */
-  }
   if (!world.areas.length)
     throw new Error("no active areas to watch");
 
@@ -144,6 +133,28 @@ export async function writeIssue(
 
   /* It landed, so the week's failures stop mattering. */
   await db.from("wb_daily_attempts").delete().eq("world_id", worldId).eq("issue_date", week);
+
+  /*
+    THE SHOPS ARE RE-READ LAST, AND ON PURPOSE.
+
+    They belong to the same weekly beat as the paper, so they happen on the
+    same pass — but they happened BEFORE it for one run and that was a
+    mistake. Pulling three shops is up to five hundred listings each out of a
+    rate-limited Etsy, which is slow and unpredictable in a way the research
+    is not, and a run that spent its window on Etsy died with no paper written
+    at all. The seller lost the thing they came for to refresh a number
+    underneath it.
+
+    Written first, the paper is committed and safe. If Etsy is slow, or the
+    function is killed here, the issue still exists and the shops keep last
+    week's numbers until the next run — which now retries them by itself,
+    because a shop with no row for the week is one the sweep goes back for.
+  */
+  try {
+    await sweepWorldShops(db, worldId, secret, new URL(from).origin);
+  } catch {
+    /* Already logged inside. The paper is already saved. */
+  }
 
   return body.items.length;
 }
