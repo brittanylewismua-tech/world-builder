@@ -64,7 +64,6 @@ export function dropStory(world: World, drops: Drop[], current?: Drop | null) {
 export const SOURCE_KEY = `HOW TO WEIGH WHAT FOLLOWS
 Each line is tagged with where it came from. These tags are the difference between evidence and inspiration, and you must never quietly upgrade one into the other.
 - [seller_validated_keyword] a search term the seller checked in eRank. Real demand evidence for that exact phrase and nothing more. It says nothing about designs, styles, or what will sell.
-- [visual_calibration_reference] a design the seller saved because they like its style. Taste, not demand. Never proof anything sells, and never described closely enough that it could be remade.
 - [world_signal] something a live web search verified as real and current in this world. True, but not demand data and not a product instruction.
 - [research_board_item] something the seller collected while researching. Raw material they happened to notice. Unverified.
 - [customer_simulation] words from the simulated customer. One plausible person, extrapolated from research. Never evidence about a market.
@@ -83,10 +82,13 @@ export function worldOpening(world: World): string[] {
     `Parts of this world being watched: ${world.areas.map((a) => a.name).join(" · ") || "none yet"}.`,
   ];
 
-  if (world.visualReferences.length)
-    lines.push(
-      `[visual_calibration_reference] ${world.visualReferences.length} designs on file showing the creative style the seller likes.`,
-    );
+  /*
+    The reference images used to contribute a line here saying how many there
+    were. A count is not a signal — no model can do anything with "there are
+    eight pictures" — so it was tokens on every expensive call in exchange for
+    nothing. If these should ever really inform the work, the images have to
+    be sent and read, which is a different feature.
+  */
 
   return lines;
 }

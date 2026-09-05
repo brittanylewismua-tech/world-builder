@@ -9,12 +9,10 @@ import { worldActions } from "@/lib/worldActions";
 import {
   hasDemandFloor,
   MIN_SUB_NICHES,
-  SUGGESTED_VISUAL_REFERENCES,
   type World,
 } from "@/lib/world";
 import {
   SubNicheInput,
-  VisualCalibrationInput,
 } from "@/components/world-inputs";
 import { Loading } from "@/components/Shell";
 import Logo from "@/components/Logo";
@@ -60,12 +58,6 @@ const STEPS: Step[] = [
     line: `Worlds are found from the bottom up. Bring the keywords you already researched in eRank — at least ${MIN_SUB_NICHES} — and the world underneath them will show itself.`,
   },
   {
-    eyebrow: "your eye",
-    question: "What are you picturing?",
-    line: `Around ${SUGGESTED_VISUAL_REFERENCES} existing designs in this world whose style you love. Not designs anything will copy — they show the AI what you see when you imagine this world.`,
-    optional: true,
-  },
-  {
     /*
       Naming is a nicety, not a requirement. It lets a few screens address
       the world directly and nothing more, so it must never be the thing
@@ -86,8 +78,21 @@ const STEPS: Step[] = [
   they were two screens standing between somebody and the tool they had just
   paid for. Setup now asks only what the software actually uses.
 */
-const CALIBRATION_STEP = 1;
-const NAME_STEP = 2;
+/*
+  "What are you picturing?" went the same way, and for the same reason.
+
+  It asked for a handful of designs whose style the seller loves, and told
+  them the pictures would show the AI what they see when they imagine this
+  world. They never did. The only thing that ever reached a model was one
+  line saying how many had been uploaded — not the images, not a description
+  of them, a count. The promise in the question was not one the code kept.
+
+  Uploading references still exists in World Profile, and Pinterest can still
+  send a board there, for anybody who wants them on file. What is gone is
+  asking every new seller for eight pictures on the way in and implying the
+  software will look at them.
+*/
+const NAME_STEP = 1;
 
 export default function Setup() {
   const router = useRouter();
@@ -273,15 +278,6 @@ function SetupBody({
                 onAdd={a.addSubNiche}
                 onAddMany={a.addSubNiches}
                 onRemove={a.removeSubNiche}
-              />
-            )}
-
-            {step === CALIBRATION_STEP && (
-              <VisualCalibrationInput
-                hideNote
-                refs={world.visualReferences}
-                onAdd={a.addVisualReferences}
-                onRemove={a.removeVisualReference}
               />
             )}
 
