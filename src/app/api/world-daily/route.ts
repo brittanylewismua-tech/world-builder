@@ -534,13 +534,24 @@ Write down everything that is language or imagery. Quote exactly.`;
       const res = await client.messages.create({
         model: MODEL,
         /*
-          The judge writes the issue AND everything else it read. The old
-          ceiling was 6000 and the issue alone was already reaching it — the
-          first run after the rest was added came back at exactly 6000, cut
-          off before it got to them, which is why nothing was kept. Room for
-          both, or the second half silently never happens.
+          The judge writes the issue AND everything else it read.
+
+          This ceiling has now been hit twice. It was 6000, and the first run
+          after "the rest" was added came back at exactly 6000 — cut off
+          before reaching them, which is why nothing was kept. So it went to
+          12000, and a new seller's very first issue came back at exactly
+          12000: three items published, the rest of the write lost.
+
+          Both times the failure was invisible. A truncated tool call still
+          parses into whatever items completed, so a cut-off run looks exactly
+          like a short one, and the seller reads three items believing that is
+          all their world had in it.
+
+          Twenty-four thousand, and stop_reason is checked below rather than
+          trusted. Output is billed on what is used, so a ceiling nobody
+          reaches costs nothing; a ceiling somebody reaches costs the issue.
         */
-        max_tokens: 12000,
+        max_tokens: 24000,
         system: SYSTEM,
         tools: TWO_STAGE
           ? [PUBLISH_TOOL as unknown as Anthropic.Tool]
@@ -605,6 +616,27 @@ ${field || "(nothing came back)"}`
             }
         }
       }
+
+      /*
+        WAS IT CUT OFF?
+
+        A tool call that runs into max_tokens still parses — the SDK hands
+        back whatever fields completed — so a truncated issue is
+        indistinguishable from a short one unless this is checked. That is how
+        a seller came to read three items and reasonably conclude their world
+        had three things in it.
+
+        It is not treated as a failure. Three real items are worth publishing
+        and the seller should not lose them to a retry. But it is said out
+        loud, because a ceiling being hit is a thing to know about rather than
+        discover twice.
+      */
+      if (res.stop_reason === "max_tokens")
+        console.error(
+          "[world-daily] the judge hit max_tokens — this issue is short " +
+            "because it was cut off, not because the week was quiet.",
+          { model: MODEL, output: res.usage?.output_tokens },
+        );
 
       // The issue arrives as tool input, already structured. The old
       // text-parsing path stays as a fallback for a model answering in prose.
