@@ -35,6 +35,40 @@ import { startCheckout } from "@/lib/upgrade";
 const ALWAYS_OPEN = ["/terms", "/privacy", "/login", "/reset"];
 
 
+/**
+ * WHAT TO SAY WHEN A CODE IS REFUSED.
+ *
+ * Every refusal used to read "That code is not working. Check it and try
+ * again." — including the most common one by far, which is somebody entering
+ * a code their account has already used. That sentence sends them to check
+ * something that is not wrong, and the natural conclusion is that the code
+ * itself is broken. On a launch day that is a support queue.
+ *
+ * The reason lookup is a separate read-only call made only after a refusal,
+ * so the working redemption path is untouched. If it cannot answer, the
+ * original wording stands.
+ */
+async function whyRefused(value: string) {
+  const GENERIC = "That code is not working. Check it and try again.";
+  try {
+    const { data } = await supabase.rpc("wb_why_code_failed", { try: value });
+    switch (data) {
+      case "already":
+        return "You have already used this code — your access is on this account. Try refreshing the page.";
+      case "full":
+        return "Every seat on this code has been taken.";
+      case "expired":
+        return "This code has expired.";
+      case "signed-out":
+        return "You have been signed out. Sign in again and the code will work.";
+      default:
+        return GENERIC;
+    }
+  } catch {
+    return GENERIC;
+  }
+}
+
 export default function Admitted({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   /*
@@ -77,6 +111,8 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+
+
   async function tryCode() {
     const value = code.trim();
     if (!value || busy) return;
@@ -86,7 +122,7 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.rpc("wb_redeem", { try: value });
       if (error) throw new Error(error.message);
       if (data === true) setInside(true);
-      else setErr("That code is not working. Check it and try again.");
+      else setErr(await whyRefused(value));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "That did not go through.");
     } finally {
@@ -191,7 +227,7 @@ function Ended({ onEntered }: { onEntered: () => void }) {
       const { data, error } = await supabase.rpc("wb_redeem", { try: value });
       if (error) throw new Error(error.message);
       if (data === true) onEntered();
-      else setErr("That code is not working.");
+      else setErr(await whyRefused(value));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "That did not go through.");
     } finally {
