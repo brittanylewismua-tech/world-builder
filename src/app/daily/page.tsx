@@ -83,18 +83,54 @@ function KeepIt({
   );
 }
 
-/*
-  "LOOK IT UP" IS GONE.
+/**
+ * WHAT "LOOK IT UP" SEARCHES, AND WHY IT IS NOT THE HEADLINE.
+ *
+ * It used to search the headline. Headlines here are written to be read on
+ * the page, not typed into a search box: "Bandanas designed to be
+ * photographed, not just worn" is a good line and a hopeless query. Nobody on
+ * the internet has written that sentence, so the button opened onto nothing —
+ * next to a source chip that worked.
+ *
+ * What a seller wants from this button is to SEE THE THING FOR THEMSELVES,
+ * beyond the one page it was found on. So the query is built from the part of
+ * the item that exists out in the world:
+ *
+ *   A phrase people actually say is searched exactly, in quotes. That is the
+ *   string that will turn up on other people's posts, which is the proof the
+ *   seller is looking for — one blog said it, or everybody is saying it.
+ *
+ *   Everything else is searched as its subject plus the area it came from.
+ *   The area is what stops a stripped-down headline from being ambiguous:
+ *   "bandanas carry the dog's name" alone is thin, and with "dog mom culture"
+ *   after it, it lands where the seller expects.
+ *
+ * And when the item is about how something LOOKS, it opens image results,
+ * because reading a description of a visual trend is not the point of it.
+ */
+function lookupTarget(item: DailyItem) {
+  const phrase = (t: string) => t.match(/["“]([^"”]{2,80})["”]/)?.[1]?.trim();
 
-  Beside each real source sat a dashed chip that ran a Google search for the
-  headline. It read as a second, better source and was neither. Headlines here
-  are quotes and observations — "This isn't a fashion rule, this is a way of
-  life" — and searching that string returns nothing to do with the item. It
-  offered a door that opened onto a wall, right next to the door that worked.
+  /* The printable line holds the real words more often than the headline. */
+  const said = phrase(item.printable) ?? phrase(item.headline);
 
-  The source chips are the provenance. One link per item, to the page the
-  thing was actually found on.
-*/
+  const visual = item.kind === "visual" || item.kind === "aesthetic";
+
+  let q: string;
+  if (said) {
+    q = `"${said}"`;
+  } else {
+    const subject = item.headline
+      .replace(/["“”]/g, "")
+      .replace(/[.,;:]+$/, "")
+      .trim();
+    q = item.area ? `${subject} ${item.area}` : subject;
+  }
+
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}${
+    visual ? "&tbm=isch" : ""
+  }`;
+}
 
 /** Source links, deliberately quiet — they are provenance, not content. */
 function Sources({
@@ -120,6 +156,14 @@ function Sources({
           {hostOf(s.url)} ↗
         </a>
       ))}
+      <a
+        href={lookupTarget(item)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rounded-md border border-dashed border-black/25 px-2 py-0.5 text-[11.5px] text-ink-2 transition hover:border-black hover:text-ink"
+      >
+        Look it up ↗
+      </a>
     </div>
   );
 }
@@ -260,6 +304,28 @@ function DailyBody({ world }: { world: World }) {
     };
   }, [world.id, world.areas.length, date, today, items, datesReady, dates.length]);
 
+
+  /*
+    IS THIS WEEK ALREADY PUBLISHED?
+
+    Asked of the list of issue dates, not of the items currently in state, and
+    the difference is the whole point. `items` is one fetch that can come back
+    empty for reasons that have nothing to do with the week being unwritten —
+    a session still attaching after a sign-in, a dropped request, an RLS read
+    racing the token. When that happened the page concluded the week was empty
+    and offered to research it again.
+
+    That offer costs real money. The schedule writes issues under a system
+    account, so a paper written for the seller overnight does not touch their
+    own weekly allowance — which means the button was not merely redundant, it
+    would genuinely have spent their one write on a week they had already been
+    given, and replaced a paper they may have been reading.
+
+    An issue that exists is a fact about the database. Once this week appears
+    in `dates`, nothing on this page offers to write it again until Monday.
+  */
+  const publishedThisWeek = dates.includes(today);
+  const loadFailed = publishedThisWeek && items?.length === 0;
 
   const noAreas = world.areas.length === 0;
 
@@ -422,7 +488,7 @@ function DailyBody({ world }: { world: World }) {
       {tab === "world" &&
         items?.length === 0 &&
         !noAreas &&
-        (writing || (datesReady && dates.length === 0)) && (
+        (writing || (datesReady && dates.length === 0 && !publishedThisWeek)) && (
           <Card className="mb-16 flex flex-col items-center py-12 text-center">
             <img
               src="/globe.png"
@@ -437,10 +503,29 @@ function DailyBody({ world }: { world: World }) {
           </Card>
         )}
 
+      {/*
+        This week is published but the fetch came back empty, so this is a
+        load that failed rather than a week that is quiet. Say so, and offer
+        the one action that can help — reading it again, which costs nothing.
+      */}
+      {tab === "world" && loadFailed && !writing && (
+        <Card className="mb-16 flex flex-col items-center py-12 text-center">
+          <p className="t-h3 text-ink">This week&apos;s issue did not load</p>
+          <p className="t-small mt-2 max-w-[46ch] text-ink-2">
+            It is written and saved — this was the reading of it that failed.
+            Nothing has been lost and nothing will be researched again.
+          </p>
+          <button onClick={() => open(today)} className="btn btn-accent mt-5">
+            Try again
+          </button>
+        </Card>
+      )}
+
       {tab === "world" &&
         items?.length === 0 &&
         !noAreas &&
         !writing &&
+        !loadFailed &&
         !(datesReady && dates.length === 0) && (
         <Empty
           title={
@@ -454,7 +539,7 @@ function DailyBody({ world }: { world: World }) {
               : "Each issue is researched fresh when you ask for it, so it is genuinely this week's rather than something written in advance and left to go stale."
           }
           action={
-            date === today && dates.length > 0 ? (
+            date === today && dates.length > 0 && !publishedThisWeek ? (
               <button
                 onClick={async () => {
                   setWriting(true);
