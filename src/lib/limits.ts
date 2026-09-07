@@ -10,8 +10,16 @@
  * sides, so it holds numbers only and pulls in nothing.
  */
 
-/** Shops a world can follow at once. Reading five properly is a week's study. */
-export const MOST_SHOPS = 5;
+/**
+ * Shops a world can follow at once.
+ *
+ * Was five. Three, because this is the feature most likely to be used as a
+ * shop-critique machine rather than as research — paste a competitor, read
+ * the verdict, swap them out, repeat — and reading three properly is already
+ * a week's study. A seller who genuinely wants a fourth almost always wants
+ * it instead of one of the three.
+ */
+export const MOST_SHOPS = 3;
 
 /**
  * Below this many views, a favorite rate says nothing — one viewer and one
@@ -44,8 +52,23 @@ export const DAILY_CAP = {
   boardRead: 4,
   winners: 12,
   world: 2,
-  shops: 12,
-  shopAdds: 5,
+  /*
+    EVERY SHOP YOU FOLLOW CAN BE FULLY READ. THAT IS THE POINT OF THE NUMBER.
+
+    Each shop has two reads — the catalogue patterns, and what its buyers
+    said — so a full roster of three costs six. Eight is that, plus room to
+    swap one shop out mid-week and read the replacement properly. Nobody
+    working their own three shops ever meets this ceiling; it exists to stop
+    the churn loop, where shops are cycled through purely to harvest verdicts.
+
+    A read averages 7.5 cents and reaches 20 on a five-hundred-listing shop,
+    which makes this the most expensive allowance in the product per unit —
+    the reason it is the tightest.
+  */
+  shops: 8,
+  /* Fills a roster of three, and leaves one correction for a typo or a
+     change of mind. Bounds a week's churn at one replacement. */
+  shopAdds: 4,
   avatar: 2,
 } as const;
 

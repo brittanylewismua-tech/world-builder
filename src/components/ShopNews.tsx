@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { MOST_SHOPS } from "@/lib/limits";
 
 /**
  * WHAT THE SHOPS YOU WATCH DID THIS WEEK.
@@ -20,7 +21,14 @@ import { supabase } from "@/lib/supabase";
  * of the product worth having.
  */
 
-const WANT_SHOPS = 3;
+/*
+  The number that makes this section worth reading is the same number as the
+  ceiling: follow all three and you are watching a market rather than one
+  seller. Taken from MOST_SHOPS so the encouragement can never ask for more
+  shops than the tool will accept — which is exactly what would have happened
+  the moment either number was edited on its own.
+*/
+const WANT_SHOPS = MOST_SHOPS;
 
 type Design = {
   title: string;
@@ -85,7 +93,7 @@ export default function ShopNews({ worldId }: { worldId: string }) {
       */}
       {news.shops === 0 && (
         <p className="t-body mt-3 max-w-[58ch] text-ink-2">
-          Add at least {WANT_SHOPS} competitor shops in{" "}
+          Follow up to {WANT_SHOPS} competitor shops in{" "}
           <Link href="/shops" className="underline underline-offset-4">
             World Shops
           </Link>
