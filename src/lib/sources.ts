@@ -46,6 +46,25 @@ export function usableSource(raw: string) {
     complaint that surfaced them. The scout is told to avoid these; this makes
     sure one never reaches a seller regardless.
   */
+  /*
+    A PRODUCT PAGE IS NOT A SOURCE ABOUT PEOPLE.
+
+    A Dog Lovers issue came back citing shop.akc.org/products/… for a claim
+    about how dog owners talk about their breed. A listing is a seller's own
+    marketing copy about a thing they want to sell; it is evidence of what one
+    shop wrote, and nothing at all about what anybody says or believes.
+
+    It reached a seller because the printability gate was relaxed the same
+    night, and this exclusion had been leaning on that gate rather than
+    standing on its own. It stands on its own now.
+  */
+  if (
+    /^\/(products?|collections?|listing|item|itm|dp|gp\/product|sku)(\/|$)/i.test(path) ||
+    /^shop\./i.test(u.hostname) ||
+    /^store\./i.test(u.hostname)
+  )
+    return false;
+
   if (
     host === "wikipedia.org" ||
     host.endsWith(".wikipedia.org") ||

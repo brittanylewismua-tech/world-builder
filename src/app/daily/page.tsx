@@ -83,24 +83,18 @@ function KeepIt({
   );
 }
 
-/**
- * WHAT TO SEARCH FOR, WHEN YOU WANT MORE THAN THE PARAGRAPH.
- *
- * Citations are now held to a hard standard — a real page, not a homepage or
- * a hashtag index — which is right, and means some items ship with one link
- * or none. That is honest but it leaves the seller at a dead end on exactly
- * the items they most want to pull on.
- *
- * A headline in this paper is usually the thing itself: the phrase, in
- * quotes, because the exact wording is the point. So the quoted part is the
- * search, and everything else falls back to the headline.
- */
-function lookupQuery(item: DailyItem) {
-  // Straight quotes and curly ones — the model writes both.
-  const quoted = item.headline.match(/["“]([^"”]{2,80})["”]/);
-  if (quoted) return `"${quoted[1]}"`;
-  return item.headline.replace(/[.,;:]+$/, "");
-}
+/*
+  "LOOK IT UP" IS GONE.
+
+  Beside each real source sat a dashed chip that ran a Google search for the
+  headline. It read as a second, better source and was neither. Headlines here
+  are quotes and observations — "This isn't a fashion rule, this is a way of
+  life" — and searching that string returns nothing to do with the item. It
+  offered a door that opened onto a wall, right next to the door that worked.
+
+  The source chips are the provenance. One link per item, to the page the
+  thing was actually found on.
+*/
 
 /** Source links, deliberately quiet — they are provenance, not content. */
 function Sources({
@@ -126,14 +120,6 @@ function Sources({
           {hostOf(s.url)} ↗
         </a>
       ))}
-      <a
-        href={`https://www.google.com/search?q=${encodeURIComponent(lookupQuery(item))}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="rounded-md border border-dashed border-black/25 px-2 py-0.5 text-[11.5px] text-ink-2 transition hover:border-black hover:text-ink"
-      >
-        Look it up ↗
-      </a>
     </div>
   );
 }
