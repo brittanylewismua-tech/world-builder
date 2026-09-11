@@ -108,28 +108,61 @@ function KeepIt({
  * And when the item is about how something LOOKS, it opens image results,
  * because reading a description of a visual trend is not the point of it.
  */
-function lookupTarget(item: DailyItem) {
-  const phrase = (t: string) => t.match(/["“]([^"”]{2,80})["”]/)?.[1]?.trim();
+/**
+ * ...AND WHY IT IS NOW ALLOWED TO NOT EXIST.
+ *
+ * The first fix stopped it searching the raw headline and searched the quoted
+ * phrase instead — but only when there WAS a quoted phrase. When there was
+ * not, it fell back to the headline with the area appended, which is the same
+ * bug wearing a coat: "Bandanas designed to be photographed, not just worn dog
+ * mom culture" is not a query anybody has ever typed and returns nothing
+ * useful. The button still sat there on every card, promising a search, and
+ * roughly half of them opened onto a page of unrelated results.
+ *
+ * A button that works sometimes is worse than a button that is absent, because
+ * a seller cannot tell in advance which one they are pressing, and after two
+ * dead ones they stop trusting the ones that work.
+ *
+ * So it returns null when there is nothing real to search for, and the card
+ * simply does not draw it. What is left is a link that is always a proper
+ * search for words that genuinely exist out there — an exact phrase people
+ * say, which is the whole reason a seller wants this: to find out whether one
+ * blog said it or everybody is saying it.
+ */
+function lookupTarget(item: DailyItem): string | null {
+  const phrase = (t: string) =>
+    t?.match(/["“]([^"”]{2,80})["”]/)?.[1]?.trim() || undefined;
 
   /* The printable line holds the real words more often than the headline. */
   const said = phrase(item.printable) ?? phrase(item.headline);
 
+  /*
+    No quoted phrase, no search. The one exception is a visual item, where the
+    subject plus its area is a genuinely reasonable image query — "flash tattoo
+    lettering" in "witchy aesthetics" returns the look, and looking is the
+    entire point of an image search. Prose still gets stripped back to
+    something typeable rather than sent whole.
+  */
   const visual = item.kind === "visual" || item.kind === "aesthetic";
 
-  let q: string;
-  if (said) {
-    q = `"${said}"`;
-  } else {
-    const subject = item.headline
-      .replace(/["“”]/g, "")
-      .replace(/[.,;:]+$/, "")
-      .trim();
-    q = item.area ? `${subject} ${item.area}` : subject;
-  }
+  if (said)
+    return `https://www.google.com/search?q=${encodeURIComponent(`"${said}"`)}${
+      visual ? "&tbm=isch" : ""
+    }`;
 
-  return `https://www.google.com/search?q=${encodeURIComponent(q)}${
-    visual ? "&tbm=isch" : ""
-  }`;
+  if (!visual) return null;
+
+  const subject = item.headline
+    .replace(/["“”]/g, "")
+    .replace(/[.,;:]+$/, "")
+    /* A headline is a sentence; an image query is a noun phrase. Keep the
+       first clause and drop the commentary that follows the comma. */
+    .split(/[,—–]/)[0]
+    .trim();
+  if (subject.split(/\s+/).length > 7 || subject.length < 3) return null;
+
+  const q = item.area ? `${subject} ${item.area}` : subject;
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}&tbm=isch`;
 }
 
 /** Source links, deliberately quiet — they are provenance, not content. */
@@ -143,6 +176,7 @@ function Sources({
   /** Drop the top margin when a surrounding row already spaces it. */
   bare?: boolean;
 }) {
+  const lookup = lookupTarget(item);
   return (
     <div className={`flex flex-wrap gap-1.5 ${bare ? "" : small ? "mt-2" : "mt-4"}`}>
       {item.sources.map((s, j) => (
@@ -156,14 +190,19 @@ function Sources({
           {hostOf(s.url)} ↗
         </a>
       ))}
-      <a
-        href={lookupTarget(item)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="rounded-md border border-dashed border-black/25 px-2 py-0.5 text-[11.5px] text-ink-2 transition hover:border-black hover:text-ink"
-      >
-        Look it up ↗
-      </a>
+      {lookup && (
+        <a
+          href={lookup}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-md border border-dashed border-black/25 px-2 py-0.5 text-[11.5px] text-ink-2 transition hover:border-black hover:text-ink"
+        >
+          {/* Say which search it is. "Look it up" on a phrase and on a look
+              are different promises, and the seller should know which one
+              they are about to open. */}
+          {lookup.includes("tbm=isch") ? "See it ↗" : "Who else says it ↗"}
+        </a>
+      )}
     </div>
   );
 }
@@ -386,11 +425,29 @@ function DailyBody({ world }: { world: World }) {
       <header className="mb-6 border-b-2 border-black pb-5">
         <div className="flex items-baseline justify-between gap-4">
           <span className="chip chip-solid">world news</span>
+          {/*
+            THIS USED TO PROMISE SOMETHING NOTHING DELIVERS.
+
+            It read "(next issue drops September 15)" on every issue, always.
+            No issue drops. The schedule writes a world's first paper and
+            nothing after it; every following week is written when the seller
+            presses the button. So the line was telling two hundred people a
+            newspaper was coming, and the newspaper was not coming — they would
+            arrive on the Monday, find an empty week, and conclude the thing
+            was broken. It was not broken; the masthead was lying.
+
+            Now it says what actually happens, and only on the current issue —
+            on a back issue from March, what happens next week is not the
+            question the reader is asking.
+          */}
           <span className="t-small text-ink-3">
-            {formatIssueDate(date)}{" "}
-            <span className="opacity-70">
-              (next issue drops {nextIssueDate(date)})
-            </span>
+            {formatIssueDate(date)}
+            {date === today && (
+              <span className="opacity-70">
+                {" "}
+                (write next week&apos;s from {nextIssueDate(date)})
+              </span>
+            )}
           </span>
         </div>
         {/*

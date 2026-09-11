@@ -2,6 +2,7 @@
 
 import { supabase, ASSET_BUCKET } from "./supabase";
 import { downscale } from "./api";
+import { report } from "./report";
 import type { World } from "./world";
 
 /**
@@ -38,8 +39,35 @@ export const REVIEW_DAYS = 60;
 
 const DAY = 86_400_000;
 
+/**
+ * THE CALENDAR DAY THIS DATE IS, WHERE THE SELLER IS STANDING.
+ *
+ * This used to be `d.toISOString().slice(0, 10)`, which is the UTC day — and
+ * every other date function in this file works in LOCAL time. nextWeekday sets
+ * local midnight; daysSince parses "YYYY-MM-DDT00:00:00" as local. Mixing the
+ * two frames is invisible in a timezone at or behind UTC and catastrophic in
+ * one ahead of it.
+ *
+ * East of UTC, local midnight on Friday the 11th is 14:00 THURSDAY in UTC, so
+ * toISOString returned "the 10th". Every publish date this software calculated
+ * for a seller in Europe, Asia or Australia landed one day early — on the day
+ * BEFORE their drop weekday.
+ *
+ * That is not a cosmetic off-by-one. syncSchedule freezes any drop whose date
+ * has passed and then opens the next one, and the next one's date is computed
+ * from this function — so it came back as the SAME day that had just been
+ * judged overdue. Freeze, create, freeze, create: a loop that only stopped
+ * when it hit the 260-iteration guard, resumed on every page load, and left
+ * one world holding fourteen hundred drops. Mid-churn there is no "next" drop
+ * yet, which is why the research tab kept vanishing for exactly those sellers.
+ *
+ * Local in, local out. No UTC anywhere near a date somebody reads.
+ */
 export function toISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /** Next occurrence of an ISO weekday (1=Mon … 7=Sun), today counting as a hit. */
@@ -216,11 +244,30 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
     if (drops.some((d) => d.number === cur.number + 1)) return;
     const after = new Date(`${cur.publishDate}T00:00:00`);
     after.setDate(after.getDate() + 1);
-    await createDrop(
-      world.id,
-      cur.number + 1,
-      toISODate(nextWeekday(after, world.dropWeekday)),
-    );
+    const when = nextWeekday(after, world.dropWeekday);
+
+    /*
+      NEXT WEEK MUST BE AFTER THIS WEEK. ENFORCED, NOT ASSUMED.
+
+      The timezone bug in toISODate made this return the same day as the drop
+      it follows, and a drop dated no later than its predecessor is one the
+      freeze loop immediately judges overdue — so it froze it, created another
+      on the same date, and went round again until the guard stopped it.
+      Fourteen hundred drops for one seller, and their research tab flickering
+      in and out while it ran.
+
+      The date arithmetic is fixed above. This makes the runaway structurally
+      impossible rather than merely unlikely: a date that is not strictly
+      later than the current drop's is wrong however it was arrived at, and
+      pushing it a week on is always the right answer.
+    */
+    let date = toISODate(when);
+    if (date <= cur.publishDate) {
+      when.setDate(when.getDate() + 7);
+      date = toISODate(when);
+    }
+
+    await createDrop(world.id, cur.number + 1, date);
     changed = true;
   }
 
@@ -284,7 +331,26 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
     seller who signed up on a Friday had Drop 01 frozen empty the moment they
     opened the studio.
   */
-  for (let guard = 0; guard < 260; guard++) {
+  /*
+    A CATCH-UP IS WEEKS, NOT YEARS.
+
+    This guard was 260 — five years of weekly drops — which is not a ceiling on
+    anything a real seller can do; it is a ceiling on how much damage a bug can
+    do before the page finishes loading. It did 260 drops of damage per load,
+    six loads deep, in silence.
+
+    A year is already generous for somebody coming back from a long absence,
+    and hitting it now means something is wrong rather than somebody was busy,
+    so it says so instead of grinding on.
+  */
+  for (let guard = 0; ; guard++) {
+    if (guard >= 60) {
+      report("studio", new Error("drop schedule did not settle"), {
+        worldId: world.id,
+        drops: drops.length,
+      });
+      break;
+    }
     const current = splitDrops(drops).current;
     if (!current) break;
     if (current.frozenAt || daysSince(current.publishDate) <= 0) {

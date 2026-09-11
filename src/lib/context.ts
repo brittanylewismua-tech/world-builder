@@ -13,6 +13,7 @@ import {
   dropStory,
   SIGNAL_DAYS,
   SIGNAL_MAX,
+  type Signal,
   worldOpening,
 } from "./worldContext";
 
@@ -52,13 +53,55 @@ async function recentSignals(worldId: string) {
   since.setDate(since.getDate() - SIGNAL_DAYS);
   const { data } = await supabase
     .from("wb_daily_items")
-    .select("issue_date, kind, headline")
+    .select("issue_date, kind, headline, sources")
     .eq("world_id", worldId)
     .gte("issue_date", since.toISOString().slice(0, 10))
     .order("issue_date", { ascending: false })
     .order("position")
     .limit(SIGNAL_MAX);
-  return (data ?? []) as { issue_date: string; kind: string; headline: string }[];
+  return (data ?? []) as Signal[];
+}
+
+/**
+ * EVERY PAGE THIS WORLD HAS ALREADY BEEN SHOWN — BROWSER SIDE.
+ *
+ * This is the half of the no-repeat rule that was missing entirely, and it is
+ * why one article led three issues running even after the memory window was
+ * widened. There are two paths that write a paper, and only one of them had
+ * this: the schedule (writeIssue) sent a ban list, and the seller's own "Write
+ * this week's issue" button — the button that writes EVERY issue after the
+ * first — sent nothing at all. The enforced rule was being applied to the one
+ * kind of issue that can never repeat anything, because it is the first.
+ *
+ * Exported separately from buildWorldContext because it is not prose. The
+ * briefing is what the model reads; this is what the route enforces.
+ */
+export async function coveredForWorld(worldId: string): Promise<string[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - SIGNAL_DAYS);
+  const from = since.toISOString().slice(0, 10);
+
+  const [{ data: items }, { data: rest }] = await Promise.all([
+    supabase
+      .from("wb_daily_items")
+      .select("sources")
+      .eq("world_id", worldId)
+      .gte("issue_date", from)
+      .limit(SIGNAL_MAX),
+    supabase
+      .from("wb_daily_rest")
+      .select("url")
+      .eq("world_id", worldId)
+      .gte("issue_date", from)
+      .limit(600),
+  ]);
+
+  const out = new Set<string>();
+  for (const row of items ?? [])
+    for (const s of (row.sources ?? []) as { url?: string }[])
+      if (s?.url) out.add(s.url);
+  for (const r of rest ?? []) if (r.url) out.add(r.url as string);
+  return [...out];
 }
 
 /**
@@ -214,19 +257,23 @@ export async function buildWorldContext(
   world: World,
   { room, drops = [], currentDrop = null, boardFor = null }: ContextOptions,
 ): Promise<string> {
-  const [signals, other, board] = await Promise.all([
+  const [signals, other, board, extras] = await Promise.all([
     recentSignals(world.id),
     room === "daily"
       ? Promise.resolve([])
       : otherThread(world.id, room === "customer" ? "room" : "customer"),
     boardFor ? boardNotes(boardFor) : Promise.resolve([]),
+    /* Only the paper needs to know which pages are burnt. */
+    room === "daily" ? coveredForWorld(world.id) : Promise.resolve([]),
   ]);
 
   const lines: string[] = worldOpening(world);
   lines.push(...dropStory(world, drops, currentDrop));
   lines.push(...board);
 
-  lines.push(...alreadyReported(signals, room === "daily" ? "daily" : "other"));
+  lines.push(
+    ...alreadyReported(signals, room === "daily" ? "daily" : "other", extras),
+  );
 
   if (other.length) {
     lines.push(

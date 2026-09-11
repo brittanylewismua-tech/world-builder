@@ -116,8 +116,31 @@ export async function GET(req: Request) {
 
     So: any world that has ever had an issue is no longer this job's business.
   */
-  const { data: written } = await db.from("wb_daily_items").select("world_id");
-  const done = new Set((written ?? []).map((r) => r.world_id as string));
+  /*
+    ASKED OF POSTGRES, NOT DE-DUPLICATED IN JAVASCRIPT.
+
+    This used to select every row of wb_daily_items and build the set here.
+    PostgREST caps a response at its max-rows setting, and the cap arrives with
+    no error and no flag — the array is simply short. At five rows an issue and
+    twenty-one live worlds, that ceiling is about ten weeks away, and the
+    failure it produces is the expensive kind: worlds that DO have papers fall
+    out of the set, read as unwritten, and get researched again — every hour,
+    at roughly thirty-five cents a run, for papers nobody asked for.
+
+    A distinct query returns twenty rows instead of thousands and is exact at
+    any size. If it fails, the run stops rather than guessing: an empty `done`
+    set means "nobody has a paper", which would put every world on the list.
+  */
+  const { data: written, error: writtenErr } =
+    await db.rpc("wb_worlds_with_issues");
+  if (writtenErr)
+    return NextResponse.json(
+      { error: `could not read which worlds have issues: ${writtenErr.message}` },
+      { status: 500 },
+    );
+  const done = new Set(
+    ((written ?? []) as { world_id: string }[]).map((r) => r.world_id),
+  );
 
   const { data: attempts } = await db
     .from("wb_daily_attempts")

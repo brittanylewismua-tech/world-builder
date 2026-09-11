@@ -2,7 +2,7 @@
 
 import { supabase } from "./supabase";
 import { askAI } from "./askAI";
-import { buildWorldContext } from "./context";
+import { buildWorldContext, coveredForWorld } from "./context";
 import type { World } from "./world";
 
 export interface DailySource {
@@ -165,6 +165,22 @@ export async function generateIssue(
   date: string,
   { append = false }: { append?: boolean } = {},
 ): Promise<DailyItem[]> {
+  /*
+    THE BAN LIST TRAVELS WITH THE REQUEST, AND THIS IS THE PATH THAT MATTERED.
+
+    The schedule writes a world's FIRST issue and nothing after it; every
+    weekly issue from the second on comes through here, on the seller's own
+    button. So this is the only path on which a repeat is even possible — and
+    it was the one sending no ban list. `memory` asks the model not to repeat
+    itself, which a model will cheerfully do anyway under a reworded headline;
+    `covered` is the list the route enforces, and without it the enforcement
+    had nothing to enforce against.
+  */
+  const [memory, covered] = await Promise.all([
+    buildWorldContext(world, { room: "daily" }),
+    coveredForWorld(world.id),
+  ]);
+
   const j = await askAI<{
     items: Omit<DailyItem, "id">[];
     also?: Omit<DailyRest, "id">[];
@@ -172,9 +188,8 @@ export async function generateIssue(
     worldName: world.name,
     areas: world.areas.map((a) => a.name),
     subNiches: world.subNiches.map((s) => s.keyword),
-    // Everything the world already knows, so today's paper does not repeat
-    // what it printed yesterday.
-    memory: await buildWorldContext(world, { room: "daily" }),
+    memory,
+    covered,
   });
 
   let offset = 0;
@@ -261,9 +276,11 @@ export function formatIssueDate(iso: string) {
  * When the next issue lands.
  *
  * An issue is filed under the Monday of its week, so the next one is simply
- * seven days on. Worth saying out loud on the page: there is no refresh
- * button any more, and without a date "once a week" leaves somebody
- * wondering whether the paper is stuck.
+ * seven days on.
+ *
+ * The page must not call this a delivery. Only a world's FIRST paper arrives
+ * on its own; every week after it is written when the seller asks. Saying
+ * "drops" sent people to an empty page expecting a newspaper.
  */
 export function nextIssueDate(iso: string) {
   const d = new Date(`${iso}T00:00:00`);

@@ -1,6 +1,13 @@
+import { noteFailure } from "@/lib/noteFailure";
 import { serviceDb } from "@/lib/pinterest";
 import { sweepWorldShops } from "@/lib/sweepWorldShops";
-import { dailyContext, SIGNAL_DAYS, SIGNAL_MAX } from "@/lib/worldContext";
+import {
+  coveredUrls,
+  dailyContext,
+  SIGNAL_DAYS,
+  SIGNAL_MAX,
+  type Signal,
+} from "@/lib/worldContext";
 import type { World } from "@/lib/world";
 
 /**
@@ -41,14 +48,35 @@ export async function writeIssue(
 
   const since = new Date();
   since.setDate(since.getDate() - SIGNAL_DAYS);
-  const { data: signals } = await db
-    .from("wb_daily_items")
-    .select("issue_date, kind, headline")
-    .eq("world_id", worldId)
-    .gte("issue_date", since.toISOString().slice(0, 10))
-    .order("issue_date", { ascending: false })
-    .order("position")
-    .limit(SIGNAL_MAX);
+  /*
+    `sources` comes back with the headlines now. The headline is what the
+    model is asked not to repeat; the URL is what it is not ALLOWED to repeat.
+    One is an instruction and the other is enforced — see coveredUrls.
+  */
+  const from_ = since.toISOString().slice(0, 10);
+  const [{ data: signalRows }, { data: restRows }] = await Promise.all([
+    db
+      .from("wb_daily_items")
+      .select("issue_date, kind, headline, sources")
+      .eq("world_id", worldId)
+      .gte("issue_date", from_)
+      .order("issue_date", { ascending: false })
+      .order("position")
+      .limit(SIGNAL_MAX),
+    /* "More this week" is printed under the same masthead, so its pages count
+       as covered ground exactly like the five that made the front page. */
+    db
+      .from("wb_daily_rest")
+      .select("url")
+      .eq("world_id", worldId)
+      .gte("issue_date", from_)
+      .limit(600),
+  ]);
+
+  const signals = (signalRows ?? []) as Signal[];
+  const restUrls = (restRows ?? [])
+    .map((r) => r.url as string)
+    .filter(Boolean);
 
   /*
     The research pipeline is the same one the app has always used, called
@@ -63,7 +91,8 @@ export async function writeIssue(
       worldName: world.name,
       areas: world.areas.map((a) => a.name),
       subNiches: world.subNiches.map((s) => s.keyword),
-      memory: dailyContext(world, [], (signals ?? []) as never[]),
+      memory: dailyContext(world, [], signals, restUrls),
+      covered: coveredUrls(signals, restUrls),
       ...(judge ? { judge } : {}),
     }),
   });
@@ -118,8 +147,14 @@ export async function writeIssue(
   );
   if (error) throw new Error(error.message);
 
-  if (body.also?.length)
-    await db.from("wb_daily_rest").insert(
+  /*
+    The extras must never cost the issue, so this failure is swallowed — but
+    swallowed loudly. "More this week" is a third of the page and it used to
+    vanish without a word if the insert was rejected, which is indistinguishable
+    from a reading that found only five things.
+  */
+  if (body.also?.length) {
+    const { error: restErr } = await db.from("wb_daily_rest").insert(
       body.also.map((r, i) => ({
         world_id: worldId,
         issue_date: week,
@@ -130,6 +165,13 @@ export async function writeIssue(
         position: i,
       })),
     );
+    if (restErr)
+      await noteFailure("daily", `extras did not save: ${restErr.message}`, {
+        worldId,
+        week,
+        count: body.also.length,
+      });
+  }
 
   /* It landed, so the week's failures stop mattering. */
   await db.from("wb_daily_attempts").delete().eq("world_id", worldId).eq("issue_date", week);
@@ -219,6 +261,29 @@ async function retranslate(db: Db, world: World, secret: string, from: string) {
     const { areas } = (await res.json()) as { areas?: string[] };
     const fresh = (areas ?? []).map((a) => a.trim()).filter(Boolean);
     if (fresh.length < FEWEST_AREAS) return;
+
+    /*
+      NOTHING CHANGED? THEN CHANGE NOTHING.
+
+      wb_set_areas deletes and re-inserts, so writing an identical set still
+      stamps every row with a new created_at. That looks harmless and quietly
+      disabled the schedule's give-up rule: the cron stops retrying a world
+      after six failures UNLESS its areas changed since the last attempt, and
+      this ran on every attempt, so the areas had ALWAYS changed. A world that
+      could never be written was therefore retried hourly forever, spending
+      research money on an issue that was never going to exist.
+
+      Most re-translations return the same topics, because most sellers do not
+      rewrite their keywords between Mondays. Comparing first makes the common
+      case free and gives the give-up counter its meaning back.
+    */
+    const same =
+      fresh.length === world.areas.length &&
+      new Set(fresh.map((a) => a.toLowerCase())).size === fresh.length &&
+      fresh.every((a) =>
+        world.areas.some((x) => x.name.toLowerCase() === a.toLowerCase()),
+      );
+    if (same) return;
 
     /*
       Replaced together, so a world is never left mid-swap with no topics —

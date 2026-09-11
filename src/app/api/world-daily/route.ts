@@ -451,6 +451,8 @@ interface Body {
   judge?: string;
   /** Everything this world already knows — see lib/context.ts. */
   memory?: string;
+  /** Every page already cited to this seller. Citing one drops the item. */
+  covered?: string[];
 }
 
 export async function POST(req: Request) {
@@ -628,6 +630,25 @@ Write down everything that is language or imagery. Quote exactly.`;
       seenRaw.add(u);
       return seen.add(normalise(u));
     };
+
+    /**
+     * PAGES THIS WORLD HAS ALREADY BEEN SHOWN.
+     *
+     * The prompt asks the model not to repeat itself. This makes it so. A
+     * headline can be reworded until it reads as new; the page it was written
+     * off cannot, so the URL is the only part of a story that is reliably the
+     * same story. An item citing one of these is dropped exactly the way an
+     * uncitable item is dropped — the seller never sees it, and no amount of
+     * rephrasing gets it through.
+     *
+     * The reason the whistleblower piece led three issues running was not this
+     * check being weak. It was the covered list arriving empty every week
+     * (see SIGNAL_WEEKS). This is the belt to that fix's braces.
+     */
+    const covered = new Set(
+      (body.covered ?? []).filter(Boolean).map((u) => normalise(u)),
+    );
+    const isCovered = (u?: string | null) => !!u && covered.has(normalise(u));
 
     /**
      * One sweep of the web, written down. Called more than once on a thin
@@ -910,7 +931,7 @@ ${field || "(nothing came back)"}`
         page no search returned is invented, whether it was going to be
         printed or not.
       */
-      const also = (parsed?.also ?? [])
+      const alsoRaw = (parsed?.also ?? [])
         .map((r) => ({
           label: (r.label || "").trim(),
           note: (r.note || "").trim(),
@@ -923,12 +944,32 @@ ${field || "(nothing came back)"}`
             r.quote &&
             r.url &&
             seen.has(normalise(r.url)) &&
+            !isCovered(r.url) &&
             usableSource(r.url),
         )
         .map((r) => ({ ...r, url: repairSource(r.url!, seenRaw, normalise) ?? r.url! }));
 
       const raw = (parsed?.items ?? []) as Item[];
-      const items = raw
+      /*
+        A STORY IS ITS PAGES, SO ONE COVERED PAGE CONDEMNS THE ITEM.
+
+        Not "strip the repeat source and keep the rest" — an item written off a
+        page this seller has already read IS the story she already read,
+        however many fresh links got stapled to it afterwards. That leniency is
+        precisely how the same article leads the paper again under a new
+        headline with a second outlet bolted on.
+      */
+      const fresh = raw.filter(
+        (it) =>
+          !(it.sources ?? []).some((s) =>
+            isCovered(
+              s.url ? (repairSource(s.url, seenRaw, normalise) ?? s.url) : s.url,
+            ),
+          ),
+      );
+      const repeated = raw.length - fresh.length;
+
+      const items = fresh
         .map((it) => ({
           area: (it.area || "").trim(),
           kind: (it.kind || "").trim().toLowerCase(),
@@ -961,6 +1002,30 @@ ${field || "(nothing came back)"}`
         );
 
       /*
+        AN EXTRA MUST NOT BE A STORY THAT IS ALREADY ON THE PAGE.
+
+        "More this week" is the rest of what the same reading turned up, and
+        nothing stopped the judge listing a page it had ALSO built a front-page
+        item from. The seller then reads the lead story and, four inches lower,
+        the same link again under a different label — which reads as the
+        software padding the issue, and is the fastest way to lose trust in a
+        section that is otherwise the best part of the paper.
+
+        Deduped against the issue that actually shipped, not the one proposed,
+        so an extra whose twin was dropped for some other reason survives.
+      */
+      const onPage = new Set(
+        items.flatMap((it) => it.sources.map((s) => normalise(s.url))),
+      );
+      const seenExtra = new Set<string>();
+      const also = alsoRaw.filter((r) => {
+        const key = normalise(r.url);
+        if (onPage.has(key) || seenExtra.has(key)) return false;
+        seenExtra.add(key);
+        return true;
+      });
+
+      /*
         WHY AN ISSUE CAME BACK EMPTY, WRITTEN DOWN.
 
         Every link is checked against the set of URLs a search genuinely
@@ -986,6 +1051,10 @@ ${field || "(nothing came back)"}`
             ).slice(0, 12),
             searchUrls: [...seen].slice(0, 12),
             searchUrlCount: seen.size,
+            /* Tells the two empty issues apart: nothing found, versus
+               everything found being last month's paper again. */
+            repeated,
+            coveredCount: covered.size,
             relaxed,
             stop: res.stop_reason,
           },

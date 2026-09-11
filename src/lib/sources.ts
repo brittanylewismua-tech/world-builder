@@ -76,6 +76,29 @@ export function usableSource(raw: string) {
   )
     return false;
 
+  /*
+    A MIRROR OF REDDIT IS NOT REDDIT.
+
+    An issue shipped citing gummysearch.com/r/TwoXChromosomes/ for a claim
+    about what women say when they are talked over. That is a keyword-research
+    product's landing page for a subreddit — a marketing page wrapped around
+    somebody else's forum, usually behind a signup, and never the thread the
+    quote came from. The seller clicks expecting the conversation and gets a
+    pricing page.
+
+    These slip through because the platform rules above are keyed to hostname:
+    reddit.com is checked for /comments/, and a mirror is not reddit.com, so it
+    lands in the catch-all where any non-empty path passes. Reddit is the single
+    most valuable source this paper has, which makes its imitations the ones
+    worth naming.
+  */
+  if (
+    /(^|\.)(gummysearch|redditlist|redditsearch|redditstatic|reddit-stream|redditp|anvaka|subredditstats|frontpagemetrics|redditmetis)\./i.test(
+      u.hostname,
+    )
+  )
+    return false;
+
   // The platforms worth naming individually, because their useless pages look
   // exactly like their useful ones until you read the path.
   if (host.endsWith("tiktok.com"))
