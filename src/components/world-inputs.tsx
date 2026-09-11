@@ -118,7 +118,19 @@ export function SubNicheInput({
     );
     if (!fresh.length) {
       setSkipped({ dropped, duplicates });
-      setPending(keywords.length ? [] : null);
+      /*
+        ALWAYS SAY SOMETHING. THIS USED TO SET `null` AND SAY NOTHING AT ALL.
+
+        `null` closes the panel, so when the parser found no keywords the
+        seller pressed enter and watched their text sit there, unexplained.
+        The one case that produced it was the one that most needed a message:
+        the parser had rejected everything they typed. A seller hit that with
+        "Etsy Witch", tried it twice more with other phrases, and emailed to
+        ask whether the word Etsy was banned.
+
+        An empty array keeps the panel open and lets the copy below explain.
+      */
+      setPending([]);
       return true;
     }
     // One keyword typed by hand goes straight in; a batch gets looked at.
@@ -236,7 +248,7 @@ export function SubNicheInput({
               <p className="t-small mt-0.5 text-ink-2">
                 {skipped.duplicates > 0
                   ? `All ${skipped.duplicates} of those are already in your list.`
-                  : "I could not find any keywords in what you pasted — it looked like numbers or column headings. Try pasting the keyword column, or type them in."}
+                  : "Nothing in that read as a keyword — it looked like numbers or column headings. If you typed a real keyword and it landed here, that is a bug on my side, not a rule: send it to Brittany."}
               </p>
               <button
                 onClick={() => setPending(null)}

@@ -51,12 +51,63 @@ const NA = /^(n\/?a|--?|none|unknown)$/i;
 const isNumeric = (s: string) => s.trim() !== "" && NUMERIC.test(s.trim());
 const isBlank = (s: string) => s.trim() === "" || NA.test(s.trim());
 
-/** A row of column headers rather than a row of data. */
+/**
+ * Words that pad a column title without naming anything: "Avg Searches",
+ * "Total Results". Harmless inside a real keyword, so they never make a cell
+ * header-ish on their own — they only fail to disqualify one.
+ */
+const FILLER = new Set([
+  "avg", "average", "total", "est", "estimated", "per", "of", "the", "and",
+  "no", "num", "#", "%", "vs", "level", "monthly", "daily",
+]);
+
+/**
+ * A ROW OF COLUMN HEADERS, RATHER THAN A ROW OF DATA.
+ *
+ * This asked whether any cell CONTAINED a header word, anywhere, as a plain
+ * substring — and a single hit condemned the whole line. The result was a
+ * silent blocklist nobody wrote on purpose:
+ *
+ *   "Etsy Witch"          contains "etsy"
+ *   "Vintage Golf Decor"  contains "tag"  — v-in-TAG-e
+ *   "Trending Now"        contains "trend"
+ *   "Count Me In"         contains "count"
+ *   "Search Party"        contains "search"
+ *   "Score Keeper"        contains "score"
+ *
+ * Every one of those was thrown away on the way in, with no message, because
+ * the parser had decided the seller was pasting a spreadsheet header. A seller
+ * typing "Etsy Witch" pressed enter and watched nothing happen — twice, then
+ * gave up and emailed.
+ *
+ * Two things were wrong and both are fixed here.
+ *
+ * FIRST, ONE CELL IS NEVER A HEADER ROW. A header row has columns. A person
+ * typing a single keyword has one cell, so that line is data by definition,
+ * whatever it says — even the literal word "keyword" is a legitimate thing to
+ * research.
+ *
+ * SECOND, MATCH WHOLE WORDS, NOT SUBSTRINGS, AND JUDGE THE CELL AS A WHOLE. A
+ * cell is header-ish only when EVERY word in it is a column word or filler.
+ * "Etsy Competition" and "Avg Searches" still pass as headers, because every
+ * word in them is one. "Etsy Witch" does not, because "witch" is not.
+ */
+/* HEADERS holds some multi-word titles ("avg searches", "long tail"); the
+   per-word test needs their words individually. */
+const HEADER_WORDS = new Set(HEADERS.flatMap((h) => h.split(/\s+/)));
+
+function isHeaderCell(cell: string) {
+  const words = cell.split(/[^a-z0-9#%]+/).filter(Boolean);
+  if (!words.length) return false;
+  return words.every((w) => HEADER_WORDS.has(w) || FILLER.has(w));
+}
+
 function looksLikeHeader(cells: string[]) {
   const clean = cells.map((c) => c.trim().toLowerCase()).filter(Boolean);
-  if (!clean.length) return false;
-  const hits = clean.filter((c) => HEADERS.some((h) => c === h || c.includes(h)));
-  return hits.length >= Math.max(1, Math.ceil(clean.length / 2));
+  /* One column is a keyword somebody typed, not a header row. */
+  if (clean.length < 2) return false;
+  const hits = clean.filter(isHeaderCell);
+  return hits.length >= Math.ceil(clean.length / 2);
 }
 
 /**
