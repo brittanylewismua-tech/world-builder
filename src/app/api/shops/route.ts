@@ -3,6 +3,7 @@ import { noteFailure } from "@/lib/noteFailure";
 import { admit, type Caller, ownerOf, refund } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
 import { MOST_SHOPS } from "@/lib/limits";
+import { weekStart } from "@/lib/week";
 import {
   allListings,
   etsyKey,
@@ -270,9 +271,9 @@ export async function POST(req: Request) {
     — a missing week of history is a smaller problem than a shop that would
     not follow.
   */
-  const monday = new Date();
-  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
-  const week = monday.toISOString().slice(0, 10);
+  /* Same week as the sweep that calls this and the paper it sits under —
+     one definition, imported, rather than three copies that can drift. */
+  const week = weekStart();
   try {
     if (rows.length)
       await db.from("wb_design_weekly").upsert(

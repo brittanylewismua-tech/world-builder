@@ -1,5 +1,6 @@
 import { noteFailure } from "@/lib/noteFailure";
 import { serviceDb } from "@/lib/pinterest";
+import { weekStart } from "@/lib/week";
 
 type Db = ReturnType<typeof serviceDb>;
 
@@ -50,26 +51,44 @@ export async function sweepWorldShops(
     it self-corrects — a shop whose pull failed has no row, so the next run
     picks it up rather than writing it off as fresh.
   */
-  const monday = new Date();
-  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
-  const week = monday.toISOString().slice(0, 10);
+  const week = weekStart();
 
-  const [{ data: snapped }, { data: owned }] = await Promise.all([
-    db
-      .from("wb_design_weekly")
-      .select("listing_id")
-      .eq("world_id", worldId)
-      .eq("week", week),
-    db
-      .from("wb_shop_designs")
-      .select("listing_id, shop_id")
-      .eq("world_id", worldId),
-  ]);
+  /*
+    ASKED OF POSTGRES, BECAUSE THE ANSWER DID NOT FIT DOWN THE WIRE.
 
-  const thisWeek = new Set((snapped ?? []).map((r) => String(r.listing_id)));
-  const have = new Set<string>();
-  for (const d of owned ?? [])
-    if (thisWeek.has(String(d.listing_id))) have.add(String(d.shop_id));
+    This used to pull wb_design_weekly for the world-week and wb_shop_designs
+    for the whole world and intersect them here. Those are two thousand and
+    fifteen hundred rows at today's data, against a response cap of one
+    thousand — so both arrays arrived silently short, the intersection was
+    missing shops, and the skip concluded "no snapshot yet" every single time.
+
+    Which means the optimisation this function is built around has never
+    worked for any seller with a full shop list: every issue re-pulled all
+    three shops out of a rate-limited Etsy, slowly, for numbers it already had.
+    Nothing looked broken. It was just always slow.
+
+    The database answers it in three rows, exactly, at any size.
+  */
+  const { data: snapshotted, error: snapErr } = await db.rpc(
+    "wb_shops_snapshotted",
+    { w: worldId, wk: week },
+  );
+
+  /*
+    If that question cannot be answered, re-read everything. Pulling a shop
+    twice costs time; skipping one that was never read costs the seller a week
+    of numbers, and that is the more expensive mistake.
+  */
+  if (snapErr)
+    await noteFailure("shops", `snapshot check failed: ${snapErr.message}`, {
+      worldId,
+      week,
+      job: "sweep",
+    });
+
+  const have = new Set(
+    ((snapshotted ?? []) as { shop_id: string }[]).map((r) => String(r.shop_id)),
+  );
 
   let pulled = 0;
   const missed: string[] = [];

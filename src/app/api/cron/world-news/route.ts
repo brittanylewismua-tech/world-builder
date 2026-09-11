@@ -117,89 +117,54 @@ export async function GET(req: Request) {
     So: any world that has ever had an issue is no longer this job's business.
   */
   /*
-    ASKED OF POSTGRES, NOT DE-DUPLICATED IN JAVASCRIPT.
+    ONE QUESTION, ASKED OF POSTGRES.
 
-    This used to select every row of wb_daily_items and build the set here.
-    PostgREST caps a response at its max-rows setting, and the cap arrives with
-    no error and no flag — the array is simply short. At five rows an issue and
-    twenty-one live worlds, that ceiling is about ten weeks away, and the
-    failure it produces is the expensive kind: worlds that DO have papers fall
-    out of the set, read as unwritten, and get researched again — every hour,
-    at roughly thirty-five cents a run, for papers nobody asked for.
+    This used to download three whole tables — every world, every area, every
+    attempt — and do the filtering in JavaScript. Each of those is an uncapped
+    read against a thousand-row response ceiling, and each grows with the
+    number of students.
 
-    A distinct query returns twenty rows instead of thousands and is exact at
-    any size. If it fails, the run stops rather than guessing: an empty `done`
-    set means "nobody has a paper", which would put every world on the list.
+    wb_areas was the one that would have bitten hardest: about seven rows a
+    world, so it crosses the cap around a hundred and forty worlds. Past that,
+    the "was this world edited since it last failed?" map silently loses
+    entries, and a world it has not heard of reads as given-up — so worlds
+    would stop being retried permanently, at exactly the scale where nobody
+    could notice one seller's paper had quietly stopped arriving.
+
+    The filtering lives in SQL now and the route receives a short list of ids.
+
+    Paused and half-built worlds are excluded in there too. Setup can be
+    abandoned partway — somebody signs up, names a world, closes the tab — and
+    an unestablished world has no areas, so writing it always fails. Left in,
+    those failures eat the run's budget six times each, and on a launch
+    morning the abandoned worlds crowd out the finished ones.
   */
-  const { data: written, error: writtenErr } =
-    await db.rpc("wb_worlds_with_issues");
-  if (writtenErr)
-    return NextResponse.json(
-      { error: `could not read which worlds have issues: ${writtenErr.message}` },
-      { status: 500 },
+  let waiting: { id: string }[];
+
+  if (only) {
+    waiting = [{ id: only }];
+  } else {
+    const { data: need, error: needErr } = await db.rpc(
+      "wb_worlds_needing_issue",
+      { wk: week, give_up: GIVE_UP_AFTER },
     );
-  const done = new Set(
-    ((written ?? []) as { world_id: string }[]).map((r) => r.world_id),
-  );
+    if (needErr)
+      return NextResponse.json(
+        { error: `could not pick worlds: ${needErr.message}` },
+        { status: 500 },
+      );
+    waiting = ((need ?? []) as { world_id: string }[]).map((r) => ({
+      id: r.world_id,
+    }));
+  }
 
   const { data: attempts } = await db
     .from("wb_daily_attempts")
-    .select("world_id, tries, last_tried")
-    .eq("issue_date", week);
+    .select("world_id, tries")
+    .eq("issue_date", week)
+    .limit(1000);
   const tried = new Map(
-    (attempts ?? []).map((r) => [
-      r.world_id as string,
-      { n: Number(r.tries), at: r.last_tried as string },
-    ]),
-  );
-
-  /*
-    A world edited since it last failed gets a clean slate. Adding the areas
-    that were missing is the fix, and the software should notice rather than
-    make somebody wait out a week for a problem they already solved.
-  */
-  const { data: touched } = await db
-    .from("wb_areas")
-    .select("world_id, created_at");
-  const newestArea = new Map<string, string>();
-  for (const a of touched ?? []) {
-    const id = a.world_id as string;
-    const at = a.created_at as string;
-    if (!newestArea.has(id) || at > (newestArea.get(id) as string))
-      newestArea.set(id, at);
-  }
-
-  const givenUp = (id: string) => {
-    const t = tried.get(id);
-    if (!t || t.n < GIVE_UP_AFTER) return false;
-    const changed = newestArea.get(id);
-    /* Changed since the last failure? Then those failures are stale. */
-    return !(changed && changed > t.at);
-  };
-
-  /*
-    A paused world is not being worked on; it does not need a paper.
-
-    Nor does a half-built one. Setup can be abandoned partway — somebody signs
-    up, names a world, and closes the tab — and an unestablished world has no
-    areas, so writing it always fails. Left in, those failures would eat the
-    run's budget six times each before giving up, and on a launch morning
-    where a couple of hundred people start setup and some do not finish, the
-    abandoned worlds would crowd out the finished ones. Throughput here is two
-    or three an hour; it belongs to people who actually built something.
-  */
-  let q = db
-    .from("wb_worlds")
-    .select("id, name, user_id")
-    .neq("paused", true)
-    .eq("established", true);
-  if (only) q = db.from("wb_worlds").select("id, name, user_id").eq("id", only);
-  const { data: worlds, error } = await q;
-  if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const waiting = (worlds ?? []).filter(
-    (w) => !done.has(w.id as string) && (only !== null || !givenUp(w.id as string)),
+    (attempts ?? []).map((r) => [r.world_id as string, Number(r.tries)]),
   );
 
   const report: { world: string; wrote?: number; skipped?: string; error?: string }[] = [];
@@ -227,7 +192,7 @@ export async function GET(req: Request) {
         {
           world_id: worldId,
           issue_date: week,
-          tries: (tried.get(worldId)?.n ?? 0) + 1,
+          tries: (tried.get(worldId) ?? 0) + 1,
           last_error: why.slice(0, 300),
           last_tried: new Date().toISOString(),
         },
@@ -238,8 +203,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     week,
-    worlds: (worlds ?? []).length,
-    alreadyWritten: done.size,
+    needingIssue: waiting.length,
     stillWaiting: Math.max(0, waiting.length - limit) + outOfTime,
     leftForNextRun: outOfTime,
     ran: report,

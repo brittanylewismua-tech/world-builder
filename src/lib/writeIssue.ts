@@ -20,13 +20,13 @@ import type { World } from "@/lib/world";
  * one most likely to be missing.
  */
 
-/** Monday of the current week, in UTC. Matches weekStartISO on the client. */
-export function weekStart(): string {
-  const d = new Date();
-  const day = (d.getUTCDay() + 6) % 7; // Monday = 0
-  d.setUTCDate(d.getUTCDate() - day);
-  return d.toISOString().slice(0, 10);
-}
+/*
+  The comment here used to read "Matches weekStartISO on the client." It did
+  not. The client worked in local time and this works in UTC, and the two
+  disagreed for part of every week for every seller east of UTC. Both now
+  import the same function, which is the only way that claim can be true.
+*/
+export { weekStart } from "@/lib/week";
 
 type Db = ReturnType<typeof serviceDb>;
 

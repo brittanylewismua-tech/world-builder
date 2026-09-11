@@ -92,11 +92,7 @@ export async function hideRest(id: string) {
   await supabase.from("wb_daily_rest").update({ hidden: true }).eq("id", id);
 }
 
-export function todayISO() {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 10);
-}
+export { todayISO } from "./week";
 
 /**
  * THE PAPER COMES OUT ONCE A WEEK.
@@ -112,15 +108,14 @@ export function todayISO() {
  *
  * An issue is filed under the MONDAY of its week, so every read during the
  * week lands on the same issue and it simply stays up.
+ *
+ * WHICH MONDAY IS NOT DECIDED HERE ANY MORE. This computed the seller's LOCAL
+ * Monday while the server that writes the issue computed the UTC one, so for
+ * anybody east of UTC the page spent part of every week looking for a paper
+ * filed under a date that was never used — finding nothing, calling the week
+ * unwritten, and offering to buy it again. One definition now, in lib/week.
  */
-export function weekStartISO(from = new Date()) {
-  const d = new Date(from);
-  d.setHours(0, 0, 0, 0);
-  // getDay(): 0 = Sunday. Shift so Monday starts the week.
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 10);
-}
+export { weekStart as weekStartISO } from "./week";
 
 export async function loadIssue(
   worldId: string,
@@ -201,19 +196,33 @@ export async function generateIssue(
       .eq("issue_date", date);
     offset = count ?? 0;
   } else {
-    // A plain rerun replaces, so it cannot double the issue. The delete only
-    // happens after the model has already answered, so a failed run never
-    // costs the seller the issue they had.
-    await supabase
-      .from("wb_daily_items")
-      .delete()
-      .eq("world_id", world.id)
-      .eq("issue_date", date);
-    await supabase
-      .from("wb_daily_rest")
-      .delete()
-      .eq("world_id", world.id)
-      .eq("issue_date", date);
+    /*
+      A plain rerun replaces, so it cannot double the issue. The delete only
+      happens after the model has already answered, so a failed run never
+      costs the seller the issue they had.
+
+      AND THE DELETE IS CHECKED, because the consequence of it failing quietly
+      is the thing it exists to prevent. The insert below runs regardless, so
+      a rejected delete does not leave the old issue standing — it leaves the
+      old issue standing AND the new one underneath it, ten items long, half
+      of them last week's. The seller sees a doubled paper and no error.
+    */
+    const [{ error: delItems }, { error: delRest }] = await Promise.all([
+      supabase
+        .from("wb_daily_items")
+        .delete()
+        .eq("world_id", world.id)
+        .eq("issue_date", date),
+      supabase
+        .from("wb_daily_rest")
+        .delete()
+        .eq("world_id", world.id)
+        .eq("issue_date", date),
+    ]);
+    if (delItems || delRest)
+      throw new Error(
+        "This week's issue could not be cleared, so the new one was not saved. Nothing was lost — try again.",
+      );
   }
 
   const rows = j.items.map((it, i) => ({

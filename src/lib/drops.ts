@@ -357,10 +357,31 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
       await ensureNextExists(current);
       break;
     }
-    await supabase
+    /*
+      THE ONE WRITE IN THIS LOOP THAT MUST NOT FAIL QUIETLY.
+
+      Freezing is what ends the iteration: the drop stops being overdue, so
+      the next pass moves on. If the update is rejected — a denied policy, a
+      dropped connection — the reload returns the same unfrozen drop, it is
+      still overdue, and the loop goes round again on identical state. That is
+      a spin with a write in it, not a catch-up, and it was invisible because
+      nobody read the error.
+
+      Stop and say so. A seller who has to press again is a much smaller
+      problem than a page that silently hammers the database.
+    */
+    const { error: freezeErr } = await supabase
       .from("wb_drops")
       .update({ frozen_at: new Date().toISOString(), status: "live" })
       .eq("id", current.id);
+    if (freezeErr) {
+      report("studio", freezeErr.message, {
+        worldId: world.id,
+        dropId: current.id,
+        at: "freeze",
+      });
+      break;
+    }
     await ensureNextExists(current);
     changed = true;
     drops = await loadDrops(world.id);
