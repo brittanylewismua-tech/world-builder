@@ -1181,14 +1181,56 @@ ${field || "(nothing came back)"}`
       Only the third costs nothing extra in searches, and the first two only
       run again on a day that would otherwise have been empty.
     */
-    let out = await judge(notes, false);
+    /*
+      SHORT IS A REASON TO GO AND LOOK AGAIN. EMPTY WAS TOO LATE.
 
-    if (!out.items.length && TWO_STAGE) {
+      Every rung of this ladder tested `!out.items.length`, so it only ever ran
+      for a completely blank issue — and a paper that came back with three
+      items was accepted as finished. The whole point of TARGET_ITEMS is that
+      the paper is five. A seller opened her issue, counted three, and was
+      right to ask what had gone wrong, because something had: the escalation
+      built to fix exactly that never fired.
+
+      So the test is now "short", and each pass tops up the last rather than
+      replacing it — a second read that finds two more should add them to the
+      three already in hand, not throw them away and start again. Deduped on
+      the headline, because the judge sees all the notes each time and will
+      cheerfully re-publish something it already chose.
+
+      It can still come back short. Some weeks the material honestly is not
+      there and the alternative is filler, which is worse than a thin paper.
+      But it will have gone to all three rungs to find out first.
+    */
+    type Published = Awaited<ReturnType<typeof judge>>["items"][number];
+    const collected: Published[] = [];
+    const already = new Set<string>();
+    const take = (found: { items?: Published[] }) => {
+      for (const item of found.items ?? []) {
+        const key = (item.headline ?? "").trim().toLowerCase();
+        if (!key || already.has(key)) continue;
+        already.add(key);
+        collected.push(item);
+      }
+    };
+
+    let out = await judge(notes, false);
+    take(out);
+    let also = out.also ?? [];
+
+    if (collected.length < TARGET_ITEMS && TWO_STAGE) {
       notes = `${notes}\n\n${await sweep(widerPrompt)}`.trim();
       out = await judge(notes, false);
+      take(out);
+      if ((out.also ?? []).length > also.length) also = out.also ?? [];
     }
 
-    if (!out.items.length && TWO_STAGE) out = await judge(notes, true);
+    if (collected.length < TARGET_ITEMS && TWO_STAGE) {
+      out = await judge(notes, true);
+      take(out);
+      if ((out.also ?? []).length > also.length) also = out.also ?? [];
+    }
+
+    out = { items: collected, also };
 
     if (!out.items.length)
       return NextResponse.json(
