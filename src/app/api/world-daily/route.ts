@@ -91,7 +91,21 @@ It is the best source you have and the easiest to skip. Three reasons:
 So: search "<area> reddit", "site:reddit.com <area>", the subreddit names themselves, and the phrasings people would use inside those communities. Read the top comments, not just the post. WRITE THE SCORE DOWN when you can see it — "[4.2k upvotes]" next to a quote is the most useful thing you can hand over, because it is the difference between a phrase somebody said and a phrase a community agreed with.
 
 Then the rest: TikTok, Reels, Shorts and their comment sections.`;
-const TARGET_ITEMS = 5;
+/*
+  FIVE WAS NEVER THE POINT, AND IT WAS NOT ASKED FOR.
+
+  The paper is as long as the week deserves. Five started as the size of a
+  normal front page and hardened into a ceiling — the model was told to publish
+  five, the escalation only ran on an empty issue, and the result was sliced to
+  five on the way out. A week that turned up nine good things printed five and
+  binned four.
+
+  It is a FLOOR now, not a ceiling: keep reading until there are at least this
+  many, then print everything that passed. Nothing that earned its place gets
+  cut for tidiness, and everything real that did not make the paper still goes
+  in the list underneath, which has never had a limit and should be long.
+*/
+const ENOUGH_ITEMS = 5;
 
 /**
  * WORLD DAILY
@@ -288,7 +302,7 @@ A worked example, so the bar is unmistakable:
     Why: a garment. The seller does not make garments.
 
 HOW TO WRITE IT
-- Publish ${TARGET_ITEMS}. That is the size of the paper, and on a normal week the reading turns up more than five things that pass the test, not fewer — the job is choosing the best five, not proving five exist.
+- Publish everything that passes the test. There is no quota and no ceiling: ${ENOUGH_ITEMS} is a normal week, nine is a good one, and printing nine when you found nine is the job. Never pad to reach a number and never cut something that earned its place to keep the paper tidy.
 - Cut below five only when the material genuinely is not there. Two strong items beat five with three fillers, and padding is a real failure. But so is the opposite, and it is the more common one here: refusing good material because it is not the single best thing you saw. A phrase real people are repeating passes. It does not have to be remarkable.
 - Never come back with nothing. Across every area, over a whole week of live culture, there is always something; an empty issue is a failed search, not a high standard.
 - AT MOST TWO ITEMS FROM ANY ONE AREA. This is a paper about a whole world, and five items about the same subject is not an issue, it is a single article cut into pieces. A seller reading it should recognise the range of what they sell, not one corner of it enlarged.
@@ -669,7 +683,7 @@ Start on Reddit: "<area> reddit", "site:reddit.com <area>", and the subreddits t
 
 Search the way someone inside that culture talks, never the way a marketer or journalist would. An area name plus "trends" returns industry articles and fabric reports, which is exactly the material this seller cannot use. You are hunting for language and imagery.
 
-Then write the newspaper. ${TARGET_ITEMS} items unless the material honestly is not there — never none, and never fewer just to seem selective. Every item must change what somebody would print on a shirt.
+Then write the newspaper. Every item that passes, however many that is — around ${ENOUGH_ITEMS} on a normal week, more when the week gave you more. Never none, never padded, and never trimmed to a number. Every item must change what somebody would print on a shirt.
 
 Then fill in "also" with everything else real you found and did not print — the phrases, moments, jokes and images that did not make the issue. Each one needs the exact words and the page they came from. This is not padding and not a summary: it is the rest of what you read, kept because the seller may see something in it that you did not. This is the bulk of your output, not an afterthought. You read dozens of pages to write five items; almost everything you saw and passed over belongs here. If the notes contain thirty real quoted things and you printed five, this list has about twenty-five in it — coming back with seven means you threw away work the seller has already paid for.
 
@@ -1186,8 +1200,8 @@ ${field || "(nothing came back)"}`
 
       Every rung of this ladder tested `!out.items.length`, so it only ever ran
       for a completely blank issue — and a paper that came back with three
-      items was accepted as finished. The whole point of TARGET_ITEMS is that
-      the paper is five. A seller opened her issue, counted three, and was
+      items was accepted as finished. The floor is ENOUGH_ITEMS, and a paper
+      under it means the reading was thin, not that the week was. A seller opened her issue, counted three, and was
       right to ask what had gone wrong, because something had: the escalation
       built to fix exactly that never fired.
 
@@ -1217,14 +1231,14 @@ ${field || "(nothing came back)"}`
     take(out);
     let also = out.also ?? [];
 
-    if (collected.length < TARGET_ITEMS && TWO_STAGE) {
+    if (collected.length < ENOUGH_ITEMS && TWO_STAGE) {
       notes = `${notes}\n\n${await sweep(widerPrompt)}`.trim();
       out = await judge(notes, false);
       take(out);
       if ((out.also ?? []).length > also.length) also = out.also ?? [];
     }
 
-    if (collected.length < TARGET_ITEMS && TWO_STAGE) {
+    if (collected.length < ENOUGH_ITEMS && TWO_STAGE) {
       out = await judge(notes, true);
       take(out);
       if ((out.also ?? []).length > also.length) also = out.also ?? [];
@@ -1244,7 +1258,8 @@ ${field || "(nothing came back)"}`
       everything else real sits behind it.
     */
     delivered = true;
-    const items = out.items.slice(0, TARGET_ITEMS);
+    /* No slice. Everything that passed the judge is the paper. */
+    const items = out.items;
 
     /*
       THE ISSUE IS SAVED HERE, BY THE SIDE THAT MADE IT.
