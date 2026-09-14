@@ -7,7 +7,6 @@ import Shell from "@/components/Shell";
 import { Page, PageHeader, ErrorNote } from "@/components/ui";
 import {
   SubNicheInput,
-  VisualCalibrationInput,
   AreasSuggest,
 } from "@/components/world-inputs";
 import { worldActions } from "@/lib/worldActions";
@@ -198,40 +197,10 @@ function ProfileBody({ world }: { world: World }) {
 
       <Group title="What feeds it">
         <Module
-          title="Your eye"
-          summary={`${world.visualReferences.length} reference${world.visualReferences.length === 1 ? "" : "s"}`}
-          id="visual"
-          open={open === "visual"}
-          onToggle={() => toggle("visual")}
-          preview={
-            world.visualReferences.length > 0 && (
-              <div className="flex -space-x-1.5">
-                {world.visualReferences.slice(0, 4).map((r) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={r.id}
-                    src={r.src}
-                    alt=""
-                    className="h-8 w-8 rounded-lg border-2 border-white object-cover"
-                  />
-                ))}
-              </div>
-            )
-          }
-        >
-          <VisualCalibrationInput
-            refs={world.visualReferences}
-            onAdd={a.addVisualReferences}
-            onRemove={a.removeVisualReference}
-            onReorder={a.reorderVisualReferences}
-          />
-        </Module>
-
-        <Module
-          title="What gets watched"
+          title="What your World News reads"
           summary={
             world.areas.length
-              ? `${world.areas.length} watched daily`
+              ? `${world.areas.length} searched every morning`
               : "None yet"
           }
           id="areas"

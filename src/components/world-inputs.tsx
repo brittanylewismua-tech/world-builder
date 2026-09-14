@@ -308,181 +308,6 @@ export function SubNicheInput({
 /* R — VISUAL CALIBRATION                                              */
 /* ------------------------------------------------------------------ */
 
-export function VisualCalibrationInput({
-  refs,
-  onAdd,
-  onRemove,
-  onReorder,
-  hideNote = false,
-}: {
-  refs: VisualReference[];
-  onAdd: (files: File[]) => Promise<void>;
-  onRemove: (ref: VisualReference) => Promise<void>;
-  /** Absent during onboarding, where arranging is premature. */
-  onReorder?: (next: VisualReference[]) => Promise<void>;
-  /** Onboarding already says this above the card; do not say it twice. */
-  hideNote?: boolean;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [drag, setDrag] = useState<number | null>(null);
-  const [over, setOver] = useState<number | null>(null);
-
-  /*
-    What leads the set says as much as what is in it. Ordering by upload time
-    meant the first thing a seller ever grabbed spoke for their whole eye,
-    permanently.
-  */
-  async function move(from: number, to: number) {
-    if (!onReorder || to < 0 || to >= refs.length || from === to) return;
-    const next = [...refs];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    await onReorder(next);
-  }
-
-  async function land(to: number) {
-    const from = drag;
-    setDrag(null);
-    setOver(null);
-    if (from === null) return;
-    await move(from, to);
-  }
-
-  async function handle(files: FileList | null) {
-    if (!files?.length) return;
-    setBusy(true);
-    await onAdd(Array.from(files).filter((f) => f.type.startsWith("image/")));
-    setBusy(false);
-    if (input.current) input.current.value = "";
-  }
-
-  return (
-    <div>
-      {!hideNote && (
-        <Note>
-          Around {SUGGESTED_VISUAL_REFERENCES} existing designs in this world
-          whose creative style you love and could imagine designing alongside.
-          Not proof of fluency, not demand evidence, and not designs anything
-          will copy — they tell the AI what you are picturing when you picture
-          this world.
-        </Note>
-      )}
-
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-        {refs.map((r, i) => (
-          <div
-            key={r.id}
-            draggable={!!onReorder}
-            onDragStart={() => setDrag(i)}
-            onDragEnd={() => {
-              setDrag(null);
-              setOver(null);
-            }}
-            onDragOver={(e) => {
-              if (drag === null || drag === i) return;
-              e.preventDefault();
-              setOver(i);
-            }}
-            onDragLeave={() => setOver((o) => (o === i ? null : o))}
-            onDrop={(e) => {
-              e.preventDefault();
-              void land(i);
-            }}
-            className={`group relative aspect-square transition ${
-              onReorder ? "cursor-grab active:cursor-grabbing" : ""
-            } ${drag === i ? "opacity-40" : ""} ${
-              over === i && drag !== null
-                ? "rounded-xl ring-2 ring-accent ring-offset-2"
-                : ""
-            }`}
-          >
-            <Zoomable
-              src={r.src ?? ""}
-              className="h-full w-full rounded-xl border border-black/12 object-cover"
-            />
-            {/*
-              Same reasoning as the drop board: dragging is the quick path,
-              never the only one. Shown on focus as well as hover, because a
-              control at zero opacity is still in the tab order.
-            */}
-            <div className="absolute inset-x-0 bottom-0 flex overflow-hidden rounded-b-xl opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-              {onReorder && (
-                <button
-                  onClick={() => void move(i, i - 1)}
-                  disabled={i === 0}
-                  aria-label={`Move this reference earlier`}
-                  className="bg-black/80 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-black disabled:opacity-30"
-                >
-                  ←
-                </button>
-              )}
-              <button
-                onClick={() => onRemove(r)}
-                aria-label="Remove this reference"
-                className="flex-1 border-x border-white/20 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
-              >
-                Remove
-              </button>
-              {onReorder && (
-                <button
-                  onClick={() => void move(i, i + 1)}
-                  disabled={i === refs.length - 1}
-                  aria-label={`Move this reference later`}
-                  className="bg-black/80 px-2 py-1.5 text-[11px] font-bold text-white hover:bg-black disabled:opacity-30"
-                >
-                  →
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-
-        <button
-          onClick={() => input.current?.click()}
-          disabled={busy}
-          className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-black/25 text-ink-3 transition hover:border-accent hover:bg-accent-soft hover:text-ink disabled:opacity-40"
-        >
-          <span className="text-xl leading-none">{busy ? "…" : "+"}</span>
-          <span className="text-[11px] font-medium">
-            {busy ? "Uploading" : "Add"}
-          </span>
-        </button>
-      </div>
-
-      <input
-        ref={input}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={(e) => handle(e.target.files)}
-        className="hidden"
-      />
-
-      <p className="t-small mt-3 text-ink-3">
-        {refs.length} reference{refs.length === 1 ? "" : "s"}. Replace or add
-        whenever your eye changes.
-        {onReorder &&
-          refs.length > 1 &&
-          " Drag, or use the arrows on each one, to change what leads."}
-      </p>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* ACTIVE WORLD AREAS                                                  */
-/* ------------------------------------------------------------------ */
-
-/**
- * Areas, proposed rather than demanded.
- *
- * A seller on day one cannot answer "what should I watch every morning?" —
- * that is the fluency the product is supposed to build, not its entry fee.
- * Their validated keywords already imply the answer, so the AI reads those
- * and offers a starting set. Every one is removable and they can add their
- * own, so the seller still decides; they just are not staring at a blank box.
- */
 export function AreasSuggest({
   world,
   onAdd,
@@ -543,9 +368,10 @@ export function AreasSuggest({
   return (
     <div>
       <Note>
-        Read from the keywords you just entered. These are starting points, not
-        decisions — take out anything that is not your customer, add anything
-        that is. You can change them whenever you like.
+        This is what your World News reads: one search per area every morning,
+        and the issue is written out of what comes back. Read from the
+        keywords you entered — starting points, not decisions. Take out
+        anything that is not your customer, add anything that is.
       </Note>
 
       {/* what is actually being watched */}
@@ -597,8 +423,26 @@ export function AreasSuggest({
 
       {err && <p className="t-small mt-2 text-ink-2">{err}</p>}
 
+      {/*
+        SUGGESTIONS LEAD, TYPING FOLLOWS.
+
+        An empty box was the prominent control and "suggest some more" was a
+        small underlined link at the bottom. That is backwards: what makes a
+        good area is not obvious, the suggester has been taught what separates
+        one from a bad one, and a seller staring at a blank field will write
+        the name of her niche rather than the parts of her customer's world.
+
+        The box stays, because she knows things about her customer that no
+        model does — it just no longer goes first.
+      */}
       <div className="mt-5 border-t border-black/10 pt-4">
-        <p className="eyebrow mb-2 text-ink-3">Or add your own</p>
+        {!thinking && (
+          <button onClick={suggest} className="btn btn-primary w-full justify-center">
+            Suggest more areas to watch
+          </button>
+        )}
+
+        <p className="eyebrow mb-2 mt-4 text-ink-3">Or add one yourself</p>
         <div className="flex gap-2">
           <input
             value={draft}
@@ -610,19 +454,11 @@ export function AreasSuggest({
           <button
             onClick={addOwn}
             disabled={!draft.trim()}
-            className="btn btn-primary"
+            className="btn btn-ghost"
           >
             Add
           </button>
         </div>
-        {!thinking && (
-          <button
-            onClick={suggest}
-            className="t-small mt-3 text-ink-3 underline underline-offset-4 transition hover:text-ink"
-          >
-            Suggest some more
-          </button>
-        )}
       </div>
     </div>
   );
@@ -656,10 +492,11 @@ export function AreasInput({
   return (
     <div>
       <Note>
-        The parts of your customer&apos;s world you want watched every day. You
-        pick these, not the AI. A festival shop might watch festival fashion,
-        EDM culture, streetwear, nightlife, rave humor, festival beauty. Yours
-        will be different.
+        This is what your World News reads. Every morning it runs one search
+        per area and writes the issue out of what it finds — so this list is
+        tomorrow&apos;s paper. You pick them, not the AI. A festival shop might
+        watch festival fashion, EDM culture, streetwear, nightlife, rave humor,
+        festival beauty. Yours will be different.
       </Note>
 
       <div className="flex gap-2">

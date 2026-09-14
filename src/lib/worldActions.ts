@@ -52,14 +52,6 @@ export function worldActions(
         patch({ areas: world.areas.filter((a) => a.id !== id) });
       }),
 
-    addVisualReferences: (files: File[]) =>
-      guard(async () => {
-        const added: VisualReference[] = [];
-        for (const f of files) {
-          added.push(await api.addVisualReference(world.id, f));
-        }
-        patch({ visualReferences: [...world.visualReferences, ...added] });
-      }),
 
     setSubNicheNote: async (id: string, note: string) => {
       await api.setSubNicheNote(id, note);
@@ -70,26 +62,7 @@ export function worldActions(
       });
     },
 
-    reorderVisualReferences: async (next: VisualReference[]) => {
-      // Show the new arrangement immediately; it is a drag, it must feel live.
-      patch({ visualReferences: next });
-      try {
-        await api.reorderVisualReferences(next);
-      } catch (e) {
-        patch({ visualReferences: world.visualReferences });
-        onError(e instanceof Error ? e.message : "That order did not save.");
-      }
-    },
 
-    removeVisualReference: (ref: VisualReference) =>
-      guard(async () => {
-        await api.removeVisualReference(ref);
-        patch({
-          visualReferences: world.visualReferences.filter(
-            (r) => r.id !== ref.id,
-          ),
-        });
-      }),
 
     setAffinity: (affinity: World["affinity"]) =>
       guard(async () => {

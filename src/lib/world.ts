@@ -66,7 +66,6 @@ export const AFFINITY_QUESTIONS: {
 ];
 
 /**
- * R — visual calibration.
  * SPEC: "not proof of fluency... not demand evidence... not products the AI
  *        should copy." Style context only.
  */
@@ -97,7 +96,6 @@ export interface World {
   paused: boolean;
   subNiches: SubNiche[];
   areas: WorldArea[];
-  visualReferences: VisualReference[];
   /** How the seller has dressed their portal. */
   theme: Theme;
 }

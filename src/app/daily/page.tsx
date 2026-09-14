@@ -242,6 +242,8 @@ function DailyBody({ world }: { world: World }) {
   // The issue that is current right now — this week's, filed under its Monday.
   const today = weekStartISO();
   const [deriving, setDeriving] = useState(false);
+  /** A fetch is in flight, but the issue already on screen stays up. */
+  const [switching, setSwitching] = useState(false);
   const [date, setDate] = useState(today);
   const [items, setItems] = useState<DailyItem[] | null>(null);
   /* Everything the same reading found and the paper did not print. */
@@ -284,7 +286,18 @@ function DailyBody({ world }: { world: World }) {
   /* Back issues are paper only; the shops tab has nothing to show there. */
   const open = useCallback(
     async (d: string) => {
-      setItems(null);
+      /*
+        THE PAPER ON SCREEN STAYS ON SCREEN.
+
+        This cleared the issue before fetching the next one, so every visit and
+        every switch between issues emptied the page first and put it back a
+        moment later. On a slow request that is a blank newspaper, which reads
+        as "there is nothing this week" rather than "this is loading" — and
+        the one thing a newspaper must never do is go blank.
+
+        The previous issue stays up until the next one has actually arrived.
+      */
+      setSwitching(true);
       setTab("world");
       setDate(d);
       try {
@@ -296,7 +309,11 @@ function DailyBody({ world }: { world: World }) {
         setRest(more);
       } catch (e) {
         setErr(e instanceof Error ? e.message : "Could not load that issue.");
-        setItems([]);
+        /* Only empty the page if there was never anything on it. A failed
+           refresh must not take away the issue already being read. */
+        setItems((current) => current ?? []);
+      } finally {
+        setSwitching(false);
       }
     },
     [world.id],
@@ -363,6 +380,26 @@ function DailyBody({ world }: { world: World }) {
     An issue that exists is a fact about the database. Once this week appears
     in `dates`, nothing on this page offers to write it again until Monday.
   */
+  /*
+    A NEWER ISSUE IS AN OFFER, NOT AN INTERRUPTION.
+
+    The schedule can write a paper while somebody is reading last week's, and
+    replacing what is on screen underneath them is the rudest thing this page
+    could do. So the list of issue dates is re-read on a slow timer, and when
+    one turns up that is newer than the issue being read, a button appears at
+    the top. Nothing moves until it is pressed.
+  */
+  useEffect(() => {
+    const timer = setInterval(() => {
+      loadIssueDates(world.id).then(setDates).catch(() => {});
+    }, 120_000);
+    return () => clearInterval(timer);
+  }, [world.id]);
+
+  /* `dates` is newest first. */
+  const newest = dates[0];
+  const newerIssue = newest && newest > date ? newest : null;
+
   const publishedThisWeek = dates.includes(today);
   const loadFailed = publishedThisWeek && items?.length === 0;
 
@@ -442,6 +479,8 @@ function DailyBody({ world }: { world: World }) {
           */}
           <span className="t-small text-ink-3">
             {formatIssueDate(date)}
+            {/* The only sign that a fetch is happening. The paper stays put. */}
+            {switching && <span className="opacity-60"> · updating</span>}
             {date === today && (
               <span className="opacity-70">
                 {" "}
@@ -464,6 +503,15 @@ function DailyBody({ world }: { world: World }) {
         </h1>
         <span className="rule-accent mt-4" />
       </header>
+
+      {newerIssue && (
+        <button
+          onClick={() => void open(newerIssue)}
+          className="btn btn-primary mb-6 w-full justify-center"
+        >
+          A newer issue is ready — read {formatIssueDate(newerIssue)}
+        </button>
+      )}
 
       {/*
         THE SHOPS ARE A TAB, NOT A TAIL.

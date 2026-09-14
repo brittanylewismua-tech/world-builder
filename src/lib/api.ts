@@ -178,7 +178,7 @@ export async function loadWorld(): Promise<World | null> {
 
   if (!row) return null;
 
-  const [{ data: niches }, { data: areas }, { data: refs }] = await Promise.all([
+  const [{ data: niches }, { data: areas }] = await Promise.all([
     supabase
       .from("wb_sub_niches")
       .select("id, keyword, note")
@@ -189,21 +189,7 @@ export async function loadWorld(): Promise<World | null> {
       .select("id, name")
       .eq("world_id", row.id)
       .order("created_at"),
-    supabase
-      .from("wb_visual_refs")
-      .select("id, storage_path, position")
-      .eq("world_id", row.id)
-      // The seller's chosen order, with upload time only as a tiebreak.
-      .order("position")
-      .order("created_at"),
   ]);
-
-  const refRows = (refs ?? []) as {
-    id: string;
-    storage_path: string;
-    position: number;
-  }[];
-  const signed = await signMany(refRows.map((r) => r.storage_path));
 
   return {
     id: row.id,
@@ -228,11 +214,6 @@ export async function loadWorld(): Promise<World | null> {
     },
     subNiches: (niches ?? []) as World["subNiches"],
     areas: (areas ?? []) as World["areas"],
-    visualReferences: refRows.map((r) => ({
-      id: r.id,
-      path: r.storage_path,
-      src: signed[r.storage_path] ?? "",
-    })),
   };
 }
 

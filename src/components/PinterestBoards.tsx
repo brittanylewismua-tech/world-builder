@@ -23,7 +23,7 @@ import type { World } from "@/lib/world";
  * same.
  */
 
-type Destination = "calibration" | "research" | "reference";
+type Destination = "research" | "reference";
 type Lane = "visual" | "market";
 
 /*

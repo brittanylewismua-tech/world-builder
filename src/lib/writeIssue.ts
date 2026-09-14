@@ -321,7 +321,6 @@ async function loadWorld(db: Db, worldId: string): Promise<World> {
     name: (w.name as string) ?? "",
     areas: (areas ?? []).map((a) => ({ name: a.name as string })),
     subNiches: (niches ?? []).map((n) => ({ keyword: n.keyword as string })),
-    visualReferences: refs ?? [],
     affinity: (w.affinity as Record<string, number | null>) ?? {},
     slotsPerDrop: (w.slots_per_drop as number) ?? 0,
   } as unknown as World;

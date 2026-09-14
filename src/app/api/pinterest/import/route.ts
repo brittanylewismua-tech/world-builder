@@ -11,7 +11,6 @@ export const maxDuration = 300;
  * A pin is an image plus the words somebody attached to it, which is exactly
  * the shape of everything this product already holds. So a board becomes:
  *
- *   calibration — this is my eye. Lands in Visual Calibration.
  *   research    — this is for the drop I am building next. Lands on its board.
  *   reference   — this is what shops in my world look like. Lands on the
  *                 board too, but marked as reference rather than as the
@@ -39,7 +38,7 @@ export async function POST(req: Request) {
     worldId?: string;
     boardId?: string;
     boardName?: string;
-    destination?: "calibration" | "research" | "reference";
+    destination?: "research" | "reference";
     dropId?: string | null;
     /*
       Which lane the whole board lands in. Sellers already keep thematic
@@ -94,7 +93,7 @@ export async function POST(req: Request) {
       belongs to a drop. Created here if this is the first thing to arrive.
     */
     let targetBoard: string | null = null;
-    if (destination !== "calibration") {
+    {
       if (!body.dropId)
         return NextResponse.json(
           { error: "No drop to attach that board to." },
@@ -119,7 +118,7 @@ export async function POST(req: Request) {
 
     // Where in storage. The first path segment must be the owner's user id,
     // because that is what the storage policies key off.
-    const folder = destination === "calibration" ? "calibration" : "board";
+    const folder = "board";
 
     let imported = 0;
     const failures: string[] = [];
@@ -136,49 +135,36 @@ export async function POST(req: Request) {
           .upload(path, bytes, { contentType: "image/jpeg", upsert: false });
         if (upErr) throw new Error(upErr.message);
 
-        if (destination === "calibration") {
-          const { count } = await db
-            .from("wb_visual_refs")
-            .select("id", { count: "exact", head: true })
-            .eq("world_id", worldId);
-          const { error } = await db.from("wb_visual_refs").insert({
-            world_id: worldId,
-            storage_path: path,
-            position: count ?? 0,
-          });
-          if (error) throw new Error(error.message);
-        } else {
-          // The seller's own words about the pin are worth more than the
-          // title Pinterest scraped off the source page.
-          /*
-            Something brought in as "other people's shops" is bestsellers by
-            definition — asking again would be asking the same question twice.
-          */
-          const lane =
-            destination === "reference"
-              ? ["market"]
-              : typeof body.lane === "string" &&
-                  ["visual", "market"].includes(body.lane)
-                ? [body.lane]
-                : [];
-          const note = [pin.title, pin.description, pin.altText]
-            .map((t) => t.trim())
-            .filter(Boolean)
-            .join(" — ")
-            .slice(0, 400);
-          const { error } = await db.from("wb_board_items").insert({
-            world_id: worldId,
-            board_id: targetBoard,
-            kind: "image",
-            storage_path: path,
-            original_name: pin.title?.slice(0, 120) || "Pin",
-            source_url: pin.link,
-            source_label: destination === "reference" ? "reference" : "pinterest",
-            sections: lane,
-            note,
-          });
-          if (error) throw new Error(error.message);
-        }
+        // The seller's own words about the pin are worth more than the
+        // title Pinterest scraped off the source page.
+        /*
+          Something brought in as "other people's shops" is bestsellers by
+          definition — asking again would be asking the same question twice.
+        */
+        const lane =
+          destination === "reference"
+            ? ["market"]
+            : typeof body.lane === "string" &&
+                ["visual", "market"].includes(body.lane)
+              ? [body.lane]
+              : [];
+        const note = [pin.title, pin.description, pin.altText]
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .join(" — ")
+          .slice(0, 400);
+        const { error } = await db.from("wb_board_items").insert({
+          world_id: worldId,
+          board_id: targetBoard,
+          kind: "image",
+          storage_path: path,
+          original_name: pin.title?.slice(0, 120) || "Pin",
+          source_url: pin.link,
+          source_label: destination === "reference" ? "reference" : "pinterest",
+          sections: lane,
+          note,
+        });
+        if (error) throw new Error(error.message);
 
         await db
           .from("wb_imported_pins")

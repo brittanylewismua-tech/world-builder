@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     .from("wb_pin_sources")
     .select("board_id, board_name, destination, drop_id")
     .eq("world_id", worldId)
-    .neq("destination", "calibration");
+    ;
 
   const feeding = (sources ?? []).filter(
     (s) => !dropId || !s.drop_id || s.drop_id === dropId,
