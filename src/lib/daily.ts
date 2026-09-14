@@ -176,16 +176,40 @@ export async function generateIssue(
     coveredForWorld(world.id),
   ]);
 
+  /*
+    WAIT LONGER THAN THE SERVER IS ALLOWED TO TAKE.
+
+    The default was 150 seconds. The route is allowed 300 and a real read over
+    seven areas routinely uses more than 150 — so the browser hung up on work
+    that was still running, every time, and reported "that took too long" for
+    a request that went on to succeed without it. Three attempts, three
+    finished issues, three charges, nothing saved.
+
+    The ceiling now sits above the route's own, so whatever ends the request
+    is the server answering rather than the browser walking away.
+  */
   const j = await askAI<{
     items: Omit<DailyItem, "id">[];
     also?: Omit<DailyRest, "id">[];
+    saved?: boolean;
   }>("/api/world-daily", {
     worldName: world.name,
     areas: world.areas.map((a) => a.name),
     subNiches: world.subNiches.map((s) => s.keyword),
     memory,
     covered,
-  });
+    /* So the route can write the issue itself and hanging up cannot lose it. */
+    worldId: world.id,
+    issueDate: date,
+    append,
+  }, { timeoutMs: 320_000 });
+
+  /*
+    Already on disk, written by the side that made it. Saving again here would
+    delete the issue that just landed and put an identical one back, which is
+    two more chances to fail for no gain.
+  */
+  if (j.saved) return loadIssue(world.id, date);
 
   let offset = 0;
   if (append) {

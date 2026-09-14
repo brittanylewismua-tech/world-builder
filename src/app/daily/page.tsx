@@ -396,6 +396,35 @@ function DailyBody({ world }: { world: World }) {
     return () => clearInterval(timer);
   }, [world.id]);
 
+  /*
+    AN ISSUE THAT EXISTS IS AN ISSUE THAT GETS SHOWN.
+
+    "This week's issue has already been written" over an empty page is the
+    worst thing this screen can say: it is both true and useless, and it has
+    taken away the button that would have fixed it. It happens whenever the
+    issue lands after this page last looked — the overnight job writing it, or
+    a request whose research finished after the browser stopped listening.
+
+    The list of dates is polled anyway. If it reports an issue for the week on
+    screen and this page is holding nothing, the page was simply looking
+    before it existed. Fetch it rather than announcing the problem.
+  */
+  useEffect(() => {
+    if (!dates.includes(date)) return;
+    if (items === null || items.length > 0 || switching) return;
+    let alive = true;
+    loadIssue(world.id, date)
+      .then(async (got) => {
+        if (!alive || !got.length) return;
+        setItems(got);
+        setRest(await loadRest(world.id, date).catch(() => []));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [world.id, date, dates, items, switching]);
+
   /* `dates` is newest first. */
   const newest = dates[0];
   const newerIssue = newest && newest > date ? newest : null;
@@ -646,7 +675,9 @@ function DailyBody({ world }: { world: World }) {
           action={
             date === today && dates.length > 0 && !publishedThisWeek ? (
               <button
+                disabled={writing}
                 onClick={async () => {
+                  if (writing) return;
                   setWriting(true);
                   setErr("");
                   try {
@@ -663,12 +694,36 @@ function DailyBody({ world }: { world: World }) {
                     /* The shop section is a sibling; tell it to look again. */
                     setNewsKey((n) => n + 1);
                   } catch (e) {
-                    /* A failed run costs nothing — the allowance is returned. */
-                    setErr(
-                      e instanceof Error
-                        ? e.message
-                        : "That did not finish. Nothing was used up; try again.",
+                    /*
+                      BEFORE REPORTING A FAILURE, CHECK WHETHER IT FAILED.
+
+                      The research runs on the server and is written there. A
+                      browser that loses the connection, times out, or is left
+                      for a moment on a sleeping laptop learns nothing about
+                      whether the work finished — and this used to take that
+                      silence as proof of failure, tell the seller it had not
+                      worked, and leave a finished issue sitting in the
+                      database unread.
+
+                      So look. If the paper is there, it worked, whatever the
+                      request did.
+                    */
+                    const landed = await loadIssue(world.id, today).catch(
+                      () => [] as DailyItem[],
                     );
+                    if (landed.length) {
+                      setItems(landed);
+                      setRest(await loadRest(world.id, today).catch(() => []));
+                      setDates(await loadIssueDates(world.id).catch(() => dates));
+                      setNewsKey((n) => n + 1);
+                      setErr("");
+                    } else {
+                      setErr(
+                        e instanceof Error
+                          ? e.message
+                          : "That did not finish. Nothing was used up; try again.",
+                      );
+                    }
                   } finally {
                     setWriting(false);
                   }

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { admit, meter, refund } from "@/lib/guard";
+import { createClient } from "@supabase/supabase-js";
+import { admit, meter, refund, type Caller } from "@/lib/guard";
 import { noteFailure } from "@/lib/noteFailure";
 import { normalise, repairSource, usableSource } from "@/lib/sources";
 
@@ -453,6 +454,109 @@ interface Body {
   memory?: string;
   /** Every page already cited to this seller. Citing one drops the item. */
   covered?: string[];
+  /*
+    WHO THIS IS FOR AND WHICH WEEK — so the route can save it itself.
+
+    Absent on older callers, in which case nothing is saved here and the
+    client writes it exactly as before.
+  */
+  worldId?: string;
+  issueDate?: string;
+  /** A rerun replaces the week; an append adds to it. */
+  append?: boolean;
+}
+
+
+const SB_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  "https://ywncfltxrnrchicjwcse.supabase.co";
+const SB_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_KEY ||
+  "sb_publishable_1dP18eUzIVckldFdIR2w7Q_6clKwTmu";
+
+/**
+ * WRITE THE ISSUE DOWN, AS THE SELLER, BEFORE ANSWERING.
+ *
+ * Uses the caller's own token so row-level security applies exactly as it does
+ * from the browser — this grants nothing the seller did not already have, it
+ * only moves the write to the side of the wire that is still connected.
+ *
+ * The overnight job has no token and keeps writing the way it always did.
+ *
+ * Returns false when it did not save, and false is a normal answer: the reply
+ * still carries the items and the client writes them itself.
+ */
+async function saveIssue(
+  caller: Caller,
+  worldId: string,
+  issueDate: string,
+  items: {
+    area?: string;
+    kind?: string;
+    headline?: string;
+    body?: string;
+    printable?: string;
+    sources?: { title?: string; url?: string }[];
+  }[],
+  also: Rest[],
+  append: boolean,
+): Promise<boolean> {
+  if (!caller.token) return false;
+
+  const db = createClient(SB_URL, SB_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${caller.token}` } },
+  });
+
+  let offset = 0;
+  if (append) {
+    const { count } = await db
+      .from("wb_daily_items")
+      .select("id", { count: "exact", head: true })
+      .eq("world_id", worldId)
+      .eq("issue_date", issueDate);
+    offset = count ?? 0;
+  } else {
+    /* A rerun replaces the week. Deleted only now that there is something to
+       put in its place, so a failed read never costs the issue on screen. */
+    const [{ error: a }, { error: b }] = await Promise.all([
+      db.from("wb_daily_items").delete().eq("world_id", worldId).eq("issue_date", issueDate),
+      db.from("wb_daily_rest").delete().eq("world_id", worldId).eq("issue_date", issueDate),
+    ]);
+    if (a || b) return false;
+  }
+
+  const { error } = await db.from("wb_daily_items").insert(
+    items.map((it, i) => ({
+      world_id: worldId,
+      issue_date: issueDate,
+      area: it.area,
+      kind: it.kind,
+      headline: it.headline,
+      body: it.body,
+      printable: it.printable,
+      sources: it.sources,
+      position: offset + i,
+    })),
+  );
+  if (error) return false;
+
+  /* The rest is written alongside and never at the cost of the issue. */
+  if (also.length)
+    await db.from("wb_daily_rest").insert(
+      also.map((r, i) => ({
+        world_id: worldId,
+        issue_date: issueDate,
+        label: r.label,
+        note: r.note,
+        quote: r.quote,
+        url: r.url,
+        position: i,
+        hidden: false,
+      })),
+    );
+
+  return true;
 }
 
 export async function POST(req: Request) {
@@ -1098,10 +1202,35 @@ ${field || "(nothing came back)"}`
       everything else real sits behind it.
     */
     delivered = true;
-    return NextResponse.json({
-      items: out.items.slice(0, TARGET_ITEMS),
-      also: out.also,
-    });
+    const items = out.items.slice(0, TARGET_ITEMS);
+
+    /*
+      THE ISSUE IS SAVED HERE, BY THE SIDE THAT MADE IT.
+
+      It used to be returned and saved by the browser. The browser gives up
+      after a couple of minutes; this route is allowed five, and a real read
+      over seven areas routinely takes longer than the browser waits. So the
+      request was aborted, the research finished anyway, and the finished
+      issue was thrown away with it — the seller was charged, the paper was
+      written, and nobody ever saw it. Three times in a row, for one seller,
+      on one afternoon.
+
+      Writing it here means hanging up no longer costs the issue. The reply is
+      unchanged, so a client that is still listening behaves exactly as it
+      did; `saved` tells it the row is already down and not to write it twice.
+    */
+    let saved = false;
+    if (body.worldId && body.issueDate) {
+      try {
+        saved = await saveIssue(door.caller, body.worldId, body.issueDate,
+          items, out.also ?? [], body.append === true);
+      } catch {
+        /* The paper still goes back. A failed save is the client's fallback
+           to make, not a reason to lose the research. */
+      }
+    }
+
+    return NextResponse.json({ items, also: out.also, saved });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Research failed." },
