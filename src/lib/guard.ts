@@ -103,8 +103,22 @@ import { DAILY_CAP, WEEKLY, type Route } from "./limits";
   building for a woman.)
 */
 const OUT_OF_BUDGET: Record<Route, string> = {
+  /*
+    THIS SAID "ALREADY BEEN WRITTEN", WHICH WAS NOT ALWAYS TRUE AND WAS THE
+    CRUELLEST WAY TO BE WRONG.
+
+    A seller pressed the button, the browser timed out on research that was
+    still running, and the issue it produced was thrown away. She pressed
+    again and was told her issue had already been written. It had not. There
+    was no issue, there was no button any more, and the message explained
+    neither.
+
+    The cap being reached is a fact about the allowance. Whether a paper
+    exists is a fact about the database, and this function knows nothing about
+    it — so it no longer claims to.
+  */
   daily:
-    "This week's issue has already been written. The next one is due Monday.",
+    "This week's write has been used. The next one is available on Monday.",
   customer: "You have reached today's limit for this chat. It resets tomorrow.",
   room: "You have reached today's limit for this chat. It resets tomorrow.",
   areas:
