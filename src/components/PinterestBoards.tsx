@@ -27,28 +27,20 @@ type Destination = "calibration" | "research" | "reference";
 type Lane = "visual" | "market";
 
 /*
-  Asked once per board rather than once per pin — but only as a fallback. The
-  real answer is that the seller keeps four boards with these names, so the
-  board she picks already says which lane it is and this never has to be
-  touched. See laneFromBoardName.
-*/
-const LANES: { id: Lane | ""; name: string }[] = [
-  { id: "visual", name: "Design inspo" },
-  { id: "market", name: "Etsy bestsellers" },
-  { id: "", name: "decide later" },
-];
+  A PINTEREST BOARD IS RESEARCH FOR THE NEXT DROP. THAT IS THE ONLY THING IT
+  EVER IS.
 
-/*
-  Three destinations, three names. The explanation under each said where the
-  pins would technically land, which is a fact about the database rather than
-  anything the seller is deciding between — she is choosing what the board IS,
-  and the name already says that.
+  Adding a board used to open a panel with two rows of choices: which lane to
+  file it under, and which of three destinations to send it to. Six buttons and
+  a decision, in front of an action that has exactly one sensible answer every
+  single time. Nobody pins to Pinterest for any other reason, so the question
+  was asking the seller to confirm something already known.
+
+  The lane is still sent, because research pins are filed by lane — it is read
+  off the board's own name, which is where the answer already lived. See
+  laneFromBoardName.
 */
-const WHERE: { id: Destination; name: string }[] = [
-  { id: "calibration", name: "This is my eye" },
-  { id: "research", name: "This is for my next drop" },
-  { id: "reference", name: "This is what shops in my world look like" },
-];
+const DESTINATION: Destination = "research";
 
 interface Pulled {
   at: string;
@@ -100,8 +92,7 @@ export default function PinterestBoards({ world }: { world: World }) {
   const [boards, setBoards] = useState<Board[]>([]);
   const [nextDrop, setNextDrop] = useState<Drop | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [choosing, setChoosing] = useState<string | null>(null);
-  const [lane, setLane] = useState<Lane | "">("");
+
   const [err, setErr] = useState("");
   const [done, setDone] = useState<Record<string, string>>({});
   /*
@@ -189,10 +180,9 @@ export default function PinterestBoards({ world }: { world: World }) {
     }
   }
 
-  async function bring(board: Board, destination: Destination) {
+  async function bring(board: Board) {
     setBusy(board.id);
     setErr("");
-    setChoosing(null);
     try {
       const r = await call<{ imported: number; skipped: number; note?: string }>(
         "/api/pinterest/import",
@@ -200,9 +190,11 @@ export default function PinterestBoards({ world }: { world: World }) {
           worldId: world.id,
           boardId: board.id,
           boardName: board.name,
-          destination,
-          lane: destination === "research" ? lane || null : null,
-          dropId: destination === "calibration" ? null : nextDrop?.id ?? null,
+          destination: DESTINATION,
+          /* Somebody who followed the workflow named this board "Quotes".
+             Answer the question from the name rather than asking it. */
+          lane: (laneFromBoardName(board.name) as Lane | null) ?? null,
+          dropId: nextDrop?.id ?? null,
         },
       );
       load();
@@ -352,22 +344,20 @@ export default function PinterestBoards({ world }: { world: World }) {
               )}
 
               <button
-                onClick={() => {
-                  const opening = choosing !== b.id;
-                  setChoosing(opening ? b.id : null);
-                  // Somebody who followed the workflow named this board
-                  // "Quotes". Answer the question for her.
-                  if (opening)
-                    setLane((laneFromBoardName(b.name) as Lane | null) ?? "");
-                }}
-                disabled={busy !== null}
+                onClick={() => void bring(b)}
+                disabled={busy !== null || !nextDrop}
+                title={
+                  nextDrop
+                    ? undefined
+                    : "Open Drop Studio once and this becomes available."
+                }
                 className="btn btn-ghost shrink-0"
               >
                 {busy === b.id
-                  ? "Bringing it in…"
+                  ? "Adding…"
                   : b.pulled || done[b.id]
                     ? "Get new pins"
-                    : "Bring it in"}
+                    : "Add board"}
               </button>
 
               {/* Only a board that is actually feeding this world can stop. */}
@@ -383,51 +373,6 @@ export default function PinterestBoards({ world }: { world: World }) {
               )}
             </div>
 
-            {choosing === b.id && (
-              <div className="rise space-y-1.5 border-t border-black/12 bg-[#faf9f8] p-3">
-                {/* Only the seller's own research needs a lane. Calibration
-                    is not a board, and reference is other people's shops. */}
-                <div className="mb-2 rounded-lg border border-black/12 bg-white p-2.5">
-                  <p className="eyebrow mb-1.5 text-ink-3">
-                    File these as
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {LANES.map((l) => (
-                      <button
-                        key={l.id || "none"}
-                        onClick={() => setLane(l.id)}
-                        className={`rounded-md border px-2 py-1 text-[12.5px] transition ${
-                          lane === l.id
-                            ? "border-black bg-black text-white"
-                            : "border-black/15 text-ink-2 hover:border-black"
-                        }`}
-                      >
-                        {l.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {WHERE.map((w) => {
-                  const needsDrop = w.id !== "calibration" && !nextDrop;
-                  return (
-                    <button
-                      key={w.id}
-                      onClick={() => bring(b, w.id)}
-                      disabled={needsDrop}
-                      title={
-                        needsDrop
-                          ? "Open Drop Studio once and this becomes available."
-                          : undefined
-                      }
-                      className="block w-full rounded-lg border border-black/12 bg-white px-3 py-2 text-left text-[13px] font-medium text-ink transition hover:border-black disabled:opacity-40"
-                    >
-                      {w.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
           </li>
         ))}
       </ul>
