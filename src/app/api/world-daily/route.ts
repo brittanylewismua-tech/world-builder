@@ -6,7 +6,12 @@ import { noteFailure } from "@/lib/noteFailure";
 import { normalise, repairSource, usableSource } from "@/lib/sources";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+/*
+  The sweep now fans out, so a normal issue lands in well under a minute. This
+  ceiling is headroom for a bad day - a slow search API, a retried area - not
+  the budget. Vercel Pro allows it and nothing is charged for time not used.
+*/
+export const maxDuration = 800;
 
 const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
 
@@ -777,7 +782,42 @@ Write down everything that is language or imagery. Quote exactly.`;
      * them, so the ceiling went straight into the bill twice over. Eight
      * still covers a seven-area watch list, which six did not.
      */
-    async function sweep(brief: string) {
+    /*
+      SEVEN AREAS ARE SEVEN SEPARATE QUESTIONS, SO ASK THEM AT THE SAME TIME.
+
+      One scout with fourteen searches had to work through the whole watch list
+      in a single conversation: search, read, decide, search again, fourteen
+      times, end to end. Four and a half minutes, every bit of it waiting. The
+      areas have nothing to do with each other and never needed to be read in
+      order.
+
+      One reader per area now, all in flight together, with the same total
+      search budget spread across them. The sweep takes as long as the slowest
+      area instead of the sum of all of them, and that is what buys the room
+      for a second look when the first comes back short.
+
+      A reader that fails is not the issue failing. Its area goes unread and
+      the others still file.
+    */
+    async function sweep(brief: string, split: string[] = areas) {
+      const at = Date.now();
+      const perReader = Math.max(2, Math.ceil(14 / Math.max(1, split.length)));
+
+      const readers = await Promise.all(
+        split.map((area) =>
+          readOne(`${brief}
+
+READ ONE AREA ONLY: ${area}
+Everything above is context for what this seller cares about. Search and write
+down what you find for THIS AREA and nothing else. Another reader is on each of
+the others.`, perReader).catch(() => ""),
+        ),
+      );
+
+      return readers.filter(Boolean).join("\n\n").trim() || (await readOne(brief, 14).catch(() => ""));
+    }
+
+    async function readOne(brief: string, searches: number) {
       const at = Date.now();
       const scout = await client.messages.create({
         model: SCOUT,
@@ -794,7 +834,7 @@ Write down everything that is language or imagery. Quote exactly.`;
               filled with encyclopedia pages. A search is about a penny; an
               issue that reports two corners of a world is worth nothing.
             */
-            max_uses: 14,
+            max_uses: searches,
           } as unknown as Anthropic.Tool,
         ],
         messages: [{ role: "user", content: brief }],
@@ -1232,7 +1272,17 @@ ${field || "(nothing came back)"}`
     let also = out.also ?? [];
 
     if (collected.length < ENOUGH_ITEMS && TWO_STAGE) {
-      notes = `${notes}\n\n${await sweep(widerPrompt)}`.trim();
+      /*
+        The wide read is wide on purpose, so it must not be split by the watch
+        list that just came up short. It fans out across the sub-niches
+        instead - different ground, same parallelism - and falls back to one
+        reader on the whole world when there are none.
+      */
+      const wideSplit = (body.subNiches ?? []).filter(Boolean).slice(0, 8);
+      notes = `${notes}\n\n${await sweep(
+        widerPrompt,
+        wideSplit.length ? wideSplit : [body.worldName || "this world"],
+      )}`.trim();
       out = await judge(notes, false);
       take(out);
       if ((out.also ?? []).length > also.length) also = out.also ?? [];
