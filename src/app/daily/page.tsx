@@ -21,6 +21,9 @@ import {
   loadRest,
   type DailyRest,
   weekStartISO,
+  startWrite,
+  pendingWrite,
+  clearWriting,
   type DailyItem,
 } from "@/lib/daily";
 import { deriveAreas } from "@/lib/api";
@@ -397,6 +400,34 @@ function DailyBody({ world }: { world: World }) {
   }, [world.id]);
 
   /*
+    A WRITE IN FLIGHT SURVIVES A RELOAD.
+
+    The work happens on the server, so refreshing the page or coming back to
+    the tab has nothing to do with whether the issue is coming. This picks the
+    watch back up rather than showing the button again and inviting a second
+    write over the top of the first.
+  */
+  useEffect(() => {
+    if (!pendingWrite(world.id, today)) return;
+    if (items && items.length > 0) { clearWriting(); return; }
+    setWriting(true);
+    let alive = true;
+    const timer = setInterval(async () => {
+      const got = await loadIssue(world.id, today).catch(() => [] as DailyItem[]);
+      if (!alive || !got.length) return;
+      alive = false;
+      clearInterval(timer);
+      clearWriting();
+      setItems(got);
+      setRest(await loadRest(world.id, today).catch(() => []));
+      setDates(await loadIssueDates(world.id).catch(() => []));
+      setWriting(false);
+    }, 10_000);
+    return () => { alive = false; clearInterval(timer); };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [world.id, today]);
+
+  /*
     AN ISSUE THAT EXISTS IS AN ISSUE THAT GETS SHOWN.
 
     "This week's issue has already been written" over an empty page is the
@@ -632,8 +663,17 @@ function DailyBody({ world }: { world: World }) {
             <p className="t-h3 mt-4 text-ink">Reading your world…</p>
             <ReadingBar
               className="mt-4 max-w-xs"
-              expect={writing ? 75 : 150}
+              expect={writing ? 300 : 150}
             />
+            {/* The write runs on the server and is saved there, so this is
+                genuinely true and worth saying: nobody has to sit here. */}
+            {writing && (
+              <p className="t-small mt-4 max-w-sm text-ink-3">
+                This takes a few minutes. You can close this page — the issue
+                is written and saved either way, and it will be here when you
+                come back.
+              </p>
+            )}
           </Card>
         )}
 
@@ -687,12 +727,22 @@ function DailyBody({ world }: { world: World }) {
                       the issue.
                     */
                     await sweepShops(world.id);
-                    const got = await generateIssue(world, today);
-                    setItems(got);
-                    setRest(await loadRest(world.id, today).catch(() => []));
-                    setDates(await loadIssueDates(world.id).catch(() => dates));
-                    /* The shop section is a sibling; tell it to look again. */
-                    setNewsKey((n) => n + 1);
+                    /*
+                      AND THEN NOBODY WAITS. The route writes the paper itself,
+                      so the request is an acknowledgement rather than the
+                      delivery. This starts it and watches the database, which
+                      is where the answer actually arrives. Closing the tab
+                      costs nothing.
+                    */
+                    startWrite(world, today, async (got) => {
+                      setItems(got);
+                      setRest(await loadRest(world.id, today).catch(() => []));
+                      setDates(await loadIssueDates(world.id).catch(() => dates));
+                      setNewsKey((n) => n + 1);
+                      setWriting(false);
+                      setErr("");
+                    });
+                    return;
                   } catch (e) {
                     /*
                       BEFORE REPORTING A FAILURE, CHECK WHETHER IT FAILED.
@@ -724,7 +774,10 @@ function DailyBody({ world }: { world: World }) {
                           : "That did not finish. Nothing was used up; try again.",
                       );
                     }
-                  } finally {
+                    /* Only here. The success path is still waiting on the
+                       watcher, and a `finally` would have cancelled the wait
+                       the instant it began. */
+                    clearWriting();
                     setWriting(false);
                   }
                 }}

@@ -1288,7 +1288,13 @@ ${field || "(nothing came back)"}`
       if ((out.also ?? []).length > also.length) also = out.also ?? [];
     }
 
-    if (collected.length < ENOUGH_ITEMS && TWO_STAGE) {
+    /*
+      The relaxed pass lowers the editorial bar, so it is the last resort and
+      only for a paper with nothing in it at all. Running it on a merely short
+      week filled the issue with material the strict read had already turned
+      down, and cost a third full judging pass to do it.
+    */
+    if (!collected.length && TWO_STAGE) {
       out = await judge(notes, true);
       take(out);
       if ((out.also ?? []).length > also.length) also = out.also ?? [];

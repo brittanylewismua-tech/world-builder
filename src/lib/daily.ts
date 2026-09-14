@@ -202,7 +202,7 @@ export async function generateIssue(
     worldId: world.id,
     issueDate: date,
     append,
-  }, { timeoutMs: 320_000 });
+  }, { timeoutMs: 780_000 });
 
   /*
     Already on disk, written by the side that made it. Saving again here would
@@ -362,4 +362,78 @@ export async function sweepShops(worldId: string): Promise<void> {
   } catch {
     /* The paper matters more than the shop numbers under it. */
   }
+}
+
+
+/*
+  THE PAPER IS WRITTEN ON THE SERVER, SO THE BROWSER MUST NOT BE WHAT WAITS.
+
+  Every failure this feature has had came from one shape: research that takes
+  minutes, a browser holding the connection open for it, and something -- a
+  timeout, a closed laptop, a dropped wifi -- letting go of the rope before the
+  end. Then the work finished, was thrown away, and the seller was told it had
+  taken too long. Raising the timeout moved the number; it never removed the
+  shape.
+
+  The route writes the issue itself now, which means the response is not the
+  delivery. It is just an acknowledgement, and nobody has to be listening for
+  it. So this starts the write, stops caring what happens to the request, and
+  watches the database for the issue to appear -- which is the only thing that
+  was ever the actual answer.
+
+  Closing the tab now costs nothing. Reloading picks the watch back up.
+*/
+export const WRITING_KEY = "wb:writing";
+
+export function markWriting(worldId: string, date: string) {
+  try {
+    localStorage.setItem(WRITING_KEY, JSON.stringify({ worldId, date, at: Date.now() }));
+  } catch { /* private mode: the poll still runs, it just will not survive a reload */ }
+}
+
+export function clearWriting() {
+  try { localStorage.removeItem(WRITING_KEY); } catch {}
+}
+
+/** A write started in this browser that has not produced an issue yet. */
+export function pendingWrite(worldId: string, date: string): boolean {
+  try {
+    const raw = localStorage.getItem(WRITING_KEY);
+    if (!raw) return false;
+    const w = JSON.parse(raw) as { worldId: string; date: string; at: number };
+    /* Long enough for the slowest honest run, short enough that a genuinely
+       dead write does not leave the page waiting forever. */
+    if (Date.now() - w.at > 15 * 60_000) { clearWriting(); return false; }
+    return w.worldId === worldId && w.date === date;
+  } catch { return false; }
+}
+
+/**
+ * Start the write and hand back a watcher. Resolves with the issue when it
+ * lands, or null when the window closes without one appearing.
+ */
+export function startWrite(
+  world: World,
+  date: string,
+  onLanded: (items: DailyItem[]) => void,
+): () => void {
+  markWriting(world.id, date);
+
+  /* Fire and forget, deliberately: the route saves what it makes. */
+  void generateIssue(world, date).catch(() => {});
+
+  let alive = true;
+  const began = Date.now();
+  const timer = setInterval(async () => {
+    if (!alive) return;
+    if (Date.now() - began > 15 * 60_000) { alive = false; clearInterval(timer); clearWriting(); return; }
+    const got = await loadIssue(world.id, date).catch(() => [] as DailyItem[]);
+    if (!alive || !got.length) return;
+    alive = false;
+    clearInterval(timer);
+    clearWriting();
+    onLanded(got);
+  }, 10_000);
+
+  return () => { alive = false; clearInterval(timer); };
 }
