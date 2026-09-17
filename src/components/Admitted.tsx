@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Logo from "./Logo";
-import { startCheckout } from "@/lib/upgrade";
 
 /**
  * THE DOOR.
@@ -263,21 +262,21 @@ function Ended({ onEntered }: { onEntered: () => void }) {
             </button>
           </span>
         ) : (
+          /*
+            NO PURCHASE PATH WHILE THERE IS NO DECISION BEHIND IT.
+
+            This sat beside "I have a code" and opened Stripe. Removed with
+            the home banner: what happens commercially with this tool is not
+            settled, and a live checkout is the wrong thing to leave standing
+            in the meantime. A code is the way back in.
+
+            `lib/upgrade.ts` and the billing routes are untouched, so putting
+            the button back is one import and one element.
+          */
           <span className="ml-auto flex shrink-0 items-center gap-4">
             <button
-              onClick={async () => {
-                setBusy(true);
-                setErr((await startCheckout()) ?? "");
-                setBusy(false);
-              }}
-              disabled={busy}
-              className="btn btn-primary shrink-0"
-            >
-              {busy ? "Opening…" : "Keep my access"}
-            </button>
-            <button
               onClick={() => setOpen(true)}
-              className="t-small shrink-0 font-semibold text-[color:var(--accent-on)] underline underline-offset-4"
+              className="btn btn-primary shrink-0"
             >
               I have a code
             </button>
