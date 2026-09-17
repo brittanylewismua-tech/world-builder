@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { World } from "@/lib/world";
 import SlotCount from "./SlotCount";
 import Zoomable from "./Zoomable";
@@ -144,11 +144,12 @@ function Tile({
   dark,
   onUpload,
   onRemove,
-  onRename,
   onDropOn,
   dragging,
   setDragging,
   total,
+  freeSlots,
+  onTooMany,
 }: {
   slot: number;
   item?: DropItem;
@@ -156,20 +157,21 @@ function Tile({
   dark: boolean;
   onUpload: (slot: number, file: File) => Promise<void>;
   onRemove: (item: DropItem) => Promise<void>;
-  onRename: (item: DropItem, title: string) => Promise<void>;
   onDropOn: (from: number, to: number) => Promise<void>;
   dragging: number | null;
   setDragging: (n: number | null) => void;
   /** Highest slot number, so the last tile cannot move further right. */
   total: number;
+  /* Empty slots in order, this one first. Lets a multi-file pick fill the
+     board rather than only the tile that was clicked. */
+  freeSlots?: number[];
+  onTooMany?: (spare: number) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [over, setOver] = useState(false);
-  const [title, setTitle] = useState(item?.title ?? "");
 
   // The board can reorder underneath this tile, so follow the item.
-  useEffect(() => setTitle(item?.title ?? ""), [item?.id, item?.title]);
 
   const canDrop = !frozen && dragging !== null && dragging !== slot;
   const dropProps = frozen
@@ -192,13 +194,37 @@ function Tile({
 
   const ring = over && canDrop ? "ring-2 ring-accent ring-offset-2" : "";
 
+  /*
+    ONE FILE OR TWENTY, THROUGH THE SAME PICKER.
+
+    Every empty slot had its own single-file input, so filling a ten-slot drop
+    meant ten trips through the file dialog for artwork that is almost always
+    exported as a folder at once. Choosing several files now fills this slot
+    and then the next free ones in order; anything that does not fit is
+    reported rather than dropped silently.
+
+    A filled tile still takes exactly one file — there it means "replace this
+    one", and quietly spilling the rest into other slots would be the wrong
+    reading of the same gesture.
+  */
   async function pick(files: FileList | null) {
-    const f = files?.[0];
-    if (!f) return;
+    const chosen = files ? Array.from(files) : [];
+    if (!chosen.length) return;
     setBusy(true);
-    await onUpload(slot, f);
-    setBusy(false);
-    if (input.current) input.current.value = "";
+    try {
+      if (item) await onUpload(slot, chosen[0]);
+      else {
+        const open = freeSlots ?? [slot];
+        const room = open.slice(0, chosen.length);
+        for (let index = 0; index < room.length; index += 1)
+          await onUpload(room[index], chosen[index]);
+        const spare = chosen.length - room.length;
+        if (spare > 0) onTooMany?.(spare);
+      }
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
   }
 
   const bar = dark ? "bg-white/14" : "bg-black/8";
@@ -224,9 +250,6 @@ function Tile({
             caption={item.title}
             className="h-full w-full object-cover"
           />
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white">
-            {String(slot).padStart(2, "0")}
-          </span>
           {!frozen && (
             /*
               Dragging is the quick way, not the only way. Reordering by mouse
@@ -238,7 +261,7 @@ function Tile({
               opacity are still in the tab order, so without it a keyboard
               user lands on controls they cannot see.
             */
-            <div className="absolute inset-x-0 bottom-0 flex opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+            <div className="absolute inset-x-0 bottom-0 flex items-stretch justify-center gap-px opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
               <button
                 onClick={() => onDropOn(slot, slot - 1)}
                 disabled={slot === 1}
@@ -249,14 +272,14 @@ function Tile({
               </button>
               <button
                 onClick={() => input.current?.click()}
-                className="flex-1 border-l border-white/25 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
+                className="flex-1 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-black"
                 aria-label={`Replace the design in slot ${slot}`}
               >
                 Replace
               </button>
               <button
                 onClick={() => onRemove(item)}
-                className="flex-1 border-l border-white/25 bg-black/80 py-1.5 text-[11px] font-medium text-white hover:bg-black"
+                className="flex-1 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-black"
                 aria-label={`Remove the design in slot ${slot}`}
               >
                 Remove
@@ -279,31 +302,6 @@ function Tile({
           onChange={(e) => pick(e.target.files)}
           className="hidden"
         />
-        {/*
-          The grey bars were always standing in for a listing's title. One of
-          them is now the real thing, editable in place — the column has
-          existed since the first migration with nothing able to write to it.
-        */}
-        {frozen ? (
-          <p className={`mt-2 truncate text-[12px] font-semibold ${dark ? "text-white/80" : "text-ink-2"}`}>
-            {item.title || `Design ${String(slot).padStart(2, "0")}`}
-          </p>
-        ) : (
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => title !== (item.title ?? "") && onRename(item, title)}
-            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-            placeholder="Name this design"
-            aria-label={`Name for the design in slot ${slot}`}
-            className={`mt-2 w-full truncate rounded-md bg-transparent px-1 py-0.5 text-[12px] font-semibold outline-none transition placeholder:font-normal ${
-              dark
-                ? "text-white/85 placeholder:text-white/35 hover:bg-white/10 focus:bg-white/10"
-                : "text-ink placeholder:text-ink-3 hover:bg-black/5 focus:bg-black/5"
-            }`}
-          />
-        )}
-        <div className={`mt-1 h-2 w-1/3 rounded-sm ${bar}`} />
       </div>
     );
   }
@@ -329,14 +327,11 @@ function Tile({
           <span className="pulse-soft text-[13px] font-semibold">Uploading…</span>
         ) : (
           <>
-            <span className="text-[15px] font-extrabold tracking-tight opacity-45">
-              {String(slot).padStart(2, "0")}
-            </span>
             {!frozen && (
               <>
                 <span className="text-[17px] leading-none">↑</span>
-                <span className="text-[12px] font-semibold">Add design</span>
-                <span className="text-[10.5px] opacity-60">PNG or JPG</span>
+                <span className="text-[12px] font-semibold">Add designs</span>
+                <span className="text-[10.5px] opacity-60">PNG or JPG · pick several</span>
               </>
             )}
           </>
@@ -348,6 +343,7 @@ function Tile({
         ref={input}
         type="file"
         accept="image/*"
+        multiple
         onChange={(e) => pick(e.target.files)}
         className="hidden"
       />
@@ -382,6 +378,8 @@ export default function DropBoard({
   onSlots?: (n: number) => Promise<void>;
 }) {
   const [dragging, setDragging] = useState<number | null>(null);
+  /* How many chosen files had nowhere to go. Said once, above the board. */
+  const [spare, setSpare] = useState(0);
   const slots = Array.from({ length: world.slotsPerDrop }, (_, i) => i + 1);
   const bySlot = new Map(drop.items.map((i) => [i.slot, i]));
   const done = drop.items.length;
@@ -431,6 +429,26 @@ export default function DropBoard({
             </span>
           </div>
 
+          {spare > 0 && (
+            <div className="px-5 pt-3">
+              <p
+                className={`t-small ${dark ? "text-white/75" : "text-black/60"}`}
+                role="status"
+              >
+                {spare} more {spare === 1 ? "design was" : "designs were"} chosen than
+                this drop has room for, so {spare === 1 ? "it was" : "they were"} not
+                added. Add slots, or choose fewer.{" "}
+                <button
+                  type="button"
+                  onClick={() => setSpare(0)}
+                  className="underline underline-offset-2"
+                >
+                  Dismiss
+                </button>
+              </p>
+            </div>
+          )}
+
           <div className="px-5 pt-3">
             <div
               className={`h-1 w-full overflow-hidden rounded-full ${dark ? "bg-white/12" : "bg-black/8"}`}
@@ -448,12 +466,13 @@ export default function DropBoard({
               <Tile
                 key={s}
                 slot={s}
+                freeSlots={[s, ...slots.filter((n) => n !== s && !bySlot.has(n))]}
+                onTooMany={setSpare}
                 item={bySlot.get(s)}
                 frozen={frozen}
                 dark={dark}
                 onUpload={onUploadMockup}
                 onRemove={onRemoveMockup}
-                onRename={onRenameMockup ?? (async () => {})}
                 onDropOn={onMoveMockup ?? (async () => {})}
                 dragging={dragging}
                 setDragging={setDragging}

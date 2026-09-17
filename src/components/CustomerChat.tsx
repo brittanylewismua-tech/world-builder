@@ -281,10 +281,30 @@ export default function CustomerChat({
         {meeting && (
           <span className="t-small text-ink-3">working out who they are…</span>
         )}
+        {/*
+          In the header for the same reason as the Director's: this panel is
+          h-full with overflow-hidden, and on the drop building tab its
+          container is a fixed height, so a row under the composer was clipped
+          away once the conversation filled the space.
+        */}
+        {msgs.length > 0 && (
+          <button
+            onClick={async () => {
+              setMsgs([]);
+              await startNewThread(world.id, "customer");
+              await refreshEarlier();
+            }}
+            className="t-small ml-auto shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink"
+          >
+            New chat
+          </button>
+        )}
         {earlier.length > 0 && (
           <button
             onClick={() => setShowEarlier((v) => !v)}
-            className="t-small ml-auto shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink"
+            className={`t-small shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink ${
+              msgs.length > 0 ? "ml-2" : "ml-auto"
+            }`}
           >
             Past chats
           </button>
@@ -413,20 +433,6 @@ export default function CustomerChat({
             Ask
           </button>
         </div>
-        {msgs.length > 0 && (
-          <div className="mt-2 flex justify-end">
-            <button
-              onClick={async () => {
-                setMsgs([]);
-                await startNewThread(world.id, "customer");
-                await refreshEarlier();
-              }}
-              className="t-small text-ink-3 transition hover:text-ink"
-            >
-              New chat
-            </button>
-          </div>
-        )}
       </div>
       )}
     </div>

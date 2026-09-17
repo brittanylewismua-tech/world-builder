@@ -258,6 +258,33 @@ export default function CreativeRoom({
             ? `Drop ${String(drop.number).padStart(2, "0")} research`
             : `Drop ${String(drop.number).padStart(2, "0")} · ${drop.items.length}/${world.slotsPerDrop}`}
         </span>
+        {/*
+          D · NEW CHAT LIVED UNDER THE COMPOSER AND WENT MISSING.
+
+          This panel is `h-full` with `overflow-hidden`, and on the drop
+          BUILDING tab its container is a fixed height — so when the
+          conversation filled the space, the row under the composer was
+          clipped away with no scrollbar to hint at it. On the research tab
+          the split pane gave more room and the button was there, which is
+          why it looked like it had been removed from one screen only.
+
+          The header is a fixed row above the scrolling area. Nothing in it
+          can be cut off, whatever height the panel is given.
+        */}
+        {msgs.length > 0 && (
+          <button
+            onClick={async () => {
+              setMsgs([]);
+              await startNewThread(world.id, "room", drop.id);
+              setPast(
+                (await listThreads(world.id, "room")).filter((t) => t.dropId),
+              );
+            }}
+            className="t-small ml-2 shrink-0 text-ink-3 underline underline-offset-2 transition hover:text-ink"
+          >
+            New chat
+          </button>
+        )}
         {past.length > 0 && (
           <button
             onClick={() => setShowPast((v) => !v)}
@@ -397,22 +424,6 @@ export default function CreativeRoom({
         >
           Send
         </button>
-        {msgs.length > 0 && (
-          <div className="mt-2 flex justify-end">
-            <button
-              onClick={async () => {
-                setMsgs([]);
-                await startNewThread(world.id, "room", drop.id);
-                setPast(
-                  (await listThreads(world.id, "room")).filter((t) => t.dropId),
-                );
-              }}
-              className="t-small text-ink-3 transition hover:text-ink"
-            >
-              New chat
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
