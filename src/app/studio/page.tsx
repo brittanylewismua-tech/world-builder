@@ -89,16 +89,20 @@ function StudioBody({ world }: { world: World }) {
     const moving = drop.items.find((i) => i.slot === from);
     if (!moving) return;
     const sitting = drop.items.find((i) => i.slot === to);
-    setDrop({
-      ...drop,
-      items: drop.items.map((i) =>
-        i.id === moving.id
-          ? { ...i, slot: to }
-          : sitting && i.id === sitting.id
-            ? { ...i, slot: from }
-            : i,
-      ),
-    });
+    setDrop((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((i) =>
+              i.id === moving.id
+                ? { ...i, slot: to }
+                : sitting && i.id === sitting.id
+                  ? { ...i, slot: from }
+                  : i,
+            ),
+          }
+        : current,
+    );
     try {
       await moveItemToSlot(before, from, to);
     } catch (e) {
@@ -111,25 +115,42 @@ function StudioBody({ world }: { world: World }) {
     if (!drop) return;
     try {
       const saved = await renameItem(item, title);
-      setDrop({
-        ...drop,
-        items: drop.items.map((i) =>
-          i.id === item.id ? { ...i, title: saved } : i,
-        ),
-      });
+      setDrop((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((i) =>
+                i.id === item.id ? { ...i, title: saved } : i,
+              ),
+            }
+          : current,
+      );
     } catch (e) {
       setErr(e instanceof Error ? e.message : "That name did not save.");
     }
   }
 
+  /*
+    EVERY WRITE COMPOSES ON THE LATEST BOARD, NOT ON THE ONE THIS RENDER SAW.
+
+    `drop` is captured from the render that created this function. That was
+    harmless while one upload happened at a time, and wrong the moment
+    several could: picking eight files ran eight of these in a row, each
+    spreading the SAME stale `drop`, so each write threw away the one before
+    it. Every photo appeared for an instant and only the last one stayed —
+    which is exactly what it looked like.
+
+    The updater form reads the current state instead, so the eight compose.
+  */
   async function onUploadMockup(slot: number, file: File) {
     if (!drop) return;
     try {
       const item = await uploadMockup(drop.id, slot, file);
-      setDrop({
-        ...drop,
-        items: [...drop.items.filter((i) => i.slot !== slot), item],
-      });
+      setDrop((current) =>
+        current
+          ? { ...current, items: [...current.items.filter((i) => i.slot !== slot), item] }
+          : current,
+      );
     } catch (e) {
       setErr(e instanceof Error ? e.message : "That upload failed.");
     }
@@ -139,7 +160,13 @@ function StudioBody({ world }: { world: World }) {
     if (!drop) return;
     try {
       await removeMockup(item);
-      setDrop({ ...drop, items: drop.items.filter((i) => i.id !== item.id) });
+      /* Updater form for the same reason as the upload above: a removal must
+         not undo a write that landed after this render. */
+      setDrop((current) =>
+        current
+          ? { ...current, items: current.items.filter((i) => i.id !== item.id) }
+          : current,
+      );
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not remove that.");
     }

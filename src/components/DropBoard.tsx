@@ -170,6 +170,7 @@ function Tile({
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [over, setOver] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; of: number } | null>(null);
 
   // The board can reorder underneath this tile, so follow the item.
 
@@ -216,12 +217,17 @@ function Tile({
       else {
         const open = freeSlots ?? [slot];
         const room = open.slice(0, chosen.length);
-        for (let index = 0; index < room.length; index += 1)
+        for (let index = 0; index < room.length; index += 1) {
+          /* Counted, because the other slots fill in without a spinner of
+             their own and eight silent seconds reads as nothing happening. */
+          setProgress({ done: index, of: room.length });
           await onUpload(room[index], chosen[index]);
+        }
         const spare = chosen.length - room.length;
         if (spare > 0) onTooMany?.(spare);
       }
     } finally {
+      setProgress(null);
       setBusy(false);
       if (input.current) input.current.value = "";
     }
@@ -324,7 +330,11 @@ function Tile({
         }`}
       >
         {busy ? (
-          <span className="pulse-soft text-[13px] font-semibold">Uploading…</span>
+          <span className="pulse-soft text-[13px] font-semibold">
+            {progress && progress.of > 1
+              ? `Uploading ${progress.done + 1} of ${progress.of}…`
+              : "Uploading…"}
+          </span>
         ) : (
           <>
             {!frozen && (
