@@ -274,6 +274,46 @@ function pick(rows: Row[]) {
     .slice(0, LOOK_AT);
 }
 
+/**
+ * ONE DESIGN PER CORNER, WHICH IS WHAT THE WORLD READ IS TOLD IT IS SEEING.
+ *
+ * WORLD_SYSTEM says, in its own words: "One product photograph per keyword,
+ * each the best seller under that search." `pick` takes the global top ten by
+ * sales, so a world with one strong corner would have sent ten designs from
+ * that corner and nothing from the other nine — and the model would have
+ * reported what "holds true across the whole world" from a single keyword,
+ * confidently, with no way for the seller to tell.
+ *
+ * So the world read takes each keyword's best seller, then fills any spare
+ * room with the next best from the busiest corners. Sorted so the strongest
+ * corner still leads.
+ */
+function pickAcrossWorld(rows: Row[]) {
+  const visible = rows.filter((r) => r.image_url);
+  const byKeyword = new Map<string, Row[]>();
+  for (const row of visible) {
+    const key = String(row.keyword ?? "");
+    const held = byKeyword.get(key);
+    if (held) held.push(row);
+    else byKeyword.set(key, [row]);
+  }
+  for (const held of byKeyword.values()) held.sort((a, b) => b.sales - a.sales);
+
+  const best = [...byKeyword.values()].map((held) => held[0]);
+  const chosen = best.sort((a, b) => b.sales - a.sales).slice(0, LOOK_AT);
+
+  /* Spare room only after every corner has been represented once. */
+  if (chosen.length < LOOK_AT) {
+    const taken = new Set(chosen.map((r) => r.listing_id));
+    const rest = visible
+      .filter((r) => !taken.has(r.listing_id))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, LOOK_AT - chosen.length);
+    chosen.push(...rest);
+  }
+  return chosen;
+}
+
 export async function POST(req: Request) {
   let body: { worldId?: string; keyword?: string; scope?: string };
   try {
@@ -367,14 +407,29 @@ export async function POST(req: Request) {
     );
   }
 
-  const { data } = await db
+  /*
+    THE WHOLE-WORLD READ COULD NEVER FIND A SINGLE DESIGN.
+
+    Reported by a member on Day 2: "Read my world" answered "There are not
+    enough designs under this keyword to find a pattern in" with ten keywords
+    on the wall and designs under them.
+
+    This query filtered on `keyword` unconditionally. A world read has no
+    keyword — `wholeWorld` is set precisely when there isn't one — so it asked
+    for rows whose keyword IS NULL, matched nothing every time, and fell
+    straight into the too-few-designs refusal. Every other query in this route
+    branches on wholeWorld: the pool count, the previous-read lookup, the
+    saved briefs. The one that fetches the designs did not.
+  */
+  let designs = db
     .from("wb_winners")
     .select(
       "listing_id, keyword, title, shop, age_days, daily_views, sales, price, views, hearts, image_url, design",
     )
     .eq("world_id", worldId)
-    .eq("keyword", keyword)
     .eq("hidden", false);
+  if (!wholeWorld) designs = designs.eq("keyword", keyword as string);
+  const { data } = await designs;
 
   /*
     What the world is, in the seller's own words.
@@ -413,14 +468,19 @@ export async function POST(req: Request) {
     .join("\n");
 
   const rows = (data ?? []) as Row[];
-  const chosen = pick(rows);
+  const chosen = wholeWorld ? pickAcrossWorld(rows) : pick(rows);
 
   if (chosen.length < 3) {
     await settle();
     return NextResponse.json(
       {
-        error:
-          "There are not enough designs under this keyword to find a pattern in.",
+        /* A world read that cannot run must not blame a keyword it was never
+           given. */
+        error: wholeWorld
+          ? "There are not enough designs saved across your world yet to read "
+            + "it as a whole. Add an eRank export to a few more keywords and "
+            + "try again."
+          : "There are not enough designs under this keyword to find a pattern in.",
       },
       { status: 400 },
     );
