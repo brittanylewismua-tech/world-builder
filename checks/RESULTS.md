@@ -45,3 +45,31 @@ corners — Womens march, Mediocre Men, Well-Behaved Women, Burn the Patriarchy
   rows arrive with no `ORDER BY` and nothing broke ties.
 
 Both are covered by checks 5, 5b and 6.
+
+## Does Tara's bug class exist anywhere else? — 2026-09-18
+
+Her bug was one shape: a value that is legitimately absent in one mode, used
+in a query filter unconditionally, so the query silently matches nothing and
+the caller reads the empty result as "no data" rather than "wrong question".
+It is a quiet failure by nature — nothing throws — so it was worth checking
+whether the same shape sits anywhere else.
+
+Swept every `route.ts` under `src/app/api` for values the route itself treats
+as possibly-absent (tested with `!x`, defaulted with `??`, or read with
+`?.trim()`) that then reach `.eq()`, `.is()` or `.filter()`.
+
+13 call sites flagged. All 13 examined by hand, all false positives:
+
+| what was flagged | why it is safe |
+|---|---|
+| `shops/read` — `shopId` ×5 | `if (!worldId \|\| !shopId) return 400` before any use |
+| `winners/read` — `keyword` ×2 | both guarded by an inline `if (!wholeWorld)`; the regex could not see a guard on the same line |
+| `pinterest/refresh` — `target` | `if (!target) continue;` immediately above |
+| `billing/checkout` — `who` ×2 | `who.id`, auth-gated and non-null |
+| `admin/access` — `user` | `user.id`, same |
+| `shops` — `saved` | `saved.id`, the row just inserted |
+
+So the shape existed in exactly one place and that place is fixed. Recorded
+because a clean sweep is only worth anything if the method is written down:
+the value must be one the route knows can be missing, and the filter must be
+reached without a branch.
