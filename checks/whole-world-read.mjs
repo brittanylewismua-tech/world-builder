@@ -152,6 +152,35 @@ check("8b · the wall cap and the read width stay equal, or a full wall loses co
     { exitsBeforeTry, settlesBeforeTry, hasFinally: /\} finally \{/.test(src) });
 }
 
+/* 11 — an unchanged world reads as already current, not as a failure */
+{
+  const page = readFileSync(new URL("../src/app/winners/page.tsx", import.meta.url), "utf8");
+  const lib = readFileSync(new URL("../src/lib/winners.ts", import.meta.url), "utf8");
+  const routeOk =
+    /unchanged: true/.test(src) &&
+    /This is already current/.test(src) &&
+    !/error: wholeWorld[\s\S]{0,200}Nothing has changed/.test(src) &&
+    !/status: 429/.test(src.slice(src.indexOf("arrived === 0"), src.indexOf("const gate = await admit(")));
+  const pageOk =
+    /if \(isAlreadyCurrent\(out\)\) \{/.test(page) &&
+    /setSaid\(out\.message\)/.test(page) &&
+    /setWorldOpen\(true\)/.test(page);
+  /* It must not spend an allowance it never used, and must not be filed as a
+     fault: both live in the branch that returns before spent()/report(). */
+  const branch = page.slice(page.indexOf("if (isAlreadyCurrent(out))"),
+    page.indexOf("spent();", page.indexOf("if (isAlreadyCurrent(out))")));
+  const noCharge = !/spent\(\)/.test(branch) && !/report\(/.test(branch)
+    && /return;/.test(branch);
+  check("11 · already-current returns the cached brief calmly, not as an error",
+    routeOk && pageOk && noCharge && /isAlreadyCurrent/.test(lib),
+    { routeOk, pageOk, noCharge });
+  /* And the calm line is not the red failure box. */
+  check("11b · it is shown in the quiet note, never in ErrorNote",
+    /\{said\}/.test(page) && /text-ink-2/.test(page)
+      && !/setErr\(out\.message\)/.test(page),
+    { usesSaid: /\{said\}/.test(page) });
+}
+
 check("10 · an unchanged world is refused before anything is charged",
   src.indexOf("Nothing has changed across your world") < src.indexOf("const gate = await admit("),
   { checkedBeforeAdmit:

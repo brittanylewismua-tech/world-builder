@@ -442,14 +442,25 @@ export async function POST(req: Request) {
     */
     const arrived = await poolNow(last.ran_at as string);
     if (arrived === 0 && pool === Number(last.pool))
-      return NextResponse.json(
-        {
-          error: wholeWorld
-            ? "Nothing has changed across your world since this was read, so a second read would only reword the one you have. Upload a new export and it opens again."
-            : `Nothing has changed under “${keyword}” since this was read, so a second read would only reword the one you have. Upload a new export and it opens again.`,
-        },
-        { status: 429 },
-      );
+      /*
+        NOT AN ERROR. THE BRIEF ON SCREEN IS THE CURRENT ONE.
+
+        This returned `error` with a 429, so askAI threw, the page rendered it
+        in the red failure box, the cached brief was never opened, and it was
+        filed in the admin error log as a fault. Every one of those is wrong:
+        the read was declined because the seller already has the answer, which
+        is the system working and costs them nothing.
+
+        A 200 with `unchanged` lets the page say so calmly and open the brief
+        it already holds.
+      */
+      return NextResponse.json({
+        unchanged: true,
+        ranAt: last.ran_at,
+        message: wholeWorld
+          ? "This is already current — nothing has changed across your world since it was read. Upload a new export and it opens again."
+          : `This is already current — nothing has changed under “${keyword}” since it was read. Upload a new export and it opens again.`,
+      });
   }
 
   const gate = await admit(req, wholeWorld ? "world" : "winners");

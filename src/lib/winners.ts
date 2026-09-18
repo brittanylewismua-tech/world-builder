@@ -201,7 +201,7 @@ export async function loadBriefs(worldId: string): Promise<{
 }
 
 export async function readPatterns(world: World, keyword: string) {
-  return askAI<{ brief: Brief; counted: number; keyword: string }>(
+  return askAI<{ brief: Brief; counted: number; keyword: string } | AlreadyCurrent>(
     "/api/winners/read",
     { worldId: world.id, keyword },
     { timeoutMs: 240_000 },
@@ -214,8 +214,23 @@ export async function readPatterns(world: World, keyword: string) {
  * Once a week, because the wall only moves when an export is uploaded — a
  * second press on the same Tuesday is reading the same world again.
  */
+/**
+ * A read that was declined because the answer on screen is already current.
+ * Not a failure: nothing was charged and the brief the seller has is the one
+ * they would have got.
+ */
+export interface AlreadyCurrent {
+  unchanged: true;
+  ranAt: string;
+  message: string;
+}
+
+export function isAlreadyCurrent(x: unknown): x is AlreadyCurrent {
+  return !!x && typeof x === "object" && (x as { unchanged?: unknown }).unchanged === true;
+}
+
 export async function readTheWorld(world: World) {
-  return askAI<{ brief: Brief; counted: number }>(
+  return askAI<{ brief: Brief; counted: number } | AlreadyCurrent>(
     "/api/winners/read",
     { worldId: world.id, scope: "world" },
     { timeoutMs: 240_000 },

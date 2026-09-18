@@ -18,6 +18,7 @@ import {
   readExport,
   readPatterns,
   readTheWorld,
+  isAlreadyCurrent,
   removeKeyword,
   removeWinner,
   SOLD_AT_LEAST,
@@ -143,7 +144,20 @@ function WinnersBody({ world }: { world: World }) {
     setErr("");
     setSaid("");
     try {
-      await readTheWorld(world);
+      const out = await readTheWorld(world);
+      /*
+        ALREADY CURRENT IS NOT A FAILURE.
+
+        Nothing was charged, and the brief on screen is the one a new read
+        would have produced. So it opens the brief the seller already has and
+        says so calmly — it does not spend an allowance it never used, and it
+        does not go in the error log.
+      */
+      if (isAlreadyCurrent(out)) {
+        setSaid(out.message);
+        setWorldOpen(true);
+        return;
+      }
       spent();
       await refresh();
       setWorldOpen(true);
@@ -162,7 +176,13 @@ function WinnersBody({ world }: { world: World }) {
     setErr("");
     setSaid("");
     try {
-      await readPatterns(world, keyword);
+      const out = await readPatterns(world, keyword);
+      /* Same for one corner: already current, nothing charged, open it. */
+      if (isAlreadyCurrent(out)) {
+        setSaid(out.message);
+        setShowing((s) => ({ ...s, [keyword]: true }));
+        return;
+      }
       spent();
       await refresh();
       setShowing((s) => ({ ...s, [keyword]: true }));
