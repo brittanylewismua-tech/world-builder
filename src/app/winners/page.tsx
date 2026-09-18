@@ -397,7 +397,30 @@ function WinnersBody({ world }: { world: World }) {
           )}
 
           {worldBrief && worldOpen && (
-            <Patterns points={worldBrief.brief.patterns} />
+            <>
+              {/*
+                WHAT THE BRIEF RESTS ON.
+
+                "Across your whole world" is a claim about breadth, and a
+                brief built from three corners read exactly like one built
+                from ten. Absent on briefs saved before this was recorded,
+                which is why it is conditional rather than defaulted to zero.
+              */}
+              {worldBrief.brief.support && (
+                <p className="t-small mt-3 text-ink-3">
+                  {`Read across ${worldBrief.brief.support.keywords} of your `
+                    + `${worldBrief.brief.support.keywordsPopulated} keywords `
+                    + `with designs, from ${worldBrief.brief.support.designsConsidered} `
+                    + `designs on the wall.`}
+                  {worldBrief.brief.support.keywordsLeftOut > 0
+                    ? ` ${worldBrief.brief.support.keywordsLeftOut} more `
+                      + `keyword${worldBrief.brief.support.keywordsLeftOut === 1 ? "" : "s"} `
+                      + `did not fit in this read.`
+                    : ""}
+                </p>
+              )}
+              <Patterns points={worldBrief.brief.patterns} />
+            </>
           )}
         </Card>
       )}

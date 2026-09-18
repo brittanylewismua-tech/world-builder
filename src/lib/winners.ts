@@ -143,8 +143,18 @@ export interface BriefPoint {
  * and the seller takes it wherever they take it. A research surface that
  * starts inventing is two tools in a coat.
  */
+/** What a brief rested on. Absent on briefs saved before it was recorded. */
+export interface BriefSupport {
+  keywords: number;
+  designs: number;
+  keywordsPopulated: number;
+  keywordsLeftOut: number;
+  designsConsidered: number;
+}
+
 export interface Brief {
   patterns: BriefPoint[];
+  support?: BriefSupport;
 }
 
 export interface StoredBrief {

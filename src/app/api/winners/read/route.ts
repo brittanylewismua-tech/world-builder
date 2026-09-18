@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { admit, endWell, meter, ownerOf, refund } from "@/lib/guard";
 import { serviceDb } from "@/lib/pinterest";
+import { MOST_KEYWORDS } from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -281,15 +282,55 @@ function pick(rows: Row[]) {
  * each the best seller under that search." `pick` takes the global top ten by
  * sales, so a world with one strong corner would have sent ten designs from
  * that corner and nothing from the other nine — and the model would have
- * reported what "holds true across the whole world" from a single keyword,
+ * reported what "holds true across your whole world" from a single keyword,
  * confidently, with no way for the seller to tell.
  *
- * So the world read takes each keyword's best seller, then fills any spare
- * room with the next best from the busiest corners. Sorted so the strongest
- * corner still leads.
+ * THE SAME DESIGN CAN SIT UNDER TWO KEYWORDS. A seller who saved one listing
+ * under "feminist" and "feminist shirt" would have had it sent twice, and two
+ * corners would have been represented by one photograph — the crowding-out
+ * this function exists to stop, arriving through the back door. A design
+ * already taken stands for the corner that claimed it first; the next corner
+ * falls through to its own next best.
+ *
+ * AND THE SAME SAVED DATA MUST PICK THE SAME DESIGNS. The rows arrive from
+ * the database with no ORDER BY, so insertion order — and therefore both the
+ * corner order and every tie between equal sales — was whatever the query
+ * happened to return. Two reads of an untouched wall could send different
+ * photographs. Every sort here breaks ties on listing_id, which is stable.
  */
-function pickAcrossWorld(rows: Row[]) {
-  const visible = rows.filter((r) => r.image_url);
+/*
+  THE WALL CAPS AT TEN KEYWORDS AND THE READ LOOKS AT TEN DESIGNS, AND THOSE
+  TWO NUMBERS BEING EQUAL IS WHAT MAKES "one photograph per keyword" TRUE.
+
+  Raise MOST_KEYWORDS to twelve without raising LOOK_AT and the two weakest
+  corners silently stop being represented, while the brief goes on saying it
+  read the whole world. Nothing else would have failed.
+*/
+if (LOOK_AT < MOST_KEYWORDS)
+  console.error(
+    `winners/read: LOOK_AT (${LOOK_AT}) is below MOST_KEYWORDS (${MOST_KEYWORDS}), `
+      + `so a full wall cannot be represented one design per keyword.`,
+  );
+
+const bySales = (a: Row, b: Row) =>
+  b.sales - a.sales ||
+  String(a.listing_id).localeCompare(String(b.listing_id));
+
+export interface WorldPick {
+  chosen: Row[];
+  /** How many corners the brief actually rests on. */
+  keywords: number;
+  /** How many of the seller's populated corners existed to choose from. */
+  keywordsPopulated: number;
+  /** Corners with designs that did not fit in LOOK_AT. */
+  keywordsLeftOut: number;
+  /** Visible designs the choice was made from. */
+  designsConsidered: number;
+}
+
+function pickAcrossWorld(rows: Row[]): WorldPick {
+  const visible = rows.filter((r) => r.image_url).sort(bySales);
+
   const byKeyword = new Map<string, Row[]>();
   for (const row of visible) {
     const key = String(row.keyword ?? "");
@@ -297,21 +338,46 @@ function pickAcrossWorld(rows: Row[]) {
     if (held) held.push(row);
     else byKeyword.set(key, [row]);
   }
-  for (const held of byKeyword.values()) held.sort((a, b) => b.sales - a.sales);
 
-  const best = [...byKeyword.values()].map((held) => held[0]);
-  const chosen = best.sort((a, b) => b.sales - a.sales).slice(0, LOOK_AT);
+  /*
+    Corner order is decided by each corner's best seller, not by the order the
+    rows arrived in, with the keyword name as the final tiebreaker. A world
+    with more corners than slots therefore always keeps the same ten.
+  */
+  const corners = [...byKeyword.entries()].sort(
+    ([aKey, aRows], [bKey, bRows]) =>
+      bySales(aRows[0], bRows[0]) || aKey.localeCompare(bKey),
+  );
+
+  const taken = new Set<string>();
+  const best: Row[] = [];
+  for (const [, held] of corners) {
+    /* A corner whose every design already stands for an earlier corner is
+       skipped rather than duplicating a photograph. */
+    const first = held.find((r) => !taken.has(String(r.listing_id)));
+    if (!first) continue;
+    taken.add(String(first.listing_id));
+    best.push(first);
+  }
+
+  const chosen = best.slice(0, LOOK_AT);
 
   /* Spare room only after every corner has been represented once. */
   if (chosen.length < LOOK_AT) {
-    const taken = new Set(chosen.map((r) => r.listing_id));
     const rest = visible
-      .filter((r) => !taken.has(r.listing_id))
-      .sort((a, b) => b.sales - a.sales)
+      .filter((r) => !taken.has(String(r.listing_id)))
       .slice(0, LOOK_AT - chosen.length);
+    for (const row of rest) taken.add(String(row.listing_id));
     chosen.push(...rest);
   }
-  return chosen;
+
+  return {
+    chosen,
+    keywords: new Set(chosen.map((r) => String(r.keyword ?? ""))).size,
+    keywordsPopulated: byKeyword.size,
+    keywordsLeftOut: Math.max(0, best.length - chosen.length),
+    designsConsidered: visible.length,
+  };
 }
 
 export async function POST(req: Request) {
@@ -468,7 +534,18 @@ export async function POST(req: Request) {
     .join("\n");
 
   const rows = (data ?? []) as Row[];
-  const chosen = wholeWorld ? pickAcrossWorld(rows) : pick(rows);
+  /* The world read also reports what it rested on; a keyword read's evidence
+     is the one corner it was asked about. */
+  const spread = wholeWorld ? pickAcrossWorld(rows) : null;
+  const chosen = spread ? spread.chosen : pick(rows);
+  const support = spread
+    ? { keywords: spread.keywords, designs: chosen.length,
+        keywordsPopulated: spread.keywordsPopulated,
+        keywordsLeftOut: spread.keywordsLeftOut,
+        designsConsidered: spread.designsConsidered }
+    : { keywords: 1, designs: chosen.length,
+        keywordsPopulated: 1, keywordsLeftOut: 0,
+        designsConsidered: rows.filter((r) => r.image_url).length };
 
   if (chosen.length < 3) {
     await settle();
@@ -592,7 +669,14 @@ export async function POST(req: Request) {
             : undefined,
         }));
 
-    const brief = { patterns: list("patterns") };
+    /*
+      The support travels INSIDE the brief because wb_winner_reads has no
+      column for it and this needs no migration to reach a seller. It is
+      attached after the model's output is parsed, so nothing the model wrote
+      can set it, and a brief saved before this existed simply has no support
+      key — the page falls back to the count it has always shown.
+    */
+    const brief = { patterns: list("patterns"), support };
 
     if (!brief.patterns.length)
       return NextResponse.json(
@@ -617,6 +701,14 @@ export async function POST(req: Request) {
     return NextResponse.json({
       brief,
       counted: chosen.length,
+      /*
+        WHAT THE BRIEF RESTS ON, SAID TO THE SELLER.
+
+        "Across your whole world" is a claim about breadth, and the seller had
+        no way to see how much breadth was behind it. A brief built from three
+        corners and one from ten read identically. This is the denominator.
+      */
+      support,
       keyword: wholeWorld ? null : keyword,
     });
   } catch (e) {
