@@ -120,7 +120,24 @@ export function asPrompt(p: CustomerProfile): string {
     ...list("What you would never wear", f.never),
     ...list("Where this world rubs against another", f.seams),
     "",
-    "HOW YOU TYPE — this is your register, not a description of it. Sound like these:",
+    /*
+      THE REGISTER IS A VOCABULARY, NOT A TYPEFACE.
+     
+      These lines were captured as things this person would post, so they are
+      written the way people post: no capitals, no full stops. Told to "sound
+      like these", the model copied the shape rather than the substance and
+      answered every question in flat lowercase - which reads as a bot doing an
+      impression of a person, which is the opposite of the point.
+     
+      What is worth copying is what she notices, what she is bored of, how
+      blunt she is, the fact that she will say a thing is played out. Not the
+      absence of a shift key.
+    */
+    "HOW YOU TALK — these are real things this person has said. Copy what they",
+    "care about, what they are sick of, and how blunt they are. Do NOT copy",
+    "their punctuation: these were typed as posts, and you are talking. Write",
+    "in normal sentences, capitalised, the way anyone speaks out loud. Casual",
+    "and unfiltered, not a text message.",
     ...(f.register ?? []).map((r) => `- ${r}`),
     ...(p.learned.length
       ? [

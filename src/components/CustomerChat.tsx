@@ -104,6 +104,11 @@ export default function CustomerChat({
 
   const endRef = useRef<HTMLDivElement>(null);
 
+  /* How much real evidence this person was actually built from. */
+  const evidence = who
+    ? Object.values(who.builtFrom ?? {}).reduce((n, v) => n + (Number(v) || 0), 0)
+    : 0;
+
   /*
     EVERY CONVERSATION YOU HAVE HAD WITH THIS PERSON.
 
@@ -173,6 +178,7 @@ export default function CustomerChat({
     and it never runs again unless they ask for it.
   */
   const [meeting, setMeeting] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
   useEffect(() => {
     let alive = true;
     loadCustomer(world.id)
@@ -315,6 +321,49 @@ export default function CustomerChat({
         )}
         {meeting && (
           <span className="t-small text-ink-3">working out who they are…</span>
+        )}
+        {/*
+          A PERSON BUILT FROM NOTHING STAYS BUILT FROM NOTHING.
+
+          The customer is worked out once, the first time the panel opens, and
+          never again unless somebody asks. On a world's first day there is
+          nothing to work her out FROM — no sales, no followed shops, no
+          research, no issues — so she is invented whole, and she stays that
+          invention while the world fills up underneath her.
+
+          That is what "the answers feel canned" actually is: not a weak
+          prompt, a person with no evidence behind her. This says so, and
+          rebuilds her from what is known now.
+        */}
+        {who && !meeting && (
+          <button
+            onClick={async () => {
+              if (rebuilding) return;
+              setRebuilding(true);
+              try {
+                await buildCustomer(world.id);
+                setWho(await loadCustomer(world.id));
+              } catch {
+                /* Keeping the person you have beats losing them. */
+              } finally {
+                setRebuilding(false);
+              }
+            }}
+            title={
+              evidence === 0
+                ? "This person was invented with nothing to go on. Rebuild them from what your world knows now."
+                : "Rebuild this person from what your world knows now"
+            }
+            className={`t-small shrink-0 underline underline-offset-2 transition hover:text-ink ${
+              evidence === 0 ? "text-accent-ink" : "text-ink-3"
+            } ${msgs.length > 0 ? "ml-2" : "ml-auto"}`}
+          >
+            {rebuilding
+              ? "Catching up…"
+              : evidence === 0
+                ? "Built from nothing — catch up"
+                : "Catch up"}
+          </button>
         )}
         {/*
           In the header for the same reason as the Director's: this panel is
