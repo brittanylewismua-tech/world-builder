@@ -89,6 +89,8 @@ export async function POST(req: Request) {
     context?: string;
     /** The drop's designs, base64 jpeg, no data: prefix. */
     images?: string[];
+    /** How many of `images` are finished designs. The rest is research. */
+    designs?: number;
   };
   try {
     body = await req.json();
@@ -135,7 +137,28 @@ export async function POST(req: Request) {
     }));
     blocks.push({
       type: "text",
-      text: `Imagine you are scrolling a shop and these ${images.length} item${images.length === 1 ? " is" : "s are"} for sale. React to them the way you would react to anything you came across shopping — what you would wear, what you would scroll past, what you have seen a hundred times, what you would buy for somebody else. You are not reviewing anyone's work and nobody is asking your professional opinion. Never mention design, layout, fonts, colours as choices somebody made, or how something could be improved. You are a shopper.`,
+      text: (() => {
+        const made = Math.max(0, Math.min(images.length, Number(body.designs) || 0));
+        const found = images.length - made;
+        /*
+          WHAT SHE IS LOOKING AT, AND WHICH PART IS WHICH.
+
+          Finished designs and reference pictures deserve different questions.
+          A product gets "would you buy this"; somebody else's pin gets "does
+          this look like you". Handing her both as one undifferentiated pile
+          got answers that were confident about the wrong thing.
+        */
+        const lines: string[] = [];
+        if (made)
+          lines.push(
+            `The first ${made} ${made === 1 ? "image is a finished design" : "images are finished designs"} this shop is about to sell. Imagine you are scrolling a shop and ${made === 1 ? "it is" : "they are"} for sale. React to them the way you would react in the wild.`,
+          );
+        if (found)
+          lines.push(
+            `${made ? `The remaining ${found}` : `These ${found}`} ${found === 1 ? "image is" : "images are"} NOT for sale and NOT made by this shop — ${found === 1 ? "it is" : "they are"} a reference picture saved while working out what to make. Do not review ${found === 1 ? "it" : "them"} as a product. Say whether ${found === 1 ? "it looks" : "they look"} like your world, what you would actually stop scrolling for, and what feels tired.`,
+          );
+        return lines.join("\n\n");
+      })(),
     });
     history.push({ role: "user", content: blocks });
     history.push({
@@ -160,14 +183,12 @@ export async function POST(req: Request) {
     history.push({
       role: "user",
       content:
-        "Before this starts: you have not been shown any pictures, and there " +
-        "is no way for anyone to send you one here. This is a conversation, " +
-        "not a review. Never ask for images, links, screenshots or a board — " +
-        "asking for something that cannot be sent is worse than having " +
-        "nothing to look at. If a design or a pin comes up, ask about it in " +
-        "words: what it says, what it looks like, where they would wear it. " +
-        "The seller's research board is private to them by design; it is not " +
-        "missing and it is not yours to ask for.",
+        "Before this starts: there is nothing to look at yet — no designs " +
+        "made and nothing saved to the research board. This is a " +
+        "conversation, not a review. Never ask for images, links or " +
+        "screenshots; asking for something that cannot be sent is worse than " +
+        "having nothing to look at. Talk about it in words instead: what a " +
+        "design says, what it looks like, where you would wear it.",
     });
     history.push({
       role: "assistant",

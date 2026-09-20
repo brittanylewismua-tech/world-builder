@@ -24,7 +24,7 @@ import {
   loadCustomer,
   type CustomerProfile,
 } from "@/lib/customer";
-import { openBoard } from "@/lib/board";
+import { openBoard, type BoardItem } from "@/lib/board";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
@@ -98,6 +98,8 @@ export default function CustomerChat({
   const [who, setWho] = useState<CustomerProfile | null>(null);
   /* What this particular drop is about, in the seller's own words. */
   const [intention, setIntention] = useState("");
+  /** The research board, so she can be shown it when there is nothing made yet. */
+  const [research, setResearch] = useState<BoardItem[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
   /*
@@ -195,8 +197,14 @@ export default function CustomerChat({
   useEffect(() => {
     if (!drop) return setIntention("");
     openBoard(world, drop)
-      .then((b) => setIntention(b.intention ?? ""))
-      .catch(() => setIntention(""));
+      .then((b) => {
+        setIntention(b.intention ?? "");
+        setResearch(b.items.filter((i) => i.src && !i.later));
+      })
+      .catch(() => {
+        setIntention("");
+        setResearch([]);
+      });
   }, [world, drop]);
 
   useEffect(() => {
@@ -236,7 +244,27 @@ export default function CustomerChat({
         {
           messages: recent(all),
           context: await context(),
-          images: drop ? await encodeAll(mockupSources(drop)) : [],
+          /*
+            THE DESIGNS FIRST, THEN THE RESEARCH BEHIND THEM.
+
+            She used to be shown the finished mockups and nothing else, on the
+            reasoning that research is the seller's working-out and a person
+            shown somebody's working-out starts commenting on the working-out.
+
+            That holds right up until the drop is empty. With nothing made yet
+            there was nothing to react to, so asked about a pin she decided an
+            attachment had failed and asked for pictures that cannot be sent —
+            and the one person whose opinion of the research is worth having
+            was the only one not allowed to see it.
+
+            Designs lead, because a real product beats a reference every time.
+            Research fills whatever room is left.
+          */
+          images: await encodeAll([
+            ...(drop ? mockupSources(drop) : []),
+            ...research.map((i) => ({ id: i.id, src: i.src })),
+          ]),
+          designs: drop ? mockupSources(drop).length : 0,
         },
         { timeoutMs: 90_000 },
       );
