@@ -172,10 +172,22 @@ async function handle(req: Request) {
       : "";
     if (token) {
       /* The caller's own token, so row security still decides what they see. */
+      /*
+        `||`, NOT `??`. THIS ONE CHARACTER PAIR BROKE THE WHOLE FEATURE.
+
+        NEXT_PUBLIC_SUPABASE_URL is set on the deployment to an EMPTY STRING.
+        `??` only falls back on null and undefined, so it handed "" straight
+        to createClient, which threw "supabaseUrl is required" before the
+        handler's only try block — an empty 500, three sellers, two days.
+
+        Every other file reaches for the same variable with `||`, which treats
+        an empty string as absent. That is why this was the one route that
+        failed and nothing else did.
+      */
       const asUser = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL ??
+        process.env.NEXT_PUBLIC_SUPABASE_URL ||
           "https://ywncfltxrnrchicjwcse.supabase.co",
-        process.env.NEXT_PUBLIC_SUPABASE_KEY ??
+        process.env.NEXT_PUBLIC_SUPABASE_KEY ||
           "sb_publishable_1dP18eUzIVckldFdIR2w7Q_6clKwTmu",
         {
           auth: { persistSession: false, autoRefreshToken: false },
