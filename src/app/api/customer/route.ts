@@ -196,7 +196,29 @@ export async function POST(req: Request) {
     });
   }
 
-  for (const m of messages) history.push({ role: m.role, content: m.content });
+  /*
+    THE PICTURES GO IN FRONT OF THE STALE DENIALS, NOT BEHIND THEM.
+
+    Images are front-loaded so they can be cached, which puts them before every
+    remembered turn. Those turns include a stretch of this conversation from
+    before she was ever shown anything, where she says — correctly, at the time
+    — that she cannot see any pictures. Replayed after the images, that is the
+    most recent thing she "said" on the subject, and she stayed consistent with
+    herself: eleven pins attached, and she still answered "nothing has come
+    through on my end".
+
+    One line against the newest question fixes it, because recency is the whole
+    problem. It is only added when there is actually something to look at, so
+    it can never talk her into seeing something that was not sent.
+  */
+  const last = messages.length - 1;
+  messages.forEach((m, i) => {
+    const stale =
+      images.length > 0 && i === last && m.role === "user"
+        ? `[Looking at the ${images.length} image${images.length === 1 ? "" : "s"} above right now. Earlier in this conversation you said you could not see any pictures — that was true then and is not true now. Answer from what is in front of you.]\n\n`
+        : "";
+    history.push({ role: m.role, content: `${stale}${m.content}` });
+  });
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
