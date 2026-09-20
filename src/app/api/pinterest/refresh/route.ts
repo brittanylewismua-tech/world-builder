@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ownerOf } from "@/lib/guard";
-import { ASSETS, listPins, serviceDb, tokenFor } from "@/lib/pinterest";
+import { ASSETS, listBoards, listPins, serviceDb, tokenFor } from "@/lib/pinterest";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
   const { data: sources } = await db
     .from("wb_pin_sources")
-    .select("board_id, board_name, destination, drop_id")
+    .select("board_id, board_name, destination, drop_id, last_pin_count")
     .eq("world_id", worldId)
     ;
 
@@ -67,8 +67,45 @@ export async function POST(req: Request) {
     let imported = 0;
     const trouble: string[] = [];
 
+    /*
+      ASK ABOUT THE BOARDS THAT MOVED, NOT ALL OF THEM.
+
+      Every refresh used to spend one request per board feeding the drop,
+      whether anything had been pinned to it or not — six boards, six requests,
+      to find out that five of them were exactly as they were an hour ago.
+
+      The board list is a SINGLE request and it carries each board's pin count.
+      Comparing that against the count at the last sync says which boards are
+      worth opening, so a seller who pinned four things to one board spends two
+      requests instead of six.
+
+      If the board list itself fails, nothing is skipped: every board is read
+      the old way. A saving is not worth a missed pin.
+    */
+    const counts = new Map<string, number>();
+    try {
+      for (const b of await listBoards(token)) counts.set(b.id, b.pinCount);
+    } catch {
+      /* No list, no skipping. */
+    }
+
+    const skipped: string[] = [];
+
     for (const src of feeding) {
       try {
+        const now = counts.get(src.board_id as string);
+        const before = src.last_pin_count as number | null;
+        /*
+          Unchanged means nothing was added AND nothing was removed. A board
+          where one pin was deleted and one added lands on the same number and
+          waits until the next change — the alternative is asking about every
+          board forever to catch a case that costs one refresh of delay.
+        */
+        if (now !== undefined && before !== null && now === before) {
+          skipped.push(String(src.board_name ?? "A board"));
+          continue;
+        }
+
         const pins = await listPins(token, src.board_id as string, PER_BOARD);
         if (!pins.length) continue;
 
@@ -154,7 +191,12 @@ export async function POST(req: Request) {
 
         await db
           .from("wb_pin_sources")
-          .update({ last_synced_at: new Date().toISOString() })
+          .update({
+            last_synced_at: new Date().toISOString(),
+            /* Only written after the pins were actually read, so a board that
+               failed halfway is looked at again next time. */
+            last_pin_count: counts.get(src.board_id as string) ?? null,
+          })
           .eq("world_id", worldId)
           .eq("board_id", src.board_id as string)
           .eq("destination", src.destination as string);
@@ -167,10 +209,31 @@ export async function POST(req: Request) {
       }
     }
 
+    /*
+      A PROBLEM THE PAGE NEVER SHOWED.
+
+      Anything that went wrong per board was collected into `trouble` and
+      returned — and the research board only ever read `imported` and `note`.
+      So when Pinterest answered "the daily limit for this app has been
+      reached", the seller was told "nothing new on your Pinterest boards
+      since last time". The one message that explains why the button is not
+      working was the one message that could not get out.
+
+      It comes back as `note` now, which is the field the page already reads.
+    */
+    const note = trouble.length
+      ? trouble.join(" · ")
+      : imported === 0 && skipped.length === feeding.length
+        ? "Nothing new on your Pinterest boards since last time."
+        : undefined;
+
     return NextResponse.json({
       ok: true,
       imported,
       boards: feeding.length,
+      checked: feeding.length - skipped.length,
+      skipped: skipped.length,
+      note,
       trouble: trouble.length ? trouble : undefined,
     });
   } catch (e) {
