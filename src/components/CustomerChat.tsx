@@ -253,14 +253,25 @@ export default function CustomerChat({
             and the one person whose opinion of the research is worth having
             was the only one not allowed to see it.
 
-            Designs lead, because a real product beats a reference every time.
-            Research fills whatever room is left.
+            ONE BOARD AT A TIME, AND ONLY THE ONE IN FRONT OF HER.
+
+            She is looking at whatever is on screen, and the two panels are
+            never the same thing: the research tab is next week's pins, the
+            build tab is this week's designs. Sending both would mean asking
+            "would you buy this" and "does this look like you" about one pile
+            of pictures, and getting an answer confident about the wrong one.
+
+            It is also not merely tidiness. On the research tab the drop in
+            scope is NEXT week's — so once anything is made for it, mixing the
+            two would start leaking unfinished designs into a conversation
+            about somebody else's pins, without a word said about it.
           */
-          images: await encodeAll([
-            ...(drop ? mockupSources(drop) : []),
-            ...pins,
-          ]),
-          designs: drop ? mockupSources(drop).length : 0,
+          images: await encodeAll(
+            pins.length ? pins : drop ? mockupSources(drop) : [],
+          ),
+          /* Zero whenever she is looking at research, so the route asks
+             about it as somebody else's reference rather than as a product. */
+          designs: pins.length ? 0 : drop ? mockupSources(drop).length : 0,
         },
         { timeoutMs: 90_000 },
       );
