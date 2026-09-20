@@ -142,6 +142,37 @@ export async function POST(req: Request) {
       role: "assistant",
       content: "Okay, I'm looking.",
     });
+  } else {
+    /*
+      SHE HAS TO BE TOLD WHEN SHE HAS BEEN SHOWN NOTHING.
+
+      With no designs in the drop, nothing at all was said about what she can
+      and cannot see — so asked about pins she improvised, decided she must be
+      missing an attachment, and asked the seller to send the actual pictures.
+      There is no way to send her a picture in this conversation. She was
+      inviting an action the product does not have, which reads as the chat
+      being broken.
+
+      The research board is deliberately not hers to see — a person shown
+      somebody's working-out starts commenting on the working-out — but that
+      is a reason to say so plainly, not a reason to leave her guessing.
+    */
+    history.push({
+      role: "user",
+      content:
+        "Before this starts: you have not been shown any pictures, and there " +
+        "is no way for anyone to send you one here. This is a conversation, " +
+        "not a review. Never ask for images, links, screenshots or a board — " +
+        "asking for something that cannot be sent is worse than having " +
+        "nothing to look at. If a design or a pin comes up, ask about it in " +
+        "words: what it says, what it looks like, where they would wear it. " +
+        "The seller's research board is private to them by design; it is not " +
+        "missing and it is not yours to ask for.",
+    });
+    history.push({
+      role: "assistant",
+      content: "Got it — just talking, then.",
+    });
   }
 
   for (const m of messages) history.push({ role: m.role, content: m.content });
