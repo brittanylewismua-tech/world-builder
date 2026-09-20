@@ -182,11 +182,13 @@ export async function POST(req: Request) {
         board_id: boardId,
         board_name: boardName ?? "Board",
         destination,
+        /* Kept as the record of where this board was first attached. The
+           refresh does not scope by it: a board feeds the world. */
         drop_id: body.dropId ?? null,
         last_synced_at: new Date().toISOString(),
         imported_count: imported,
       },
-      { onConflict: "world_id,board_id,destination,drop_id" },
+      { onConflict: "world_id,board_id,destination" },
     );
 
     return NextResponse.json({

@@ -48,9 +48,19 @@ export async function POST(req: Request) {
     .eq("world_id", worldId)
     ;
 
-  const feeding = (sources ?? []).filter(
-    (s) => !dropId || !s.drop_id || s.drop_id === dropId,
-  );
+  /*
+    EVERY BOARD THIS WORLD IS CONNECTED TO, NOT JUST THIS DROP'S.
+
+    This used to keep only the sources whose drop_id matched the drop on
+    screen. A board connected during Drop 3 therefore vanished from the
+    refresh the moment Drop 5 began — still listed as connected, contributing
+    nothing, and a press of Get new pins did not even consider it. Nothing on
+    the page said why, and the only way to find out was to read the database.
+
+    A Pinterest board is chosen for the world. Whatever drop is open is where
+    its new pins land.
+  */
+  const feeding = sources ?? [];
 
   if (!feeding.length)
     return NextResponse.json({
@@ -122,9 +132,10 @@ export async function POST(req: Request) {
         if (!fresh.length) continue;
 
         // The board this drop's research lands on, made if this is the first
-        // thing to arrive for it.
+        // thing to arrive for it. Always the drop being worked on — where the
+        // board was first attached is history, not a destination.
         let boardId: string | null = null;
-        const target = (src.drop_id as string | null) ?? dropId ?? null;
+        const target = dropId ?? (src.drop_id as string | null) ?? null;
         if (!target) continue;
 
         const { data: existing } = await db
