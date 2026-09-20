@@ -24,7 +24,7 @@ import {
   loadCustomer,
   type CustomerProfile,
 } from "@/lib/customer";
-import { openBoard, type BoardItem } from "@/lib/board";
+import { openBoard } from "@/lib/board";
 import { report } from "@/lib/report";
 import type { World } from "@/lib/world";
 import type { Drop } from "@/lib/drops";
@@ -74,11 +74,14 @@ export default function CustomerChat({
    * already knows.
    */
   looking = "the drop being built",
+  pins = [],
 }: {
   world: World;
   /** The drop being built. She is shown its designs, nothing else. */
   drop?: Drop;
   looking?: "the drop being built" | "next week's research";
+  /** The research board she is sitting beside, so she can see it too. */
+  pins?: { id: string; src: string | null }[];
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
@@ -98,8 +101,7 @@ export default function CustomerChat({
   const [who, setWho] = useState<CustomerProfile | null>(null);
   /* What this particular drop is about, in the seller's own words. */
   const [intention, setIntention] = useState("");
-  /** The research board, so she can be shown it when there is nothing made yet. */
-  const [research, setResearch] = useState<BoardItem[]>([]);
+
   const endRef = useRef<HTMLDivElement>(null);
 
   /*
@@ -197,14 +199,8 @@ export default function CustomerChat({
   useEffect(() => {
     if (!drop) return setIntention("");
     openBoard(world, drop)
-      .then((b) => {
-        setIntention(b.intention ?? "");
-        setResearch(b.items.filter((i) => i.src && !i.later));
-      })
-      .catch(() => {
-        setIntention("");
-        setResearch([]);
-      });
+      .then((b) => setIntention(b.intention ?? ""))
+      .catch(() => setIntention(""));
   }, [world, drop]);
 
   useEffect(() => {
@@ -262,7 +258,7 @@ export default function CustomerChat({
           */
           images: await encodeAll([
             ...(drop ? mockupSources(drop) : []),
-            ...research.map((i) => ({ id: i.id, src: i.src })),
+            ...pins,
           ]),
           designs: drop ? mockupSources(drop).length : 0,
         },

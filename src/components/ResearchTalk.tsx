@@ -89,6 +89,13 @@ export default function ResearchTalk({
             is in front of them.
           */
           looking={pins.length ? "next week's research" : "the drop being built"}
+          /*
+            The same pins the Director is looking at. They stopped here before:
+            the board handed them down, the Director got them, and the customer
+            — the one person whose opinion of a reference is worth anything —
+            was given a label saying research existed and never shown it.
+          */
+          pins={pins}
         />
       </div>
     </div>
