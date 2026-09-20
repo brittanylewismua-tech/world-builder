@@ -99,7 +99,36 @@ interface Body {
   boardId?: string;
 }
 
+/*
+  A CRASH HERE USED TO ARRIVE AS A 500 WITH AN EMPTY BODY.
+
+  Only the model call was wrapped. Anything that went wrong before it — the
+  allowance check, a malformed board, an SDK constructed badly — threw out of
+  the handler, and Vercel answered with nothing at all. The browser turned
+  that into "That did not go through", the one message that describes every
+  possible cause equally badly, and the error log recorded that same sentence
+  three times a day for two days across three different worlds. Nobody could
+  have diagnosed it from the outside, which is the actual fault.
+
+  Everything is inside now, and what broke is said out loud.
+*/
 export async function POST(req: Request) {
+  try {
+    return await handle(req);
+  } catch (e) {
+    return NextResponse.json(
+      {
+        error:
+          e instanceof Error
+            ? `The board read failed: ${e.message}`
+            : "The board read failed before it started.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+async function handle(req: Request) {
   let body: Body;
   try {
     body = await req.json();
