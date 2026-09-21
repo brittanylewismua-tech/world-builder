@@ -295,12 +295,21 @@ export async function saveSignalToBoard(
   const board = await openBoard(world, drop);
   const note = `${signal.headline} — ${signal.body}`.slice(0, 2000);
   if (signal.url) {
-    let label: string | null = null;
-    try {
-      label = new URL(signal.url).hostname.replace(/^www\./, "");
-    } catch {
-      label = null;
-    }
+    /*
+      THE CARD SAYS WHAT IT IS, NOT WHERE IT WAS HOSTED.
+
+      The label was the hostname, so a quote worth keeping - reported in the
+      paper, found on a Walmart listing - sat on the board as a card reading
+      "walmart.com". The domain is the least interesting true thing about it:
+      it is not why it was saved, it is not what it says, and on a wall of
+      pictures it reads as a shopping link rather than an idea.
+
+      The headline is what the seller recognised when they saved it, so that
+      is what the card carries. The link still goes where it always did - the
+      source is one click away and nothing is hidden, it is just no longer the
+      headline of its own card.
+    */
+    const label = signal.headline.trim().slice(0, 120) || null;
     if (label)
       return insert({
         world_id: world.id,
@@ -308,7 +317,9 @@ export async function saveSignalToBoard(
         kind: "link",
         source_url: signal.url,
         source_label: label,
-        note,
+        /* The card carries the headline now, so the caption underneath is the
+           part it did not already say. */
+        note: signal.body.trim().slice(0, 2000) || note,
       });
   }
   return insert({

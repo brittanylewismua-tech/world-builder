@@ -957,9 +957,13 @@ function Piece({
           target="_blank"
           rel="noopener noreferrer"
           draggable={false}
-          className="flex aspect-[3/2] w-full items-center justify-center rounded-lg border border-black/8 bg-[#f4f2f1] px-3 text-center text-[13px] font-semibold text-ink transition hover:bg-[#ece9e7]"
+          /* Sized for a hostname before it carried a headline: a sentence ran
+             out of the box. Clamped rather than truncated in the data, so the
+             whole thing is still there on hover and in the caption. */
+          className="flex aspect-[3/2] w-full items-center justify-center rounded-lg border border-black/8 bg-[#f4f2f1] px-3 py-2 text-center text-[13px] font-semibold leading-snug text-ink transition hover:bg-[#ece9e7]"
+          title={item.sourceLabel ?? undefined}
         >
-          {item.sourceLabel} ↗
+          <span className="line-clamp-4">{item.sourceLabel} ↗</span>
         </a>
       )}
 
