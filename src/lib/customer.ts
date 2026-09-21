@@ -110,25 +110,31 @@ export function asPrompt(p: CustomerProfile): string {
     me.how_they_got_here ? `How you ended up in this world: ${me.how_they_got_here}` : "",
     "",
     /*
-      KNOWING A THING EXISTS IS NOT THE SAME AS LIKING IT.
+      SHE IS FROM THE WORLD, NOT FROM THE SHOP'S KEYWORD LIST.
 
-      These lists were written as her taste - "what lands", "what is live right
-      now" - so a handful of named symbols became her standing favourites, and
-      she recommended them whatever she was asked. Four questions, four praying
-      mantises, because the mantis is named in four of these lists and a
-      preference stated in advance is a preference she will keep restating.
-      That is a lookup table with a name on it.
+      These lists were written as her taste, so a handful of named symbols
+      became standing favourites she recommended whatever she was asked - four
+      questions, four praying mantises. Worse, much of what was in them came
+      from the seller's own eRank terms, so a seller asking her a question got
+      their own search history read back as a personality.
 
-      They are her KNOWLEDGE of the world now: things she has seen go round,
-      the way anyone knows what is on the shelves. What she actually thinks of
-      the thing in front of her has to be worked out when she sees it, which is
-      the only reason asking her is worth anything.
+      What follows is background: the furniture of a world she lives in, the
+      way anyone half-knows what is around them. It is not a list of her
+      favourite things and it is not a vocabulary to speak from. She is a
+      person with a job, a group chat and a Saturday, and most of who she is
+      was never written down here at all.
+
+      When she is shown something, the opinion has to be formed about THAT
+      thing, in front of her. Anything else and the seller is being sold their
+      own notes back.
     */
-    "WHAT YOU HAVE SEEN GO ROUND IN THIS WORLD — this is what you KNOW, not",
-    "what you love. You recognise all of it. You have no favourites decided in",
-    "advance, and naming something from these lists is not an opinion. When you",
-    "are shown something, work out what you think of THAT, in front of you, and",
-    "say why in terms of the thing itself.",
+    "BACKGROUND — the furniture of the world you live in. You half-know all of",
+    "it the way anyone knows what is around them. These are NOT your favourite",
+    "things, NOT a list to pick answers from, and naming one of them is not an",
+    "opinion. Most of who you are is not written here: your job, your friends,",
+    "what you did at the weekend, what you are quietly tired of. Answer from",
+    "the whole of that life, and when you are shown something, say what you",
+    "think of THAT thing rather than reaching for anything below.",
     "",
     "YOU KNOW THIS WHOLE WORLD, NOT ONE CORNER OF IT.",
     "You move between all of the below and the parts next door. When you are asked about a corner you are not standing in, you still know it — that is what being from here means.",

@@ -242,10 +242,44 @@ export async function POST(req: Request) {
         .limit(15),
     ]);
 
+  /*
+    THE WORLD, NOT THE SELLER'S SEARCH HISTORY.
+
+    The seller's eRank keywords and their watch list used to be handed over as
+    the raw material for this person, and it produced exactly what you would
+    expect: a customer whose interests were the seller's search terms, saying
+    them back. That is not a customer, it is an echo with a name, and the
+    seller learns nothing they did not type in themselves.
+
+    A real person in this world did not arrive at it through keyword research.
+    They have a life, a politics, a group chat and a set of things they are
+    tired of, and the shop's commercial angle is invisible to them.
+
+    So the brief is the world itself plus what real buyers have really done.
+    The keywords are named once, as a thing to AVOID sounding like, and never
+    as material.
+  */
+  const sellerTerms = [
+    ...(niches ?? []).map((n) => n.keyword),
+    ...(areas ?? []).map((a) => a.name),
+  ].filter(Boolean);
+
   const lines: string[] = [
-    `THE WORLD: ${world?.name ?? "unnamed"}`,
-    `Search terms the seller has checked in eRank: ${(niches ?? []).map((n) => n.keyword).join(" · ") || "none"}`,
-    `Parts of the world they watch: ${(areas ?? []).map((a) => a.name).join(" · ") || "none"}`,
+    `THE WORLD THIS PERSON LIVES IN: ${world?.name ?? "unnamed"}`,
+    "",
+    "Write somebody who belongs to that world as a whole — its politics, its",
+    "humour, its arguments, the people in it and what they are sick of. Not",
+    "somebody assembled from a shop's product range.",
+    ...(sellerTerms.length
+      ? [
+          "",
+          "THE SELLER'S OWN SEARCH TERMS — these are the shop's commercial angle",
+          "and this person has never seen them. Do NOT build them into who she is",
+          "and do not let her vocabulary come back as this list. They are here so",
+          "you can tell when you are echoing the shop instead of describing a",
+          `person: ${sellerTerms.join(" · ")}`,
+        ]
+      : []),
   ];
 
   if (winners?.length) {
