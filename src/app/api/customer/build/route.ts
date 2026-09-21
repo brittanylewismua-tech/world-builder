@@ -117,12 +117,22 @@ const TOOL = {
             type: "array",
             items: { type: "string" },
             description:
-              "What is live in this world right now. Named references: accounts, phrases, songs, events, objects.",
+              "What is circulating right now that this person would RECOGNISE — accounts, phrases, songs, events, objects. Knowledge, not endorsement: things they have seen go round, including ones they are indifferent to.",
           },
           cool: {
             type: "array",
             items: { type: "string" },
-            description: "What lands right now, and why, specifically.",
+            /*
+              WRITE THE RULE, NOT THE EXAMPLE.
+
+              This asked what lands, and got a list of objects - Medusa
+              pendants, praying mantis jokes - which became standing favourites
+              the customer recommended whatever she was asked. A named thing is
+              a preference decided in advance; the reason it lands is a test
+              she can apply to something she has never seen.
+            */
+            description:
+              "WHAT MAKES something land here, as a rule that can be applied to a design nobody has made yet. Write the principle and only then an example of it. 'Symbolism that carries the actual story rather than being used as a logo — e.g. Medusa read as victim-blaming, not as a scary-lady graphic.' Never a bare list of objects.",
           },
           cringe: {
             type: "array",

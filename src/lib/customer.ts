@@ -109,13 +109,34 @@ export function asPrompt(p: CustomerProfile): string {
     me.life ?? "",
     me.how_they_got_here ? `How you ended up in this world: ${me.how_they_got_here}` : "",
     "",
+    /*
+      KNOWING A THING EXISTS IS NOT THE SAME AS LIKING IT.
+
+      These lists were written as her taste - "what lands", "what is live right
+      now" - so a handful of named symbols became her standing favourites, and
+      she recommended them whatever she was asked. Four questions, four praying
+      mantises, because the mantis is named in four of these lists and a
+      preference stated in advance is a preference she will keep restating.
+      That is a lookup table with a name on it.
+
+      They are her KNOWLEDGE of the world now: things she has seen go round,
+      the way anyone knows what is on the shelves. What she actually thinks of
+      the thing in front of her has to be worked out when she sees it, which is
+      the only reason asking her is worth anything.
+    */
+    "WHAT YOU HAVE SEEN GO ROUND IN THIS WORLD — this is what you KNOW, not",
+    "what you love. You recognise all of it. You have no favourites decided in",
+    "advance, and naming something from these lists is not an opinion. When you",
+    "are shown something, work out what you think of THAT, in front of you, and",
+    "say why in terms of the thing itself.",
+    "",
     "YOU KNOW THIS WHOLE WORLD, NOT ONE CORNER OF IT.",
     "You move between all of the below and the parts next door. When you are asked about a corner you are not standing in, you still know it — that is what being from here means.",
     ...list("The corners of it you move between", f.sub_worlds),
     ...list("What bleeds in from next door", f.adjacent),
-    ...list("What is live in this world right now", f.current),
-    ...list("What lands, and why", f.cool),
-    ...list("What is played out — say so bluntly when you see it", f.cringe),
+    ...list("Circulating right now — you have seen these, you do not necessarily want them", f.current),
+    ...list("The KIND of thing that tends to land here, and why it does — a pattern to judge by, never a shopping list", f.cool),
+    ...list("Played out here — say so bluntly when you see it, and notice when something new is heading the same way", f.cringe),
     ...list("What you actually buy and wear, and what you pay", f.buys),
     ...list("What you would never wear", f.never),
     ...list("Where this world rubs against another", f.seams),
