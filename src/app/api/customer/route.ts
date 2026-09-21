@@ -39,6 +39,29 @@ Good: "the 'nevertheless she persisted' stuff reads 2017 to me now, i'd feel lik
 YOU ARE FROM THE WHOLE WORLD, NOT ONE CORNER
 Everything in the profile below is yours — the sub-worlds, the parts that bleed in from next door. Somebody from rave culture also knows that summer's silhouette and the circuit and the music, because from the inside it is all one thing. When you are asked about a corner you are not standing in, you still know it.
 
+YOU ARE NOT A LIST OF FIVE FAVOURITE THINGS
+The profile below is a SAMPLE of your world, not an inventory of you. The same
+few motifs appear in several of those lists because they are well known, not
+because they are all you think about — most of your life is not written down
+there at all.
+
+So: do not reach for the same reference twice in one conversation. If you named
+a symbol, a slogan or an object once, it is used up — find another, or answer
+from a part of your life the profile never mentions: your job, your group chat,
+a shop you walk past, what you wore last weekend, something you are sick of
+that nobody has asked about.
+
+Being specific does not mean naming a motif. "I'd wear it to my aunt's
+thanksgiving and let her read it" is specific. Saying "praying mantis" for the
+fourth time is a tic.
+
+YOU ARE ALLOWED TO BE UNMOVED
+Real people are mostly indifferent. "None of these do anything for me",
+"honestly I'd scroll past all of them", "this is fine, I just wouldn't buy it"
+are complete and useful answers. Manufacturing enthusiasm to seem helpful is
+the single fastest way to be useless — the seller cannot tell a real yes from a
+polite one, and a polite one costs them a print run.
+
 WHAT YOU ARE NOT
 - Not a market research report. You never talk in trends, demographics, or segments.
 - Not proof of anything. You are one plausible person, extrapolated from research, and you can be wrong about your own world the way real people are.
@@ -211,13 +234,54 @@ export async function POST(req: Request) {
     problem. It is only added when there is actually something to look at, so
     it can never talk her into seeing something that was not sent.
   */
+  /*
+    WHAT SHE HAS ALREADY WORN OUT, COUNTED RATHER THAN HOPED FOR.
+
+    Telling a model "do not repeat yourself" while handing it the same thirty
+    motifs every turn loses to probability: the profile names praying mantis in
+    four separate lists, Medusa and Lilith in three, so the most available
+    "specific detail" is the same handful forever. A seller asked four
+    questions and got the mantis four times.
+
+    So the repetition is measured off her own previous answers and named back
+    to her. A word she has used in two or more replies is spent — not banned
+    from her vocabulary, but no longer available as the thing she reaches for
+    to sound like herself.
+  */
+  const STOP = new Set(("the a an and or but of to in on for with at it its is are was were be been am i you " +
+    "my me we us they them he she his her this that these those not no yes so if then than as up out about " +
+    "just like really very much more most some any all lot bit kind sort thing things one two really honestly " +
+    "would could should will can do does did done have has had get got make makes made go goes went say says " +
+    "said see sees saw look looks looking wear wears wearing buy buys buying actually even still only also " +
+    "there here what when where who why how which while from into over under again ever never always").split(" "));
+
+  const saidBefore = new Map<string, number>();
+  for (const m of messages) {
+    if (m.role !== "assistant") continue;
+    const seen = new Set<string>();
+    for (const w of m.content.toLowerCase().match(/[a-z']{4,}/g) ?? []) {
+      if (STOP.has(w) || seen.has(w)) continue;
+      seen.add(w);
+      saidBefore.set(w, (saidBefore.get(w) ?? 0) + 1);
+    }
+  }
+  const wornOut = [...saidBefore.entries()]
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([w]) => w);
+
   const last = messages.length - 1;
   messages.forEach((m, i) => {
+    const spent =
+      i === last && m.role === "user" && wornOut.length
+        ? `[You have already used these in this conversation and they are spent — say something else: ${wornOut.join(", ")}. Reaching for them again is the tic that makes you sound like a bot.]\n\n`
+        : "";
     const stale =
       images.length > 0 && i === last && m.role === "user"
         ? `[Looking at the ${images.length} image${images.length === 1 ? "" : "s"} above right now. Earlier in this conversation you said you could not see any pictures — that was true then and is not true now. Answer from what is in front of you.]\n\n`
         : "";
-    history.push({ role: m.role, content: `${stale}${m.content}` });
+    history.push({ role: m.role, content: `${spent}${stale}${m.content}` });
   });
 
   try {
