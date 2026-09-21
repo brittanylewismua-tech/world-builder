@@ -31,7 +31,8 @@ const MODEL = process.env.WB_MODEL || "claude-sonnet-5";
  *
  * EVIDENCE, BEST FIRST. Designs that actually sold, with their numbers. The
  * designs the most viewers favorited across followed shops. What the seller
- * collected on their research board. What the paper has reported lately. The
+ * What the paper has reported lately. Deliberately NOT the research board —
+ * see below. The
  * seller's own keywords and areas. Real measured behaviour ranks above
  * anything anybody wrote down as a description.
  */
@@ -202,7 +203,7 @@ export async function POST(req: Request) {
 
   const db = serviceDb();
 
-  const [{ data: world }, { data: niches }, { data: areas }, { data: winners }, { data: loved }, { data: board }, { data: news }] =
+  const [{ data: world }, { data: niches }, { data: areas }, { data: winners }, { data: loved }, { data: news }] =
     await Promise.all([
       db.from("wb_worlds").select("name").eq("id", worldId).maybeSingle(),
       db.from("wb_sub_niches").select("keyword, note").eq("world_id", worldId),
@@ -223,12 +224,6 @@ export async function POST(req: Request) {
         .gte("views", 150)
         .order("favorers", { ascending: false })
         .limit(40),
-      db
-        .from("wb_board_items")
-        .select("body, note, ai")
-        .eq("world_id", worldId)
-        .not("analyzed_at", "is", null)
-        .limit(30),
       db
         .from("wb_daily_items")
         .select("headline, body, printable")
@@ -265,20 +260,26 @@ export async function POST(req: Request) {
     );
   }
 
-  if (board?.length) {
-    lines.push(
-      "",
-      "WHAT THE SELLER HAS BEEN COLLECTING — unverified, taste rather than demand:",
-      ...board.map((b) => {
-        const ai = (b.ai ?? {}) as Record<string, unknown>;
-        const bits = ["structure", "colors", "language"]
-          .map((k) => (ai[k] ? `${k}: ${String(ai[k])}` : null))
-          .filter(Boolean)
-          .join("; ");
-        return `- ${b.body || b.note || ""} ${bits}`.trim();
-      }),
-    );
-  }
+  /*
+    THE RESEARCH BOARD IS NOT EVIDENCE ABOUT THE CUSTOMER.
+
+    It used to be fed in here, hedged as "taste rather than demand", and that
+    hedge was not enough. A person whose opinions are assembled partly out of
+    what the seller has been saving will agree with what the seller has been
+    saving. Ask her about a pin and she likes it, because she was built from
+    pins like it. That is a mirror wearing a name, and a mirror cannot tell
+    you that roses without words are everywhere and you should stop.
+
+    She is still SHOWN the board in conversation — that is the whole point of
+    her, and reacting to something is the opposite of being made of it. What
+    she is MADE of has to come from outside this shop: what really sold and
+    for how much, what a real share of real viewers favorited in shops already
+    serving this world, and what the world itself has been doing lately.
+
+    The seller does not get a vote on what their customer thinks. That is the
+    only reason asking her is worth anything.
+  */
+
 
   if (news?.length) {
     lines.push(
@@ -317,7 +318,9 @@ export async function POST(req: Request) {
         const built_from = {
           sold: winners?.length ?? 0,
           favorited: loved?.length ?? 0,
-          collected: board?.length ?? 0,
+          /* Deliberately zero: the board is the seller's taste, not the
+             customer's. It is shown to her, never baked into her. */
+          collected: 0,
           reported: news?.length ?? 0,
         };
         await db.from("wb_world_customer").upsert(
