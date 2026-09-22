@@ -256,6 +256,12 @@ function DailyBody({ world }: { world: World }) {
   /* Whether we yet know if this world has a history — see the effect below. */
   const [datesReady, setDatesReady] = useState(false);
   const [writing, setWriting] = useState(false);
+  /*
+    Clicked, but the request has not left the browser yet: the world context
+    is still being built here. Nothing is running on the server during this,
+    so the page must not yet say it is safe to leave.
+  */
+  const [starting, setStarting] = useState(false);
   /* Bumped after a run so the shop section re-reads its numbers. */
   const [newsKey, setNewsKey] = useState(0);
   const [err, setErr] = useState("");
@@ -653,7 +659,7 @@ function DailyBody({ world }: { world: World }) {
       {tab === "world" &&
         items?.length === 0 &&
         !noAreas &&
-        (writing || (datesReady && dates.length === 0 && !publishedThisWeek)) && (
+        (writing || starting || (datesReady && dates.length === 0 && !publishedThisWeek)) && (
           <Card className="mb-16 flex flex-col items-center py-12 text-center">
             <img
               src="/globe.png"
@@ -663,10 +669,19 @@ function DailyBody({ world }: { world: World }) {
             <p className="t-h3 mt-4 text-ink">Reading your world…</p>
             <ReadingBar
               className="mt-4 max-w-xs"
-              expect={writing ? 300 : 150}
+              expect={writing || starting ? 300 : 150}
             />
-            {/* The write runs on the server and is saved there, so this is
-                genuinely true and worth saying: nobody has to sit here. */}
+            {/*
+              ONLY ONCE IT IS TRUE.
+
+              This sat under the spinner from the instant the button was
+              clicked — while the shop sweep was still running and the world
+              context was still being built, both of which happen in this
+              browser. Leave in that window and nothing had been started, so
+              the page came back to the button and the sentence had been a
+              lie. It now appears when the server has the request, which is
+              the moment leaving stops costing anything.
+            */}
             {writing && (
               <p className="t-small mt-4 max-w-sm text-ink-3">
                 This takes a few minutes. You can close this page — the issue
@@ -699,6 +714,7 @@ function DailyBody({ world }: { world: World }) {
         items?.length === 0 &&
         !noAreas &&
         !writing &&
+        !starting &&
         !loadFailed &&
         !(datesReady && dates.length === 0) && (
         <Empty
@@ -715,33 +731,49 @@ function DailyBody({ world }: { world: World }) {
           action={
             date === today && dates.length > 0 && !publishedThisWeek ? (
               <button
-                disabled={writing}
+                disabled={writing || starting}
                 onClick={async () => {
-                  if (writing) return;
-                  setWriting(true);
+                  if (writing || starting) return;
+                  setStarting(true);
                   setErr("");
                   try {
                     /*
-                      Shops first, so the numbers under the paper are from the
-                      same moment as the paper. It is quick and it cannot fail
-                      the issue.
+                      THE PAPER GOES FIRST, BECAUSE THE PAPER IS THE PROMISE.
+
+                      The shop sweep used to be awaited here, ahead of
+                      everything. It is one request in this browser, and until
+                      it came back nothing had been marked and nothing had
+                      been sent — so a seller who clicked, saw "you can close
+                      this page", and moved to another screen came back to the
+                      button with no write anywhere. The sweep cannot fail the
+                      issue and the numbers it refreshes sit under the paper,
+                      so it no longer stands in front of it.
                     */
-                    await sweepShops(world.id);
+                    void sweepShops(world.id).then(() => setNewsKey((n) => n + 1));
                     /*
-                      AND THEN NOBODY WAITS. The route writes the paper itself,
-                      so the request is an acknowledgement rather than the
-                      delivery. This starts it and watches the database, which
-                      is where the answer actually arrives. Closing the tab
-                      costs nothing.
+                      NOBODY WAITS. The route writes the paper itself, so the
+                      request is an acknowledgement rather than the delivery.
+                      This starts it and watches the database, which is where
+                      the answer actually arrives. Once the request is away,
+                      closing the tab costs nothing — and `onSent` is how the
+                      page knows that moment has arrived.
                     */
-                    startWrite(world, today, async (got) => {
-                      setItems(got);
-                      setRest(await loadRest(world.id, today).catch(() => []));
-                      setDates(await loadIssueDates(world.id).catch(() => dates));
-                      setNewsKey((n) => n + 1);
-                      setWriting(false);
-                      setErr("");
-                    });
+                    startWrite(
+                      world,
+                      today,
+                      async (got) => {
+                        setItems(got);
+                        setRest(await loadRest(world.id, today).catch(() => []));
+                        setDates(await loadIssueDates(world.id).catch(() => dates));
+                        setNewsKey((n) => n + 1);
+                        setWriting(false);
+                        setStarting(false);
+                        setErr("");
+                      },
+                      /* The request is away and the server owns it: now the
+                         page may say so, and now leaving is free. */
+                      () => { setStarting(false); setWriting(true); },
+                    );
                     return;
                   } catch (e) {
                     /*
@@ -779,6 +811,7 @@ function DailyBody({ world }: { world: World }) {
                        the instant it began. */
                     clearWriting();
                     setWriting(false);
+                    setStarting(false);
                   }
                 }}
                 className="btn btn-accent"

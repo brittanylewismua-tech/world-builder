@@ -158,7 +158,7 @@ export async function loadIssueDates(worldId: string): Promise<string[]> {
 export async function generateIssue(
   world: World,
   date: string,
-  { append = false }: { append?: boolean } = {},
+  { append = false, onSent }: { append?: boolean; onSent?: () => void } = {},
 ): Promise<DailyItem[]> {
   /*
     THE BAN LIST TRAVELS WITH THE REQUEST, AND THIS IS THE PATH THAT MATTERED.
@@ -188,6 +188,16 @@ export async function generateIssue(
     The ceiling now sits above the route's own, so whatever ends the request
     is the server answering rather than the browser walking away.
   */
+  /*
+    THE WORK BECOMES THE SERVER'S HERE, AND NOT ONE LINE EARLIER.
+
+    Everything above this point — the world context, the covered list — is
+    built in the browser. Until the request below is on its way, nothing is
+    running anywhere else, so nothing survives the tab. The caller is told at
+    exactly this moment so the page can stop promising more than is true.
+  */
+  onSent?.();
+
   const j = await askAI<{
     items: Omit<DailyItem, "id">[];
     also?: Omit<DailyRest, "id">[];
@@ -416,11 +426,23 @@ export function startWrite(
   world: World,
   date: string,
   onLanded: (items: DailyItem[]) => void,
+  onSent?: () => void,
 ): () => void {
-  markWriting(world.id, date);
+  /*
+    D · THE FLAG USED TO BE SET ON THE CLICK, WHICH IS BEFORE ANY WORK EXISTS.
 
-  /* Fire and forget, deliberately: the route saves what it makes. */
-  void generateIssue(world, date).catch(() => {});
+    `markWriting` ran here, then `generateIssue` spent two round trips in the
+    browser building the world context before it posted anything. Leave in
+    that window and the flag said a write was in flight while no server had
+    ever heard of it — the page came back, showed "Reading your world…", and
+    polled for fifteen minutes for an issue nobody was writing.
+
+    The flag is now set when the request is actually on its way, which is the
+    moment the claim becomes true.
+  */
+  void generateIssue(world, date, {
+    onSent: () => { markWriting(world.id, date); onSent?.(); },
+  }).catch(() => {});
 
   let alive = true;
   const began = Date.now();
