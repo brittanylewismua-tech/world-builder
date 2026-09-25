@@ -276,6 +276,84 @@ export async function openBoard(world: World, drop: Drop): Promise<Board> {
   };
 }
 
+
+/**
+ * CARRY THE RESEARCH FORWARD. ALL OF IT.
+ *
+ * A board belongs to a drop, so finishing a drop used to put everything on it
+ * behind the read-only wall with it — the pins, the notes, the links, the
+ * patterns a read had found. A seller who had saved twenty things and used
+ * four lost the other sixteen to a date, and there was no way back to them.
+ *
+ * Research is not an artifact of the week it was done in; it is the material
+ * you are working from. So when a drop ends, its board moves on to the next
+ * one intact. Nothing is copied and nothing is thrown away — the same rows
+ * point at the new board, so what the seller sees is simply that their board
+ * is still their board.
+ *
+ * The mockups stay with the drop they were made for. Those ARE the artifact.
+ */
+export async function carryBoardForward(fromDropId: string, toDropId: string) {
+  const { data: from } = await supabase
+    .from("wb_boards")
+    .select("id, intention")
+    .eq("drop_id", fromDropId)
+    .limit(1)
+    .maybeSingle();
+  if (!from) return;
+
+  const { data: to } = await supabase
+    .from("wb_boards")
+    .select("id")
+    .eq("drop_id", toDropId)
+    .limit(1)
+    .maybeSingle();
+
+  /*
+    THE CHEAPEST CORRECT MOVE IS TO HAND OVER THE WHOLE BOARD.
+
+    When next week has no board yet, the finished drop's board simply becomes
+    next week's — one update, nothing to copy, and no window in which the
+    items belong to neither. The seller cannot tell the difference, which is
+    the point.
+  */
+  if (!to) {
+    await supabase
+      .from("wb_boards")
+      .update({ drop_id: toDropId })
+      .eq("id", from.id);
+    return;
+  }
+
+  /* Next week already has a board of its own, so the items move across to it
+     and the emptied one is left where it is. */
+  await Promise.all([
+    supabase
+      .from("wb_board_items")
+      .update({ board_id: to.id })
+      .eq("board_id", from.id),
+    supabase
+      .from("wb_board_findings")
+      .update({ board_id: to.id })
+      .eq("board_id", from.id),
+  ]);
+
+  /* An intention the seller wrote is theirs, not the week's. Only carried
+     when the receiving board has none, so it cannot overwrite a newer one. */
+  if (from.intention) {
+    const { data: current } = await supabase
+      .from("wb_boards")
+      .select("intention")
+      .eq("id", to.id)
+      .maybeSingle();
+    if (!current?.intention)
+      await supabase
+        .from("wb_boards")
+        .update({ intention: from.intention })
+        .eq("id", to.id);
+  }
+}
+
 /**
  * SAVING A SIGNAL FROM THE PAPER STRAIGHT ONTO NEXT WEEK'S BOARD
  *

@@ -11,7 +11,7 @@ import Explain from "@/components/Explain";
 import { useWorld } from "@/lib/useWorld";
 import { clearShopBanner, saveWorld, setShopBanner } from "@/lib/api";
 import {
-  freezeNow,
+  finishDrop,
   moveItemToSlot,
   removeMockup,
   renameItem,
@@ -199,39 +199,26 @@ function StudioBody({ world }: { world: World }) {
     }
   }
 
-  async function togglePause() {
-    const paused = !world.paused;
-    if (
-      paused &&
-      !window.confirm(
-        "Pause the weekly schedule?\n\nYour current drop and research board stay exactly as they are. No new publish date is assigned until you resume. Nothing is deleted or archived.",
-      )
-    )
-      return;
-    patch({ paused });
-    await saveWorld(world.id, { paused });
-  }
-
   /**
-   * Publishing is the one irreversible action in the product: the board
-   * freezes, the week rolls, and next week's research becomes the drop being
-   * built. It is allowed at any fill level — a seller may deliberately
-   * release six designs — but never by accident, and never without being told
-   * what happens next.
+   * Finishing is the seller's decision and nothing else's. It is allowed at
+   * any fill level — somebody may deliberately put out six designs — but
+   * never by accident, and never without being told what happens next.
+   *
+   * It is also no longer irreversible: Drop History re-opens a finished drop.
    */
   async function publishNow() {
     if (!drop) return;
     const filled = drop.items.length;
 
     const consequences = [
-      `Drop ${String(drop.number).padStart(2, "0")} moves into Drop History and its board becomes read-only.`,
+      `Drop ${String(drop.number).padStart(2, "0")} moves into Drop History. You can re-open it from there whenever you like.`,
       next
         ? `Drop ${String(next.number).padStart(2, "0")} research becomes the drop you are building, and a fresh research board opens behind it.`
         : "A new drop opens for next week.",
       filled < world.slotsPerDrop
         ? `The ${world.slotsPerDrop - filled} empty slot${world.slotsPerDrop - filled === 1 ? "" : "s"} stay empty in the archived version.`
         : null,
-      "Your research is kept and stays attached to this drop.",
+      "Your research board comes with you — everything on it stays exactly where it is.",
     ]
       .filter(Boolean)
       .join("\n\n");
@@ -243,7 +230,7 @@ function StudioBody({ world }: { world: World }) {
 
     if (!window.confirm(question)) return;
 
-    await freezeNow(world, drop);
+    await finishDrop(world, drop);
     setLoading(true);
     setTab("build");
     await load();
@@ -345,39 +332,29 @@ function StudioBody({ world }: { world: World }) {
         className={`mb-4 flex flex-wrap items-center gap-3 ${tab === "research" ? "hidden" : ""}`}
       >
         <span className="eyebrow text-ink-3">Drop Studio</span>
-        {world.paused && (
-          <span className="chip chip-accent">Schedule paused</span>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          <span className="flex items-center gap-1.5">
-            <button onClick={togglePause} className="btn btn-ghost">
-              {world.paused
-                ? "Restart the weekly rhythm"
-                : "Pause the weekly rhythm"}
-            </button>
-            <Explain label="What does pausing do?">
-              {world.paused
-                ? "Drops start moving again on their dates. This one keeps the date it has."
-                : "Drops stop rolling over on their dates and wait for you. Nothing is lost — you pick up where you left off."}
-            </Explain>
-          </span>
-          {/*
-            This never said what it did. The tool does not publish anything
-            anywhere — a seller reads "Publish" as "push to Etsy", presses it
-            once to find out, and archives a drop she was still working on.
+        {/*
+          PAUSE IS GONE, BECAUSE THERE IS NO LONGER A CLOCK TO STOP.
 
-            What it actually does is roll the week forward early: this drop
-            goes to Drop History read-only and next week's research becomes
-            the drop being built. So it says that.
+          It existed to hold off the automatic rollover. Nothing rolls over on
+          a date any more, so a pause button would be a switch that turns off
+          something that does not happen.
+        */}
+        <div className="ml-auto flex items-center gap-2">
+          {/*
+            "Early" was the wrong word once the date stopped meaning anything.
+            There is no schedule to be early against: a drop ends when you say
+            it ends, whether that is the day it was planned for, three weeks
+            later, or this afternoon.
           */}
           <span className="flex items-center gap-1.5">
             <button onClick={publishNow} className="btn btn-ghost">
-              Finish this drop early
+              Finish this drop
             </button>
-            <Explain label="What does finishing early do?">
-              Moves this drop into Drop History read-only and starts the next
-              one now, instead of waiting for its date. Nothing is sent
-              anywhere — this tool never publishes.
+            <Explain label="What does finishing a drop do?">
+              Moves this drop into Drop History and starts the next one.
+              Your research board comes with you, and you can re-open a
+              finished drop from Drop History whenever you like. Nothing is
+              sent anywhere — this tool never publishes.
             </Explain>
           </span>
         </div>
