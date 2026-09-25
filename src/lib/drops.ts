@@ -181,21 +181,12 @@ export async function loadDrops(worldId: string): Promise<Drop[]> {
 /* schedule                                                            */
 /* ------------------------------------------------------------------ */
 
-async function createDrop(
-  worldId: string,
-  number: number,
-  publishDate: string,
-): Promise<Drop> {
+async function createDrop(worldId: string, number: number, publishDate: string) {
   const { error } = await supabase
     .from("wb_drops")
     .insert({ world_id: worldId, number, publish_date: publishDate });
   if (error && !/duplicate key/i.test(error.message))
     throw new Error(error.message);
-  /* Read it back rather than trusting the insert: a duplicate key means a
-     racing tab made it first, and that row is the one that matters. */
-  const made = (await loadDrops(worldId)).find((d) => d.number === number);
-  if (!made) throw new Error("The drop could not be opened.");
-  return made;
 }
 
 /**
@@ -282,24 +273,139 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
   }
 
   /*
-    NOTHING FREEZES ON A DATE. EVER.
+    PAUSING STOPS THE CLOCK.
 
-    This used to walk the calendar: any drop whose publish day had passed was
-    frozen where it stood, read-only, and the next board opened in its place.
-    A seller who worked at her own pace came back to a board she could no
-    longer touch and a message about a day she had missed — which is what the
-    date had quietly become, a deadline enforced by software.
+    It used to only stop the freezing, which meant the publish date kept
+    sliding into the past while the seller was away. Coming back from a month
+    off, they owed four drops they had never worked on, and the software
+    walked them through freezing each one on successive page loads.
 
-    It is a plan now, and plans are allowed to slip. A drop ends when the
-    seller says it ends, and not before: `finishDrop` is the only thing in
-    this file that freezes anything, and it runs from a button. Pausing is
-    gone with it, because there is no longer a clock to stop.
-
-    What remains here is bookkeeping: make sure the first board exists, make
-    sure there is always a board for next week for research to attach to, and
-    keep the status of finished drops in step with their age.
+    A pause means this week has not happened yet. So while paused, the board
+    keeps its date level with the calendar instead of falling behind it, and
+    resuming picks up on the next publish day with nothing owed.
+  */
+  /*
+    If the first board could not be created — a denied insert, a dropped
+    connection — there is genuinely nothing to schedule. Saying so and
+    letting the screen offer to try again is the honest outcome. Asserting a
+    drop exists here is how a seller's first ever visit ended in
+    "Cannot read properties of null".
   */
   if (!drops.length) return [];
+
+  if (world.paused) {
+    const { current: paused, next: after } = splitDrops(drops);
+    if (paused) {
+      if (daysSince(paused.publishDate) > 0) {
+        const moved = toISODate(nextWeekday(new Date(), world.dropWeekday));
+        await supabase
+          .from("wb_drops")
+          .update({ publish_date: moved })
+          .eq("id", paused.id);
+        if (after) {
+          const week = new Date(`${moved}T00:00:00`);
+          week.setDate(week.getDate() + 7);
+          await supabase
+            .from("wb_drops")
+            .update({ publish_date: toISODate(week) })
+            .eq("id", after.id);
+        }
+        changed = true;
+        drops = await loadDrops(world.id);
+      }
+      const stillCurrent = splitDrops(drops).current;
+      if (stillCurrent) await ensureNextExists(stillCurrent);
+    }
+    return changed ? loadDrops(world.id) : drops;
+  }
+
+  /*
+    Freeze every drop whose day has passed, not just the oldest one.
+
+    Freezing one per call meant a seller who had been away for a month landed
+    on a board from three weeks ago, and had to reload three more times to
+    reach the present — quietly freezing a drop they had never opened on each
+    one. Catching up happens in a single pass so they always arrive in the
+    current week.
+
+    Freeze only once the publish day has fully passed. Using >= 0 here meant a
+    seller who signed up on a Friday had Drop 01 frozen empty the moment they
+    opened the studio.
+  */
+  /*
+    A CATCH-UP IS WEEKS, NOT YEARS.
+
+    This guard was 260 — five years of weekly drops — which is not a ceiling on
+    anything a real seller can do; it is a ceiling on how much damage a bug can
+    do before the page finishes loading. It did 260 drops of damage per load,
+    six loads deep, in silence.
+
+    A year is already generous for somebody coming back from a long absence,
+    and hitting it now means something is wrong rather than somebody was busy,
+    so it says so instead of grinding on.
+  */
+  for (let guard = 0; ; guard++) {
+    if (guard >= 60) {
+      report("studio", new Error("drop schedule did not settle"), {
+        worldId: world.id,
+        drops: drops.length,
+      });
+      break;
+    }
+    const current = splitDrops(drops).current;
+    if (!current) break;
+    if (current.frozenAt || daysSince(current.publishDate) <= 0) {
+      await ensureNextExists(current);
+      break;
+    }
+    /*
+      THE ONE WRITE IN THIS LOOP THAT MUST NOT FAIL QUIETLY.
+
+      Freezing is what ends the iteration: the drop stops being overdue, so
+      the next pass moves on. If the update is rejected — a denied policy, a
+      dropped connection — the reload returns the same unfrozen drop, it is
+      still overdue, and the loop goes round again on identical state. That is
+      a spin with a write in it, not a catch-up, and it was invisible because
+      nobody read the error.
+
+      Stop and say so. A seller who has to press again is a much smaller
+      problem than a page that silently hammers the database.
+    */
+    const { error: freezeErr } = await supabase
+      .from("wb_drops")
+      .update({ frozen_at: new Date().toISOString(), status: "live" })
+      .eq("id", current.id);
+    if (freezeErr) {
+      report("studio", freezeErr.message, {
+        worldId: world.id,
+        dropId: current.id,
+        at: "freeze",
+      });
+      break;
+    }
+    await ensureNextExists(current);
+    changed = true;
+    drops = await loadDrops(world.id);
+
+    /*
+      AND THE RESEARCH COMES WITH THEM.
+
+      The drop ending on its day is the point of the weekly rhythm. The board
+      going with it was not: everything a seller had saved and not yet used
+      went read-only along with the mockups, with no way back to it. The
+      mockups belong to the week they were made for; the research is the
+      material being worked from, and it moves to the board that is now open.
+    */
+    const moved = drops.find((d) => d.number === current.number + 1);
+    if (moved)
+      await carryBoardForward(current.id, moved.id).catch((e) =>
+        report("studio", e, {
+          worldId: world.id,
+          dropId: current.id,
+          at: "carry",
+        }),
+      );
+  }
 
   // Age frozen drops through the lifecycle. Status is age, not performance.
   for (const d of drops) {
@@ -313,7 +419,8 @@ export async function syncSchedule(world: World): Promise<Drop[]> {
 
   if (changed) drops = await loadDrops(world.id);
 
-  // Research needs a board for next week whatever else has happened.
+  // After a freeze, the drop that was "next" is now the one being built, so
+  // the week after it needs opening too.
   const { current: nowCurrent, next } = splitDrops(drops);
   if (nowCurrent && !next) {
     await ensureNextExists(nowCurrent);
@@ -466,37 +573,7 @@ export async function removeMockup(item: DropItem) {
 }
 
 /** Publish early — freeze this board now rather than waiting for the date. */
-/**
- * END A DROP, BECAUSE THE SELLER SAID SO.
- *
- * The only thing in this file that freezes anything. Nothing here runs on a
- * schedule, on a date, or on a page load — it runs when somebody presses the
- * button, and it is reversible: `reopenDrop` puts it straight back.
- */
-export async function finishDrop(world: World, drop: Drop) {
-  const after = new Date();
-  after.setDate(after.getDate() + 1);
-
-  /*
-    The next board is made FIRST, so the research has somewhere to land. If
-    this failed and the drop had already been frozen, a seller would be left
-    holding a finished drop, no next week, and their board behind the wall.
-  */
-  const nextNumber = drop.number + 1;
-  const existing = (await loadDrops(world.id)).find((d) => d.number === nextNumber);
-  const nextDrop =
-    existing ??
-    (await createDrop(
-      world.id,
-      nextNumber,
-      toISODate(nextWeekday(after, world.dropWeekday)),
-    ));
-
-  /* Everything saved into research moves on with the seller. */
-  await carryBoardForward(drop.id, nextDrop.id).catch((e) =>
-    report("studio", e, { worldId: world.id, dropId: drop.id, at: "carry" }),
-  );
-
+export async function freezeNow(world: World, drop: Drop) {
   await supabase
     .from("wb_drops")
     .update({
@@ -505,4 +582,21 @@ export async function finishDrop(world: World, drop: Drop) {
       publish_date: toISODate(new Date()),
     })
     .eq("id", drop.id);
+  const next = new Date();
+  next.setDate(next.getDate() + 1);
+  await createDrop(
+    world.id,
+    drop.number + 1,
+    toISODate(nextWeekday(next, world.dropWeekday)),
+  );
+
+  /* Same rule as the weekly rollover: the archive keeps the mockups, the
+     seller keeps their board. */
+  const opened = (await loadDrops(world.id)).find(
+    (d) => d.number === drop.number + 1,
+  );
+  if (opened)
+    await carryBoardForward(drop.id, opened.id).catch((e) =>
+      report("studio", e, { worldId: world.id, dropId: drop.id, at: "carry" }),
+    );
 }

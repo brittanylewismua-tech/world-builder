@@ -98,10 +98,10 @@ export default function DropRhythm({
       <div>
         <p className="t-h3 text-ink">Drop day</p>
         <p className="t-small mt-1 text-ink-2">
-          The day each new board is dated for. It is a plan, not a deadline —
-          nothing freezes, publishes or rolls over on its own, and a drop ends
-          only when you finish it. Research always runs a week ahead of
-          whichever day you pick.
+          The day this drop ends and the next board opens. The finished one
+          goes to Drop History, where it stays available to look at or re-open.
+          Your research board carries across to the new drop. Research always
+          runs a week ahead of whichever day you pick.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {DAYS.map((d) => (
@@ -125,6 +125,23 @@ export default function DropRhythm({
         </p>
       </div>
 
+      <div className="border-t border-black/12 pt-5">
+        <p className="t-h3 text-ink">
+          {world.paused ? "The schedule is paused" : "The schedule is running"}
+        </p>
+        <p className="t-small mt-1 max-w-xl text-ink-2">
+          {world.paused
+            ? "Nothing publishes and nothing freezes while you are paused. The board you are building keeps pace with the calendar, so when you come back you pick up on the next drop day owing nothing."
+            : "Drops publish and freeze on their own each week. Pause if you need to step away — your current board waits for you rather than falling behind."}
+        </p>
+        <button
+          disabled={busy}
+          onClick={() => save({ paused: !world.paused })}
+          className={`mt-3 ${world.paused ? "btn btn-accent" : "btn btn-ghost"}`}
+        >
+          {world.paused ? "Start the schedule again" : "Pause the schedule"}
+        </button>
+      </div>
     </div>
   );
 }
