@@ -110,6 +110,18 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
   return <SuiteDoor email={email} reason={reason} />;
 }
 
+/* 10 Oct 2026 · one person, two emails: prove both sign-ins and the Goldie Suite membership counts here. */
+async function linkOtherEmail() {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token ?? "";
+  window.location.href = `https://thegoldiesuite.com/world-builder-link#t=${encodeURIComponent(token)}`;
+}
+const linkButton = (
+  <button onClick={() => void linkOtherEmail()} className="t-small mt-4 w-full text-ink-2 underline underline-offset-4 transition hover:text-ink">
+    I&apos;m in The Goldie Suite with a different email
+  </button>
+);
+
 function SuiteDoor({ email, reason: first }: { email: string; reason: string }) {
   const [checking, setChecking] = useState(false);
   const [note, setNote] = useState("");
@@ -157,6 +169,7 @@ function SuiteDoor({ email, reason: first }: { email: string; reason: string }) 
           <p className="t-body mt-3 text-ink-2">
             If you joined the challenge with a different email, sign out and sign in with that one. Questions? Email support@beawolfbiz.com.
           </p>
+          {linkButton}
           {signOut}
         </div>
       </main>
@@ -199,6 +212,7 @@ function SuiteDoor({ email, reason: first }: { email: string; reason: string }) 
           {checking ? "Checking…" : "I've joined"}
         </button>
         {note && <p className="t-small mt-3 text-[#8a2020]">{note}</p>}
+        {linkButton}
         <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
           <button
             onClick={async () => {
