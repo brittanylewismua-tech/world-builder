@@ -168,10 +168,10 @@ function SuiteDoor({ email, reason: first }: { email: string; reason: string }) 
           <Logo height={22} />
           <h1 className="t-h2 mt-6 text-ink">World Builder isn&apos;t part of the free trial</h1>
           <p className="t-body mt-3 text-ink-2">
-            World Builder opens once your Goldie Suite membership is paid. Upgrade from your Goldie Suite account, then come back and tap &quot;I&apos;ve upgraded&quot;. Everything you built is saved.
+            World Builder opens once your Goldie Suite membership is paid. In The Goldie Suite, tap &quot;Start membership&quot; at the top of the page to end your free trial and start your membership today. Then come back here and tap &quot;I&apos;ve upgraded&quot;. Everything you built is saved.
           </p>
-          <a href="https://thegoldiesuite.com/account/settings" className="btn btn-accent mt-6 w-full text-center">
-            Upgrade my Goldie Suite membership
+          <a href="https://thegoldiesuite.com/home" className="btn btn-accent mt-6 w-full text-center">
+            Open The Goldie Suite
           </a>
           <button onClick={checkAgain} disabled={checking} className="btn mt-3 w-full">
             {checking ? "Checking…" : "I've upgraded"}
