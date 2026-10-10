@@ -68,6 +68,12 @@ const SLOWEST_SEEN_MS = 130_000;
 const GIVE_UP_AFTER = 6;
 
 export async function GET(req: Request) {
+  /* 10 Oct 2026: closing non-members runs on EVERY call, before the secret check. It only ever takes away access
+     that should already be gone, so it is safe for anyone to trigger, and it can't be skipped if CRON_SECRET is unset. */
+  {
+    const { closeNonMembers } = await import("@/lib/suiteAccess");
+    await closeNonMembers().catch(() => null);
+  }
   const secret = process.env.CRON_SECRET;
   const url = new URL(req.url);
   /*
