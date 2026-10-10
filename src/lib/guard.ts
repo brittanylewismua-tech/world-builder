@@ -208,7 +208,7 @@ export async function admit(
   let { data: live } = await supabase.rpc("wb_is_live");
   if (live === false) {
     const { syncFromSuite } = await import("./suiteAccess");
-    if ((await syncFromSuite(data.user.id, token).catch(() => null)) === true) live = true;
+    if ((await syncFromSuite(data.user.id, token).catch(() => null))?.live === true) live = true;
   }
   if (live === false)
     return {

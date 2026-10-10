@@ -9,6 +9,6 @@ export async function POST(req: Request) {
   const caller = await callerOf(req);
   if (!caller) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const token = (req.headers.get("authorization") ?? "").slice(7).trim();
-  const live = await syncFromSuite(caller.id, token);
-  return NextResponse.json({ live, email: caller.email }, { headers: { "Cache-Control": "no-store" } });
+  const { live, reason } = await syncFromSuite(caller.id, token);
+  return NextResponse.json({ live, reason: reason ?? null, email: caller.email }, { headers: { "Cache-Control": "no-store" } });
 }

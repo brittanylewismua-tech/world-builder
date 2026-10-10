@@ -51,6 +51,7 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
   const [inside, setInside] = useState<boolean | null>(null);
   const [endsAt, setEndsAt] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -63,11 +64,13 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
       }
       /* 10 Oct 2026: World Builder comes with The Goldie Suite. Ask the suite first, every visit (lib/suiteAccess.ts). */
       try {
-        await fetch("/api/access/suite", {
+        const r = await fetch("/api/access/suite", {
           method: "POST",
           headers: { Authorization: `Bearer ${data.session.access_token}` },
           cache: "no-store",
         });
+        const b = (await r.json().catch(() => ({}))) as { reason?: string | null };
+        if (alive) setReason(b.reason ?? "");
       } catch {
         /* the suite could not be reached: the stored date stands */
       }
@@ -104,12 +107,13 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
     comes with The Goldie Suite; everything a person built is kept, and joining
     the suite with the same email opens it exactly as it was.
   */
-  return <SuiteDoor email={email} />;
+  return <SuiteDoor email={email} reason={reason} />;
 }
 
-function SuiteDoor({ email }: { email: string }) {
+function SuiteDoor({ email, reason: first }: { email: string; reason: string }) {
   const [checking, setChecking] = useState(false);
   const [note, setNote] = useState("");
+  const [reason, setReason] = useState(first);
   async function checkAgain() {
     setChecking(true);
     setNote("");
@@ -120,8 +124,9 @@ function SuiteDoor({ email }: { email: string }) {
         headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
         cache: "no-store",
       });
-      const b = (await r.json().catch(() => ({}))) as { live?: boolean | null };
+      const b = (await r.json().catch(() => ({}))) as { live?: boolean | null; reason?: string | null };
       if (b.live) window.location.reload();
+      else if (b.reason === "not_on_list" || b.reason === "trial") setReason(b.reason);
       else setNote(`We couldn't find a Goldie Suite membership for ${email || "this email"} yet. Join with this exact email, then check again.`);
     } catch {
       setNote("That didn't go through. Try again in a moment.");
@@ -129,6 +134,53 @@ function SuiteDoor({ email }: { email: string }) {
       setChecking(false);
     }
   }
+  const signOut = (
+    <button
+      onClick={async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/login";
+      }}
+      className="t-small mt-6 text-ink-3 underline underline-offset-4 transition hover:text-ink"
+    >
+      Sign out
+    </button>
+  );
+  if (reason === "not_on_list")
+    return (
+      <main className="flex min-h-dvh items-center justify-center px-5">
+        <div className="w-full max-w-md">
+          <Logo height={22} />
+          <h1 className="t-h2 mt-6 text-ink">World Builder is for World Building Challenge members</h1>
+          <p className="t-body mt-3 text-ink-2">
+            <b className="text-ink">{email || "This email"}</b> isn&apos;t on the World Building Challenge list, so World Builder can&apos;t open for it.
+          </p>
+          <p className="t-body mt-3 text-ink-2">
+            If you joined the challenge with a different email, sign out and sign in with that one. Questions? Email support@beawolfbiz.com.
+          </p>
+          {signOut}
+        </div>
+      </main>
+    );
+  if (reason === "trial")
+    return (
+      <main className="flex min-h-dvh items-center justify-center px-5">
+        <div className="w-full max-w-md">
+          <Logo height={22} />
+          <h1 className="t-h2 mt-6 text-ink">World Builder isn&apos;t part of the free trial</h1>
+          <p className="t-body mt-3 text-ink-2">
+            World Builder opens once your Goldie Suite membership is paid. Upgrade from your Goldie Suite account, then come back and tap &quot;I&apos;ve upgraded&quot;. Everything you built is saved.
+          </p>
+          <a href="https://thegoldiesuite.com/account/settings" className="btn btn-accent mt-6 w-full text-center">
+            Upgrade my Goldie Suite membership
+          </a>
+          <button onClick={checkAgain} disabled={checking} className="btn mt-3 w-full">
+            {checking ? "Checking…" : "I've upgraded"}
+          </button>
+          {note && <p className="t-small mt-3 text-[#8a2020]">{note}</p>}
+          {signOut}
+        </div>
+      </main>
+    );
   return (
     <main className="flex min-h-dvh items-center justify-center px-5">
       <div className="w-full max-w-md">

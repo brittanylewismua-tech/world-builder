@@ -139,7 +139,7 @@ export async function GET(req: Request) {
     those failures eat the run's budget six times each, and on a launch
     morning the abandoned worlds crowd out the finished ones.
   */
-  /* 10 Oct 2026: only Goldie Suite members (and direct subscribers) keep World Builder. Close everyone else first,
+  /* 10 Oct 2026: only Goldie Suite members keep World Builder. Close everyone else first,
      then write issues only for worlds whose owner is still live (lib/suiteAccess.ts). */
   const { closeNonMembers } = await import("@/lib/suiteAccess");
   await closeNonMembers().catch(() => null);
