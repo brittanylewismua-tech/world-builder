@@ -200,13 +200,22 @@ export async function admit(
     Subscribing clears the expiry, and because nothing else about the
     account changes, somebody who pays mid-challenge notices nothing.
   */
-  const { data: live } = await supabase.rpc("wb_is_live");
+  /*
+    10 Oct 2026: World Builder comes with The Goldie Suite. A stale account is
+    checked against the suite once more before being refused, so somebody who
+    joined a minute ago is never turned away (lib/suiteAccess.ts).
+  */
+  let { data: live } = await supabase.rpc("wb_is_live");
+  if (live === false) {
+    const { syncFromSuite } = await import("./suiteAccess");
+    if ((await syncFromSuite(data.user.id, token).catch(() => null)) === true) live = true;
+  }
   if (live === false)
     return {
       deny: NextResponse.json(
         {
           error:
-            "Your challenge access has ended. Everything you built is still here — subscribe to pick it back up.",
+            "World Builder is part of The Goldie Suite now. Join The Goldie Suite with this same email and everything you built is right where you left it.",
         },
         { status: 402 },
       ),

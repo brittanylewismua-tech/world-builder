@@ -34,40 +34,6 @@ import Logo from "./Logo";
 const ALWAYS_OPEN = ["/terms", "/privacy", "/login", "/reset"];
 
 
-/**
- * WHAT TO SAY WHEN A CODE IS REFUSED.
- *
- * Every refusal used to read "That code is not working. Check it and try
- * again." — including the most common one by far, which is somebody entering
- * a code their account has already used. That sentence sends them to check
- * something that is not wrong, and the natural conclusion is that the code
- * itself is broken. On a launch day that is a support queue.
- *
- * The reason lookup is a separate read-only call made only after a refusal,
- * so the working redemption path is untouched. If it cannot answer, the
- * original wording stands.
- */
-async function whyRefused(value: string) {
-  const GENERIC = "That code is not working. Check it and try again.";
-  try {
-    const { data } = await supabase.rpc("wb_why_code_failed", { try: value });
-    switch (data) {
-      case "already":
-        return "You have already used this code — your access is on this account. Try refreshing the page.";
-      case "full":
-        return "Every seat on this code has been taken.";
-      case "expired":
-        return "This code has expired.";
-      case "signed-out":
-        return "You have been signed out. Sign in again and the code will work.";
-      default:
-        return GENERIC;
-    }
-  } catch {
-    return GENERIC;
-  }
-}
-
 export default function Admitted({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   /*
@@ -84,9 +50,7 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
   */
   const [inside, setInside] = useState<boolean | null>(null);
   const [endsAt, setEndsAt] = useState<string | null>(null);
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -97,6 +61,17 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
         if (alive) setInside(true);
         return;
       }
+      /* 10 Oct 2026: World Builder comes with The Goldie Suite. Ask the suite first, every visit (lib/suiteAccess.ts). */
+      try {
+        await fetch("/api/access/suite", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+          cache: "no-store",
+        });
+      } catch {
+        /* the suite could not be reached: the stored date stands */
+      }
+      setEmail(data.session.user.email ?? "");
       const { data: row } = await supabase
         .from("wb_admitted")
         .select("user_id, expires_at")
@@ -112,23 +87,6 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
 
 
 
-  async function tryCode() {
-    const value = code.trim();
-    if (!value || busy) return;
-    setBusy(true);
-    setErr("");
-    try {
-      const { data, error } = await supabase.rpc("wb_redeem", { try: value });
-      if (error) throw new Error(error.message);
-      if (data === true) setInside(true);
-      else setErr(await whyRefused(value));
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "That did not go through.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (ALWAYS_OPEN.some((p) => path?.startsWith(p))) return <>{children}</>;
   if (inside === null) return null;
 
@@ -141,42 +99,54 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
   */
   if (inside && !stale) return <>{children}</>;
 
-  /* Out of term. The app stays, read-only, behind an honest banner. */
-  if (inside && stale)
-    return (
-      <>
-        <Ended onEntered={() => window.location.reload()} />
-        {children}
-      </>
-    );
+  /*
+    10 Oct 2026: no access codes and no read-only view any more. World Builder
+    comes with The Goldie Suite; everything a person built is kept, and joining
+    the suite with the same email opens it exactly as it was.
+  */
+  return <SuiteDoor email={email} />;
+}
 
+function SuiteDoor({ email }: { email: string }) {
+  const [checking, setChecking] = useState(false);
+  const [note, setNote] = useState("");
+  async function checkAgain() {
+    setChecking(true);
+    setNote("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      const r = await fetch("/api/access/suite", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
+        cache: "no-store",
+      });
+      const b = (await r.json().catch(() => ({}))) as { live?: boolean | null };
+      if (b.live) window.location.reload();
+      else setNote(`We couldn't find a Goldie Suite membership for ${email || "this email"} yet. Join with this exact email, then check again.`);
+    } catch {
+      setNote("That didn't go through. Try again in a moment.");
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
     <main className="flex min-h-dvh items-center justify-center px-5">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <Logo height={22} />
-        <h1 className="t-h2 mt-6 text-ink">You need an access code</h1>
-        <p className="t-body mt-2 text-ink-2">
-          World Builder is not open yet. If you have a code, put it in here.
+        <h1 className="t-h2 mt-6 text-ink">World Builder is part of The Goldie Suite</h1>
+        <p className="t-body mt-3 text-ink-2">
+          World Builder now comes with a Goldie Suite membership ($47 a month). Everything you built is saved and will be right where you left it.
         </p>
-
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && tryCode()}
-          placeholder="your code"
-          autoFocus
-          className="mt-6 w-full rounded-lg border-2 border-black px-3.5 py-2.5 text-[15px] outline-none"
-        />
-        {err && <p className="t-small mt-2 text-[#8a2020]">{err}</p>}
-
-        <button
-          onClick={tryCode}
-          disabled={busy || !code.trim()}
-          className="btn btn-accent mt-3 w-full"
-        >
-          {busy ? "Checking…" : "Enter"}
+        <p className="t-body mt-3 text-ink-2">
+          Join The Goldie Suite using <b className="text-ink">{email || "the email you sign in here with"}</b>, then come back and tap "I've joined".
+        </p>
+        <a href="https://thegoldiesuite.com" className="btn btn-accent mt-6 w-full text-center">
+          Join The Goldie Suite
+        </a>
+        <button onClick={checkAgain} disabled={checking} className="btn mt-3 w-full">
+          {checking ? "Checking…" : "I've joined"}
         </button>
-
+        {note && <p className="t-small mt-3 text-[#8a2020]">{note}</p>}
         <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
           <button
             onClick={async () => {
@@ -187,18 +157,8 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
           >
             Sign out
           </button>
-          <a
-            href="/terms"
-            className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
-          >
-            Terms
-          </a>
-          <a
-            href="/privacy"
-            className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink"
-          >
-            Privacy
-          </a>
+          <a href="/terms" className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink">Terms</a>
+          <a href="/privacy" className="t-small text-ink-3 underline underline-offset-4 transition hover:text-ink">Privacy</a>
         </div>
       </div>
     </main>
@@ -206,88 +166,3 @@ export default function Admitted({ children }: { children: React.ReactNode }) {
 }
 
 /* ------------------------------------------------------------------ */
-
-/**
- * After the term. The app is still there behind this, read-only, because a
- * world you can still see is the whole reason to continue.
- */
-function Ended({ onEntered }: { onEntered: () => void }) {
-  const [code, setCode] = useState("");
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-
-  async function tryCode() {
-    const value = code.trim();
-    if (!value || busy) return;
-    setBusy(true);
-    setErr("");
-    try {
-      const { data, error } = await supabase.rpc("wb_redeem", { try: value });
-      if (error) throw new Error(error.message);
-      if (data === true) onEntered();
-      else setErr(await whyRefused(value));
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "That did not go through.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div
-      className="border-b-2 border-black px-5 py-3"
-      style={{ background: "var(--accent)" }}
-    >
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-4 gap-y-2">
-        <p className="t-small font-semibold text-[color:var(--accent-on)]">
-          Your challenge access has ended. Everything you built is still here.
-        </p>
-        {open ? (
-          <span className="ml-auto flex items-center gap-2">
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && tryCode()}
-              placeholder="code"
-              autoFocus
-              className="w-32 rounded-lg border-2 border-black px-2.5 py-1 text-[13px] outline-none"
-            />
-            <button
-              onClick={tryCode}
-              disabled={busy}
-              className="btn btn-primary shrink-0"
-            >
-              {busy ? "…" : "Enter"}
-            </button>
-          </span>
-        ) : (
-          /*
-            NO PURCHASE PATH WHILE THERE IS NO DECISION BEHIND IT.
-
-            This sat beside "I have a code" and opened Stripe. Removed with
-            the home banner: what happens commercially with this tool is not
-            settled, and a live checkout is the wrong thing to leave standing
-            in the meantime. A code is the way back in.
-
-            `lib/upgrade.ts` and the billing routes are untouched, so putting
-            the button back is one import and one element.
-          */
-          <span className="ml-auto flex shrink-0 items-center gap-4">
-            <button
-              onClick={() => setOpen(true)}
-              className="btn btn-primary shrink-0"
-            >
-              I have a code
-            </button>
-          </span>
-        )}
-      </div>
-      {err && (
-        <p className="t-small mx-auto mt-1 max-w-4xl text-[color:var(--accent-on)] opacity-80">
-          {err}
-        </p>
-      )}
-    </div>
-  );
-}

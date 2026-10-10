@@ -139,6 +139,11 @@ export async function GET(req: Request) {
     those failures eat the run's budget six times each, and on a launch
     morning the abandoned worlds crowd out the finished ones.
   */
+  /* 10 Oct 2026: only Goldie Suite members (and direct subscribers) keep World Builder. Close everyone else first,
+     then write issues only for worlds whose owner is still live (lib/suiteAccess.ts). */
+  const { closeNonMembers } = await import("@/lib/suiteAccess");
+  await closeNonMembers().catch(() => null);
+
   let waiting: { id: string }[];
 
   if (only) {
@@ -156,6 +161,17 @@ export async function GET(req: Request) {
     waiting = ((need ?? []) as { world_id: string }[]).map((r) => ({
       id: r.world_id,
     }));
+  }
+
+  if (waiting.length) {
+    const { data: owners } = await db.from("wb_worlds").select("id, user_id").in("id", waiting.map(w => w.id));
+    const userIds = [...new Set((owners ?? []).map(o => o.user_id as string))];
+    const { data: access } = userIds.length
+      ? await db.from("wb_admitted").select("user_id, expires_at").in("user_id", userIds)
+      : { data: [] as { user_id: string; expires_at: string | null }[] };
+    const liveUsers = new Set((access ?? []).filter(a => a.expires_at === null || new Date(a.expires_at as string) > new Date()).map(a => a.user_id as string));
+    const ownerOf = new Map((owners ?? []).map(o => [o.id as string, o.user_id as string]));
+    waiting = waiting.filter(w => liveUsers.has(ownerOf.get(w.id) ?? ""));
   }
 
   const { data: attempts } = await db
